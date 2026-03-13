@@ -30,7 +30,6 @@ const wallpaperOptions: { id: WallpaperType; label: string; src?: string }[] = [
 
 const layoutLabels: Record<DashboardLayoutItem, string> = {
     nav: 'Atalhos',
-    stats: 'Estatísticas',
     journey: 'Jornada'
 };
 

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type ThemeType = 'classic-dark' | 'royal-purple' | 'midnight-blue' | 'pure-monochrome';
 export type WallpaperType = 'particles' | 'mesh' | 'aurora' | 'none';
-export type DashboardLayoutItem = 'nav' | 'stats' | 'journey';
+export type DashboardLayoutItem = 'nav' | 'journey';
 
 export interface UserPreferences {
     theme: ThemeType;
@@ -13,7 +13,7 @@ export interface UserPreferences {
 const defaultPreferences: UserPreferences = {
     theme: 'classic-dark',
     wallpaper: 'particles',
-    dashboardLayout: ['nav', 'stats', 'journey']
+    dashboardLayout: ['nav', 'journey']
 };
 
 interface PreferencesContextType {
@@ -31,7 +31,11 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const saved = localStorage.getItem(PREFERENCES_KEY);
         if (saved) {
             try {
-                return { ...defaultPreferences, ...JSON.parse(saved) };
+                const parsed = JSON.parse(saved);
+                if (parsed.dashboardLayout) {
+                    parsed.dashboardLayout = parsed.dashboardLayout.filter((item: any) => item === 'nav' || item === 'journey');
+                }
+                return { ...defaultPreferences, ...parsed };
             } catch (e) {
                 console.error("Failed to parse user preferences", e);
             }

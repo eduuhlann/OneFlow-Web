@@ -10,14 +10,12 @@ import {
     CloudRain,
     Trees,
     Music,
-    Wind,
-    Plus,
-    Trash2,
-    CheckCircle2
+    Wind
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import PageTransition from '../components/PageTransition';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -36,10 +34,6 @@ const Prayer: React.FC = () => {
     // Ambience State
     const [ambience, setAmbience] = useState<Ambience>('none');
     const [isMuted, setIsMuted] = useState(false);
-
-    // Prayer Requests
-    const [requests, setRequests] = useState<string[]>([]);
-    const [newRequest, setNewRequest] = useState('');
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -74,17 +68,6 @@ const Prayer: React.FC = () => {
         setTimeLeft(initialTime);
     };
 
-    const handleAddRequest = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newRequest.trim()) return;
-        setRequests(prev => [...prev, newRequest.trim()]);
-        setNewRequest('');
-    };
-
-    const removeRequest = (index: number) => {
-        setRequests(prev => prev.filter((_, i) => i !== index));
-    };
-
     const ambienceOptions = [
         { id: 'rain', icon: CloudRain, label: 'Chuva' },
         { id: 'nature', icon: Trees, label: 'Natureza' },
@@ -93,6 +76,7 @@ const Prayer: React.FC = () => {
     ];
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
             {/* Background Ambience Layer */}
             <div className="fixed inset-0 pointer-events-none">
@@ -118,7 +102,7 @@ const Prayer: React.FC = () => {
                 </button>
             </header>
 
-            <main className="flex-1 max-w-7xl mx-auto w-full px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+            <main className="flex-1 max-w-3xl mx-auto w-full px-6 flex items-center justify-center relative z-10">
                 {/* Timer Section */}
                 <div className="flex flex-col items-center justify-center text-center">
                     <motion.div
@@ -173,67 +157,6 @@ const Prayer: React.FC = () => {
                         ))}
                     </div>
                 </div>
-
-                {/* Prayer Requests Section */}
-                <div className="bg-white/5 border border-white/10 rounded-[3rem] p-10 flex flex-col h-[600px] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 text-white/5">
-                        <Plus size={100} />
-                    </div>
-
-                    <div className="relative z-10 flex flex-col h-full">
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-black italic tracking-tighter mb-2">Pedidos de Oração</h2>
-                            <p className="text-white/30 text-xs font-bold tracking-widest uppercase italic">Mantenha seu foco no que importa</p>
-                        </div>
-
-                        <form onSubmit={handleAddRequest} className="relative mb-8">
-                            <input
-                                type="text"
-                                placeholder="Pelo que você quer orar?"
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-6 pr-16 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all font-medium"
-                                value={newRequest}
-                                onChange={(e) => setNewRequest(e.target.value)}
-                            />
-                            <button
-                                type="submit"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-white text-black rounded-xl hover:scale-105 active:scale-95 transition-all"
-                            >
-                                <Plus size={20} />
-                            </button>
-                        </form>
-
-                        <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
-                            <AnimatePresence>
-                                {requests.map((request, i) => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
-                                        className="p-6 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between group"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-2 h-2 rounded-full bg-white/20" />
-                                            <span className="font-medium text-white/70">{request}</span>
-                                        </div>
-                                        <button
-                                            onClick={() => removeRequest(i)}
-                                            className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                            {requests.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center text-center opacity-20 pointer-events-none">
-                                    <CheckCircle2 size={48} className="mb-4" />
-                                    <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase italic">Momentos de conexão e silêncio</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
             </main>
 
             {/* Quote Footer */}
@@ -243,6 +166,7 @@ const Prayer: React.FC = () => {
                 </p>
             </footer>
         </div>
+        </PageTransition>
     );
 };
 

@@ -19,6 +19,7 @@ import { twMerge } from 'tailwind-merge';
 // Sub-views
 import SecurityView from '../components/settings/SecurityView';
 import LegalView from '../components/settings/LegalView';
+import PageTransition from '../components/PageTransition';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -157,6 +158,7 @@ const Settings: React.FC = () => {
     };
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-black text-white p-6 md:p-12 overflow-x-hidden">
             <div className="max-w-3xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
@@ -230,6 +232,7 @@ const Settings: React.FC = () => {
                 )}
             </AnimatePresence>
         </div>
+        </PageTransition>
     );
 };
 
