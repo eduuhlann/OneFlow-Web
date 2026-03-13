@@ -19,6 +19,7 @@ import { useProfile } from '../contexts/ProfileContext';
 import logo from '../assets/logo.png';
 import { chatStorage, ChatMessage, ChatThread } from '../services/ai/chatStorage';
 import { callGroqChat } from '../services/ai/groqService';
+import { AnimatedMessage } from '../components/AnimatedMessage';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -357,12 +358,20 @@ const Olyviah: React.FC = () => {
                                         message.role === 'user' ? "items-end" : "items-start"
                                     )}>
                                         <div className={cn(
-                                            "p-4 rounded-3xl text-base leading-relaxed whitespace-pre-wrap",
+                                            "p-4 rounded-3xl text-base leading-relaxed",
                                             message.role === 'user'
                                                 ? "bg-white text-black font-medium"
                                                 : "bg-white/[0.03] border border-white/[0.06] text-gray-200"
                                         )}>
-                                            {message.content}
+                                            {message.role === 'user' ? (
+                                                <span className="whitespace-pre-wrap">{message.content}</span>
+                                            ) : (
+                                                <AnimatedMessage
+                                                    content={message.content}
+                                                    animate={message.id === messages[messages.length - 1]?.id && isTyping === false && message.role === 'assistant'}
+                                                    speed={12}
+                                                />
+                                            )}
                                         </div>
                                         <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">
                                             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

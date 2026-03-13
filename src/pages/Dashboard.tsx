@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion } from 'motion/react';
@@ -16,12 +16,17 @@ import {
     Lock,
     User,
     Heart,
-    Palette
+    Palette,
+    Mountain,
+    TreePine,
+    Map as MapIcon,
+    Compass
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
 import CustomizationModal from '../components/CustomizationModal';
+import PageTransition from '../components/PageTransition';
 import { statsService } from '../services/features/statsService';
 import { STATIC_BOOKS } from '../services/bible/staticBibleData';
 import { usePreferences } from '../contexts/PreferencesContext';
@@ -32,7 +37,15 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-const LEVEL_HEIGHT = 120;
+const MAP_SIZE = 4000;
+const NODE_SPACING = 300;
+const SPIRAL_A = 120;
+const SPIRAL_B = 40;
+
+const LCG = (seed: number) => () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+};
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
@@ -65,42 +78,79 @@ export default function Dashboard() {
         { icon: Clock, label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
     ];
 
-    const getLevelPosition = (index: number, width: number) => {
-        // Map width logic based on container
-        const centerX = width / 2;
-        // creates a wider sine wave for the full map
-        const amplitude = width * 0.35; 
-        const xOffset = Math.sin(index * 0.6) * amplitude;
-        return { x: centerX + xOffset, y: index * LEVEL_HEIGHT + 60 };
-    };
+    const constraintsRef = useRef<HTMLDivElement>(null);
 
     // Calculate map state
     const mapNodes = useMemo(() => {
-        return STATIC_BOOKS.map((book, index) => {
+        const nodes = [];
+        let theta = 0;
+        let r = SPIRAL_A;
+        
+        for (let i = 0; i < STATIC_BOOKS.length; i++) {
+            const book = STATIC_BOOKS[i];
+            
+            const noiseX = Math.sin(i * 2.1) * 60;
+            const noiseY = Math.cos(i * 1.7) * 60;
+            
+            const x = MAP_SIZE / 2 + r * Math.cos(theta) + noiseX;
+            const y = MAP_SIZE / 2 + r * Math.sin(theta) + noiseY;
+            
             const isCompleted = statsService.isBookCompleted(book.abbrev.pt);
-            
-            // Genesis (0) and Matthew (39) are always unlocked
-            let isUnlocked = index === 0 || index === 39;
-            
-            // Otherwise, unlock if previous book is completed
-            if (!isUnlocked && index > 0) {
-                isUnlocked = statsService.isBookCompleted(STATIC_BOOKS[index - 1].abbrev.pt);
+            let isUnlocked = i === 0 || i === 39;
+            if (!isUnlocked && i > 0) {
+                isUnlocked = statsService.isBookCompleted(STATIC_BOOKS[i - 1].abbrev.pt);
             }
 
-            return {
+            nodes.push({
                 ...book,
-                index,
+                index: i,
+                x,
+                y,
                 isCompleted,
                 isUnlocked,
                 isCurrent: isUnlocked && !isCompleted
-            };
-        });
+            });
+            
+            const dTheta = NODE_SPACING / r;
+            theta += dTheta;
+            r = SPIRAL_A + SPIRAL_B * theta;
+        }
+        return nodes;
     }, [stats]);
     
-    // We don't need totalChapters for the map, we need total books
-    const totalBooks = STATIC_BOOKS.length;
+    const currentBookNode = useMemo(() => {
+        const abbrev = statsService.getLastReadBook();
+        const node = mapNodes.find(n => n.abbrev.pt === abbrev);
+        return node || mapNodes.find(n => n.isCurrent) || mapNodes[0];
+    }, [mapNodes]);
+
+    const initialX = useMemo(() => {
+        const winWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth, 1280) : 1000;
+        return (winWidth / 2) - currentBookNode.x;
+    }, [currentBookNode.x]);
+    
+    const initialY = useMemo(() => {
+        return 300 - currentBookNode.y;
+    }, [currentBookNode.y]);
+
+    const decorations = useMemo(() => {
+        const rnd = LCG(12345);
+        return Array.from({ length: 150 }).map((_, i) => {
+            const x = rnd() * MAP_SIZE;
+            const y = rnd() * MAP_SIZE;
+            const type = rnd();
+            const size = 16 + rnd() * 48;
+            const opacity = 0.05 + rnd() * 0.15;
+            let Icon = Mountain;
+            if (type > 0.8) Icon = TreePine;
+            else if (type > 0.6) Icon = Sparkles;
+            else if (type > 0.4) Icon = Compass;
+            return { id: i, x, y, size, opacity, Icon };
+        });
+    }, []);
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-black text-white p-6 md:p-12 overflow-x-hidden selection:bg-white selection:text-black relative">
             <ParticleBackground />
             <div className="max-w-7xl mx-auto relative z-10">
@@ -177,41 +227,7 @@ export default function Dashboard() {
                             );
                         }
                         
-                        if (layoutBlock === 'stats') {
-                            return (
-                                <div key="stats" className="p-8 bg-white/[0.04] border border-white/10 rounded-[2.5rem] relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-10 text-white/[0.02] pointer-events-none">
-                                        <TrendingUp size={180} />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <span className="text-[10px] font-bold tracking-[0.3em] text-white/30 uppercase mb-3 block italic">Progresso Bíblico</span>
-                                        <div className="flex items-end gap-3 mb-10 italic">
-                                            <div className="text-6xl font-black tracking-tighter tabular-nums">
-                                                {stats.completionPercentage.toFixed(1)}<span className="text-2xl font-normal opacity-20">%</span>
-                                            </div>
-                                            <div className="mb-2 text-white/20 font-bold text-sm">
-                                                {stats.totalChaptersRead} de 1189 Cap.
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-8">
-                                            {[
-                                                { label: 'Livros', val: stats.booksTouched, icon: BookOpen },
-                                                { label: 'Horas', val: `${stats.hoursRead}h`, icon: Clock },
-                                                { label: 'XP', val: stats.totalChaptersRead * 50, icon: Sparkles },
-                                            ].map((stat, i) => (
-                                                <div key={i} className="space-y-1">
-                                                    <div className="flex items-center gap-1.5 text-white/20">
-                                                        <stat.icon size={12} />
-                                                        <span className="text-[9px] font-black tracking-widest uppercase">{stat.label}</span>
-                                                    </div>
-                                                    <div className="text-2xl font-black tracking-tighter italic">{stat.val}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        }
+
 
                         if (layoutBlock === 'journey') {
                             return (
@@ -223,37 +239,63 @@ export default function Dashboard() {
                                         </div>
                                     </div>
 
-                                    {/* Duolingo style map container */}
-                                    <div className="relative h-[600px] overflow-y-auto overflow-x-hidden rounded-3xl bg-black/40 p-4 border border-white/5 scrollbar-hide" id="journey-scroll-container">
-                                        
-                                        {/* Testament marker - VT */}
-                                        <div className="text-center py-8 relative z-20">
-                                            <span className="bg-white/10 border border-white/20 px-6 py-2 rounded-full text-xs font-bold tracking-[0.2em] uppercase">Antigo Testamento</span>
+                                    {/* Interactive 2D Map Container */}
+                                    <div ref={constraintsRef} className="relative h-[600px] overflow-hidden rounded-3xl bg-[#0a0a0a] border border-white/5 cursor-grab active:cursor-grabbing group">
+                                        {/* Overlay hint */}
+                                        <div className="absolute top-4 right-4 z-50 bg-black/50 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Compass size={14} className="text-white/40" />
+                                            <span className="text-[10px] font-bold tracking-widest uppercase text-white/40">Arraste para explorar</span>
                                         </div>
+                                        
+                                        <motion.div
+                                            drag
+                                            dragConstraints={constraintsRef}
+                                            dragElastic={0.1}
+                                            initial={{ x: initialX, y: initialY }}
+                                            className="absolute"
+                                            style={{ width: MAP_SIZE, height: MAP_SIZE }}
+                                        >
+                                            {/* Map Grid/Texture */}
+                                            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] pointer-events-none" />
+                                            
+                                            {/* Decorations */}
+                                            {decorations.map(dec => (
+                                                <div 
+                                                    key={dec.id} 
+                                                    className="absolute pointer-events-none text-white transition-opacity"
+                                                    style={{ 
+                                                        left: dec.x, 
+                                                        top: dec.y, 
+                                                        opacity: dec.opacity,
+                                                        transform: `translate(-50%, -50%) rotate(${dec.id % 2 === 0 ? 15 : -15}deg)`
+                                                    }}
+                                                >
+                                                    <dec.Icon size={dec.size} strokeWidth={1} />
+                                                </div>
+                                            ))}
 
-                                        <div className="relative w-full max-w-lg mx-auto" style={{ height: totalBooks * LEVEL_HEIGHT + 200 }}>
                                             {/* Sinuous Path Background */}
                                             <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20 z-0">
-                                                {Array.from({ length: totalBooks - 1 }).map((_, i) => {
-                                                    // Skip drawing line connecting Malachi to Matthew as it's a new testament break
-                                                    if (i === 38) return null;
+                                                {Array.from({ length: STATIC_BOOKS.length - 1 }).map((_, i) => {
+                                                    if (i === 38) return null; // Break line between OT and NT
                                                     
-                                                    const start = getLevelPosition(i, 400); // fixed width constraint for path calc
-                                                    const end = getLevelPosition(i + 1, 400);
-                                                    const node = mapNodes[i+1];
+                                                    const start = mapNodes[i];
+                                                    const end = mapNodes[i + 1];
                                                     
-                                                    // Path color based on destination node unlock state
-                                                    const strokeColor = node.isUnlocked ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)";
+                                                    const strokeColor = end.isUnlocked ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)";
+                                                    
+                                                    const cx1 = start.x + (end.x - start.x) * 0.5 + Math.sin(i) * 50;
+                                                    const cy1 = start.y + (end.y - start.y) * 0.5 + Math.cos(i) * 50;
                                                     
                                                     return (
                                                         <path
-                                                            // Offset Y to account for Testament markers
                                                             key={i}
-                                                            d={`M ${start.x} ${start.y + (i >= 39 ? 120 : 0)} C ${start.x} ${start.y + (i >= 39 ? 120 : 0) + 60}, ${end.x} ${end.y + (i + 1 >= 39 ? 120 : 0) - 60}, ${end.x} ${end.y + (i + 1 >= 39 ? 120 : 0)}`}
+                                                            d={`M ${start.x} ${start.y} Q ${cx1} ${cy1} ${end.x} ${end.y}`}
                                                             stroke={strokeColor}
-                                                            strokeWidth="12"
+                                                            strokeWidth="8"
                                                             fill="none"
                                                             strokeLinecap="round"
+                                                            strokeDasharray={end.isUnlocked ? "none" : "12 12"}
                                                         />
                                                     );
                                                 })}
@@ -261,56 +303,75 @@ export default function Dashboard() {
 
                                             {/* Map Nodes (Books) */}
                                             {mapNodes.map((node) => {
-                                                const pos = getLevelPosition(node.index, 400); // Ensure nodes align with SVG
-                                                const isNT = node.index >= 39;
-                                                const yOffset = isNT ? 120 : 0; // Push down NT nodes to make room for the marker
+                                                const isNTMarker = node.index === 39;
+                                                const isOTMarker = node.index === 0;
                                                 
                                                 return (
-                                                    <React.Fragment key={node.abbrev.pt}>
-                                                        {node.index === 39 && (
-                                                            <div className="absolute w-full text-center z-20" style={{ top: pos.y + yOffset - 100 }}>
-                                                                <span className="bg-white/10 border border-white/20 px-6 py-2 rounded-full text-xs font-bold tracking-[0.2em] uppercase">Novo Testamento</span>
+                                                    <div
+                                                        key={node.abbrev.pt}
+                                                        className="absolute"
+                                                        style={{
+                                                            left: node.x,
+                                                            top: node.y,
+                                                            transform: 'translate(-50%, -50%)'
+                                                        }}
+                                                    >
+                                                        {isOTMarker && (
+                                                            <div className="absolute z-20 pointer-events-none flex flex-col items-center" style={{ left: '50%', top: -120, transform: 'translateX(-50%)' }}>
+                                                                <span className="bg-black/80 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full text-xs font-black tracking-[0.3em] uppercase text-white shadow-2xl whitespace-nowrap">
+                                                                    Antigo Testamento
+                                                                </span>
+                                                                <div className="w-px h-12 bg-gradient-to-b from-white/20 to-transparent mt-2" />
                                                             </div>
                                                         )}
+                                                        {isNTMarker && (
+                                                            <div className="absolute z-20 pointer-events-none flex flex-col items-center" style={{ left: '50%', top: -120, transform: 'translateX(-50%)' }}>
+                                                                <span className="bg-white text-black border border-white/20 px-6 py-3 rounded-full text-xs font-black tracking-[0.3em] uppercase shadow-[0_0_30px_rgba(255,255,255,0.3)] whitespace-nowrap">
+                                                                    Novo Testamento
+                                                                </span>
+                                                                <div className="w-px h-12 bg-gradient-to-b from-white/60 to-transparent mt-2" />
+                                                            </div>
+                                                        )}
+                                                        
                                                         <motion.button
                                                             whileHover={node.isUnlocked ? { scale: 1.15 } : {}}
                                                             whileTap={node.isUnlocked ? { scale: 0.95 } : {}}
                                                             onClick={() => node.isUnlocked && navigate(`/bible/${node.abbrev.pt}`)}
                                                             className={cn(
-                                                                "absolute w-[80px] h-[80px] rounded-full flex flex-col items-center justify-center transition-all border-4 z-10 shadow-xl",
+                                                                "relative w-[70px] h-[70px] rounded-full flex flex-col items-center justify-center transition-all border-4 z-10 shadow-xl backdrop-blur-sm",
                                                                 node.isCompleted 
-                                                                    ? "bg-amber-400 border-amber-200 text-amber-950 shadow-[0_0_30px_rgba(251,191,36,0.5)]" 
+                                                                    ? "bg-amber-400/90 border-amber-200 text-amber-950 shadow-[0_0_40px_rgba(251,191,36,0.3)]" 
                                                                     : node.isCurrent 
-                                                                        ? "bg-white border-white text-black shadow-[0_0_40px_rgba(255,255,255,0.6)] ring-4 ring-white/20 animate-pulse" 
-                                                                        : "bg-zinc-900 border-zinc-700 text-zinc-500 cursor-not-allowed"
+                                                                        ? "bg-white border-white text-black shadow-[0_0_60px_rgba(255,255,255,0.8)] ring-4 ring-white/30 animate-[pulse_3s_ease-in-out_infinite]" 
+                                                                        : "bg-black/60 border-white/10 text-white/30 hover:bg-black/80"
                                                             )}
-                                                            style={{
-                                                                left: `calc(50% - 40px + ${pos.x - 200}px)`, // center relative positioning
-                                                                top: pos.y + yOffset - 40,
-                                                            }}
                                                         >
                                                             {node.isCompleted ? (
-                                                                <CheckCircle2 size={32} className="text-amber-900" />
+                                                                <CheckCircle2 size={30} className="text-amber-900" />
                                                             ) : !node.isUnlocked ? (
-                                                                <Lock size={24} className="opacity-50" />
+                                                                <Lock size={20} className="opacity-50" />
                                                             ) : (
-                                                                <span className="font-black text-2xl tracking-tighter leading-none">{node.name.substring(0, 3)}</span>
+                                                                <span className="font-black text-xl tracking-tighter leading-none">{node.name.substring(0, 3)}</span>
                                                             )}
                                                             
                                                             {/* Label underneath */}
-                                                            <div className="absolute top-[90px] w-[120px] text-center">
+                                                            <div className="absolute top-[80px] w-auto whitespace-nowrap text-center pointer-events-none">
                                                                 <span className={cn(
-                                                                    "text-xs font-bold tracking-tight rounded-md px-2 py-1 bg-black/80 backdrop-blur-sm border",
-                                                                    node.isUnlocked ? "text-white border-white/20" : "text-white/30 border-transparent"
+                                                                    "text-xs font-bold tracking-tight rounded-lg px-3 py-1.5 shadow-xl transition-all",
+                                                                    node.isCurrent
+                                                                        ? "bg-white text-black"
+                                                                        : node.isUnlocked 
+                                                                            ? "bg-black/90 text-white border border-white/20" 
+                                                                            : "bg-black/40 text-white/30 border border-white/5"
                                                                 )}>
                                                                     {node.name}
                                                                 </span>
                                                             </div>
                                                         </motion.button>
-                                                    </React.Fragment>
+                                                    </div>
                                                 );
                                             })}
-                                        </div>
+                                        </motion.div>
                                     </div>
                                 </div>
                             );
@@ -323,5 +384,6 @@ export default function Dashboard() {
             
             <CustomizationModal isOpen={showCustomization} onClose={() => setShowCustomization(false)} />
         </div>
+        </PageTransition>
     );
 }

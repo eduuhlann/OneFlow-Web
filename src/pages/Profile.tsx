@@ -21,6 +21,7 @@ import { useProfile } from '../contexts/ProfileContext';
 import { supabase } from '../services/supabase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import PageTransition from '../components/PageTransition';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -106,6 +107,7 @@ const Profile: React.FC = () => {
     };
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-black text-white p-6 md:p-12 overflow-x-hidden">
             <div className="max-w-3xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
@@ -219,35 +221,11 @@ const Profile: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-
-                        {/* Integration/Metadata Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] flex items-center gap-6 group">
-                                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
-                                    <Sparkles size={24} />
-                                </div>
-                                <div>
-                                    <span className="text-[8px] font-bold tracking-[0.3em] text-white/20 uppercase block mb-1">Status da Conta</span>
-                                    <h5 className="font-black italic tracking-tighter">Premium OneFlow</h5>
-                                </div>
-                            </div>
-
-                            <div className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] flex items-center gap-6 group">
-                                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
-                                    <Clock size={24} />
-                                </div>
-                                <div>
-                                    <span className="text-[8px] font-bold tracking-[0.3em] text-white/20 uppercase block mb-1">Membro desde</span>
-                                    <h5 className="font-black italic tracking-tighter">
-                                        {new Date(user?.created_at || Date.now()).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
-                                    </h5>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        </PageTransition>
     );
 };
 

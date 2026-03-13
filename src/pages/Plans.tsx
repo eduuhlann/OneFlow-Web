@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { plansService, STATIC_PLANS, Plan, UserPlan } from '../services/features/plansService';
 import logo from '../assets/logo.png';
+import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -53,6 +54,7 @@ const Plans: React.FC = () => {
     const isPlanActive = (planId: string) => activePlans.some(p => p.planId === planId);
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
             <div className="max-w-4xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
@@ -246,6 +248,7 @@ const Plans: React.FC = () => {
                 )}
             </AnimatePresence>
         </div>
+        </PageTransition>
     );
 };
 
