@@ -8,7 +8,7 @@
 
 @layer base {
   body {
-    @apply bg-black text-white antialiased;
+    @apply bg-black text-white antialiased font-serif;
   }
 }
 
@@ -54,4 +54,94 @@
 
 .translate-z-8 {
   transform: translateZ(-8px);
+}
+
+/* =========================================
+   THEMES & CUSTOMIZATION
+   ========================================= */
+
+/* Default Global Theme (classic-dark fallback) */
+:root {
+  --color-accent: rgba(255, 255, 255, 0.2);
+  --color-accent-hover: rgba(255, 255, 255, 0.4);
+  --color-text-glow: rgba(255, 255, 255, 0.3);
+}
+
+/* Classic Dark (default) */
+:root[data-theme="classic-dark"] {
+  --color-accent: rgba(255, 255, 255, 0.2);
+  --color-accent-hover: rgba(255, 255, 255, 0.4);
+  --color-text-glow: rgba(255, 255, 255, 0.3);
+}
+
+/* Royal Purple */
+:root[data-theme="royal-purple"] {
+  --color-accent: rgba(168, 85, 247, 0.4); /* purple-500 */
+  --color-accent-hover: rgba(192, 132, 252, 0.6); /* purple-400 */
+  --color-text-glow: rgba(168, 85, 247, 0.5);
+}
+
+/* Midnight Blue */
+:root[data-theme="midnight-blue"] {
+  --color-accent: rgba(59, 130, 246, 0.4); /* blue-500 */
+  --color-accent-hover: rgba(96, 165, 250, 0.6); /* blue-400 */
+  --color-text-glow: rgba(59, 130, 246, 0.5);
+}
+
+/* Pure Monochrome */
+:root[data-theme="pure-monochrome"] {
+  --color-accent: rgba(255, 255, 255, 0.1);
+  --color-accent-hover: rgba(255, 255, 255, 0.25);
+  --color-text-glow: rgba(255, 255, 255, 0.15);
+}
+
+/* Classes to consume the variables if we want global application */
+.theme-glow {
+  text-shadow: 0 0 20px var(--color-text-glow);
+}
+
+.theme-border {
+  border-color: var(--color-accent);
+}
+
+.hover\:theme-border:hover {
+  border-color: var(--color-accent-hover);
+}
+
+/* =========================================
+   WALLPAPERS (Background Utilities)
+   ========================================= */
+
+.bg-wallpaper-none {
+  background: #000;
+}
+
+.bg-wallpaper-mesh {
+  background-color: #000000;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+  background-size: 200% 200%;
+  animation: meshFlow 15s ease infinite alternate;
+}
+
+.bg-wallpaper-aurora {
+  background-color: #000;
+  background-image: 
+    radial-gradient(circle at top left, rgba(74, 222, 128, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+  animation: auroraFlow 20s ease-in-out infinite alternate;
+}
+
+@keyframes meshFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes auroraFlow {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
 }

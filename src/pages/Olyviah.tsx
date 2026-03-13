@@ -186,7 +186,7 @@ const Olyviah: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-black text-white overflow-hidden font-sans">
+        <div className="flex h-screen bg-black text-white overflow-hidden">
             <input
                 type="file"
                 ref={avatarInputRef}
@@ -276,7 +276,7 @@ const Olyviah: React.FC = () => {
                                 <h1 className="font-bold text-lg">Olyviah</h1>
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">IA Missionária Online</span>
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic opacity-60">IA Missionária Online</span>
                                 </div>
                             </div>
                         </div>
@@ -308,7 +308,7 @@ const Olyviah: React.FC = () => {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold mb-2 text-white">Paz do Senhor, {displayName}</h2>
-                                <p className="text-white/40 leading-relaxed italic text-sm">
+                                <p className="text-white/40 leading-relaxed italic text-sm opacity-80">
                                     Sou Olyviah. Estou aqui para caminhar com você em sua jornada espiritual. O que gostaria de compartilhar hoje?
                                 </p>
                             </div>

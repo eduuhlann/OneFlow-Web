@@ -93,7 +93,7 @@ const Prayer: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-black text-white overflow-hidden flex flex-col">
+        <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
             {/* Background Ambience Layer */}
             <div className="fixed inset-0 pointer-events-none">
                 <AnimatePresence mode="wait">
@@ -111,7 +111,7 @@ const Prayer: React.FC = () => {
             </div>
 
             {/* Header */}
-            <header className="p-6 md:p-12 relative z-10">
+            <header className="relative z-10">
                 <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group">
                     <ArrowLeft className="group-hover:-translate-x-1 transition-transform" />
                     <span className="font-bold text-xs tracking-widest uppercase">Voltar</span>
@@ -228,7 +228,7 @@ const Prayer: React.FC = () => {
                             {requests.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-center opacity-20 pointer-events-none">
                                     <CheckCircle2 size={48} className="mb-4" />
-                                    <p className="font-bold text-xs tracking-[0.2em] uppercase">Sua lista está vazia</p>
+                                    <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase italic">Momentos de conexão e silêncio</p>
                                 </div>
                             )}
                         </div>
