@@ -41,7 +41,11 @@ const Plans: React.FC = () => {
     };
 
     const handleDelete = (planId: string) => {
-        plansService.leavePlan(planId);
+        if (plansService.getCustomPlans().some(p => p.id === planId)) {
+            plansService.deleteCustomPlan(planId);
+        } else {
+            plansService.leavePlan(planId);
+        }
         setActivePlans(plansService.getActivePlans());
         setShowConfirmDelete(null);
     };
@@ -49,7 +53,7 @@ const Plans: React.FC = () => {
     const isPlanActive = (planId: string) => activePlans.some(p => p.planId === planId);
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12">
+        <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
             <div className="max-w-4xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
                     <div className="flex items-center gap-6">
@@ -92,8 +96,8 @@ const Plans: React.FC = () => {
                         <p className="text-white/40 text-sm font-medium leading-relaxed">Deixe a Olyviah criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
                     </div>
                     <button 
-                        onClick={() => navigate('/olyviah')}
-                        className="px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+                        onClick={() => navigate('/plans/ai-generator')}
+                        className="px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all whitespace-nowrap uppercase"
                     >
                         CRIAR AGORA
                     </button>
@@ -114,7 +118,8 @@ const Plans: React.FC = () => {
                                 </div>
                             ) : (
                                 activePlans.map(up => {
-                                    const plan = STATIC_PLANS.find(p => p.id === up.planId);
+                                    const customPlans = plansService.getCustomPlans();
+                                    const plan = STATIC_PLANS.find(p => p.id === up.planId) || customPlans.find(p => p.id === up.planId);
                                     if (!plan) return null;
                                     const progress = plansService.getPlanProgress(plan.id);
 
@@ -122,7 +127,8 @@ const Plans: React.FC = () => {
                                         <motion.div
                                             key={up.planId}
                                             layout
-                                            className="p-6 bg-white/5 border border-white/10 rounded-[2rem] group"
+                                            className="p-6 bg-white/5 border border-white/10 rounded-[2rem] group cursor-pointer hover:bg-white/[0.07] transition-all"
+                                            onClick={() => navigate(`/plans/${plan.id}`)}
                                         >
                                             <div className="flex items-center gap-6">
                                                 <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
@@ -142,14 +148,17 @@ const Plans: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <button
-                                                    onClick={() => setShowConfirmDelete(plan.id)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowConfirmDelete(plan.id);
+                                                    }}
                                                     className="p-3 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
-                                                <button className="p-3 bg-white text-black rounded-xl hover:scale-110 active:scale-95 transition-all">
-                                                    <Plus size={18} />
-                                                </button>
+                                                <div className="p-3 bg-white text-black rounded-xl hover:scale-110 active:scale-95 transition-all">
+                                                    <ChevronRight size={18} />
+                                                </div>
                                             </div>
                                         </motion.div>
                                     );
@@ -165,7 +174,7 @@ const Plans: React.FC = () => {
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {STATIC_PLANS.filter(p => !isPlanActive(p.id)).map(plan => (
+                            {[...STATIC_PLANS, ...plansService.getCustomPlans()].filter(p => !isPlanActive(p.id)).map(plan => (
                                 <motion.div
                                     key={plan.id}
                                     whileHover={{ y: -5 }}
@@ -181,7 +190,7 @@ const Plans: React.FC = () => {
                                             </span>
                                         </div>
                                         <h4 className="text-xl font-bold mb-3 tracking-tight">{plan.title}</h4>
-                                        <p className="text-white/40 text-sm font-light leading-relaxed mb-8">{plan.description}</p>
+                                        <p className="text-white/40 text-sm italic opacity-80">{plan.description}</p>
                                     </div>
                                     <button
                                         onClick={() => handleJoin(plan.id)}

@@ -65,5 +65,21 @@ export const statsService = {
         if (chapters.length === 0) return null;
         const last = chapters[chapters.length - 1];
         return last.split(':')[0];
+    },
+
+    isBookCompleted(bookAbbrev: string): boolean {
+        const book = STATIC_BOOKS.find(b => b.abbrev.pt === bookAbbrev);
+        if (!book) return false;
+
+        const chapters = this.getReadChapters();
+        let readCount = 0;
+        
+        for (const chapterKey of chapters) {
+            if (chapterKey.startsWith(`${bookAbbrev}:`)) {
+                readCount++;
+            }
+        }
+        
+        return readCount >= book.chapters;
     }
 };

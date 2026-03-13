@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   BookOpen,
   Search,
@@ -312,45 +312,56 @@ const Features = () => {
 
 
 
-import { Phone3D } from '../components/Phone3D';
 
-const BiblePreview = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+const ExperienceManifesto = () => {
+  const coreValues = [
+    { title: "Fluidez", description: "Onde cada transição é um suspiro. Uma navegação sem atrito, desenhada para desaparecer e deixar apenas o essencial no seu fluxo de leitura." },
+    { title: "Sutileza", description: "A beleza mora no que não grita. Tons profundos, tipografia curada e um equilíbrio visual que acalma os sentidos e eleva o espírito." },
+    { title: "Foco", description: "Em um mundo ruidoso, silenciamos o desnecessário. O OneFlow é o seu lugar de concentração absoluta para o estudo da Palavra." },
+    { title: "Privacidade", description: "Seu momento de fé é sagrado. Sem rastros, sem pixels intrusivos, sem nuvens de dados. Apenas você e o que realmente importa." }
+  ];
 
   return (
-    <section id="preview" className="py-20 md:py-40 px-6 bg-white/[0.01] relative overflow-hidden">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-32 items-center">
+    <section id="manifesto" className="py-40 px-6 relative overflow-hidden bg-white/[0.01]">
+      <div className="max-w-7xl mx-auto border-t border-white/5 pt-20">
         <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 1 }}
+          className="mb-32"
         >
-          <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/20 mb-6 block">Interface</span>
-          <h2 className="text-5xl md:text-7xl font-serif font-bold mb-10 leading-[0.95] tracking-tighter">
-            Fluidez em cada <br />
-            <span className="italic font-normal text-white/30">versículo.</span>
+          <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/20 mb-8 block font-sans">A Filosofia do Essencial</span>
+          <h2 className="text-6xl md:text-[8rem] font-serif font-bold leading-[0.85] tracking-tighter mb-12">
+            Design que <br />
+            <span className="italic font-normal text-white/30">encontra o espírito.</span>
           </h2>
-          <p className="text-xl text-white/40 font-light leading-relaxed mb-12">
-            Navegue por livros e capítulos com a leveza de passar uma página física, mas com a precisão do digital.
-          </p>
-
         </motion.div>
 
-        <div className="relative group flex justify-center items-center" ref={containerRef}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="w-full max-w-[500px]"
-          >
-            <Phone3D />
-          </motion.div>
-          
-          {/* Decorative background glow */}
-          <div className="absolute -z-10 inset-0 bg-white/5 blur-[120px] rounded-full opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-32 gap-y-24">
+          {coreValues.map((value, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 * index, duration: 0.8 }}
+              className="group"
+            >
+              <div className="flex items-baseline gap-8 mb-8">
+                <span className="text-white/5 font-serif italic text-5xl group-hover:text-white/20 transition-all duration-700">0{index + 1}</span>
+                <h3 className="text-4xl font-serif font-bold tracking-tight">{value.title}</h3>
+              </div>
+              <p className="text-white/40 leading-relaxed font-light text-xl max-w-sm group-hover:text-white/60 transition-all duration-700">
+                {value.description}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </div>
+      
+      {/* Background patterns */}
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/[0.01] to-transparent pointer-events-none" />
     </section>
   );
 };
@@ -381,8 +392,8 @@ const Footer = () => {
           <div>
             <h4 className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/20 mb-8">Legal</h4>
             <ul className="space-y-4 text-white/50 font-light">
-              <li><a href="#" className="hover:text-white transition-colors">Privacidade</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Termos</a></li>
+              <li><Link to="/privacy" className="hover:text-white transition-colors">Privacidade</Link></li>
+              <li><Link to="/terms" className="hover:text-white transition-colors">Termos</Link></li>
               <li><a href="#" className="hover:text-white transition-colors">Cookies</a></li>
             </ul>
           </div>
@@ -415,7 +426,7 @@ export default function Home() {
       <main className="relative z-10">
         <Hero onOpenAuth={() => setIsAuthModalOpen(true)} />
         <Features />
-        <BiblePreview />
+        <ExperienceManifesto />
       </main>
       <Footer />
 

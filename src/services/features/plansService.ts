@@ -1,9 +1,17 @@
+export interface PlanDayContent {
+    day: number;
+    title: string;
+    verse: string;
+    content: string;
+}
+
 export interface Plan {
     id: string;
     title: string;
     description: string;
     durationDays: number;
     category: 'standard' | 'ai' | 'thematic';
+    content?: PlanDayContent[];
 }
 
 export interface UserPlan {
@@ -13,6 +21,7 @@ export interface UserPlan {
 }
 
 const ACTIVE_PLANS_KEY = 'oneflow_active_plans';
+const CUSTOM_PLANS_KEY = 'oneflow_custom_plans';
 
 export const STATIC_PLANS: Plan[] = [
     {
@@ -39,6 +48,26 @@ export const STATIC_PLANS: Plan[] = [
 ];
 
 export const plansService = {
+    getCustomPlans(): Plan[] {
+        const data = localStorage.getItem(CUSTOM_PLANS_KEY);
+        return data ? JSON.parse(data) : [];
+    },
+
+    saveCustomPlan(plan: Plan) {
+        const customPlans = this.getCustomPlans();
+        customPlans.push(plan);
+        localStorage.setItem(CUSTOM_PLANS_KEY, JSON.stringify(customPlans));
+    },
+
+    deleteCustomPlan(planId: string) {
+        // Remove from custom plans
+        const customPlans = this.getCustomPlans().filter(p => p.id !== planId);
+        localStorage.setItem(CUSTOM_PLANS_KEY, JSON.stringify(customPlans));
+        
+        // Also remove from active plans if it is there
+        this.leavePlan(planId);
+    },
+
     getActivePlans(): UserPlan[] {
         const data = localStorage.getItem(ACTIVE_PLANS_KEY);
         return data ? JSON.parse(data) : [];
@@ -76,9 +105,14 @@ export const plansService = {
         const plan = active.find(p => p.planId === planId);
         if (!plan) return 0;
 
-        const staticPlan = STATIC_PLANS.find(p => p.id === planId);
-        if (!staticPlan) return 0;
+        let targetPlan = STATIC_PLANS.find(p => p.id === planId);
+        if (!targetPlan) {
+            const customPlans = this.getCustomPlans();
+            targetPlan = customPlans.find(p => p.id === planId);
+        }
 
-        return Math.round((plan.completedDays.length / staticPlan.durationDays) * 100);
+        if (!targetPlan) return 0;
+
+        return Math.round((plan.completedDays.length / targetPlan.durationDays) * 100);
     }
 };
