@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Palette, Image as ImageIcon, Layout as LayoutIcon } from 'lucide-react';
+import { X, Palette as PaletteIcon, Image as ImageIcon, Layout as LayoutIcon, Upload, Trash2 } from 'lucide-react';
 import { usePreferences, ThemeType, WallpaperType, DashboardLayoutItem } from '../contexts/PreferencesContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -14,35 +14,43 @@ interface Props {
     onClose: () => void;
 }
 
-const themeOptions: { id: ThemeType; label: string; color: string }[] = [
-    { id: 'classic-dark', label: 'Clássico', color: 'bg-white' },
-    { id: 'royal-purple', label: 'Real', color: 'bg-purple-500' },
-    { id: 'midnight-blue', label: 'Meia-noite', color: 'bg-blue-500' },
-    { id: 'pure-monochrome', label: 'Puro', color: 'bg-gray-400' }
-];
-
-const wallpaperOptions: { id: WallpaperType; label: string; src?: string }[] = [
-    { id: 'particles', label: 'Partículas' },
-    { id: 'mesh', label: 'Aura' },
-    { id: 'aurora', label: 'Boreal' },
-    { id: 'none', label: 'Sólido' }
-];
-
-const layoutLabels: Record<DashboardLayoutItem, string> = {
-    nav: 'Atalhos',
-    journey: 'Jornada'
-};
-
 export default function CustomizationModal({ isOpen, onClose }: Props) {
     const { preferences, updatePreference, resetPreferences } = usePreferences();
 
-    const handleLayoutMove = (index: number, direction: -1 | 1) => {
-        if (index + direction < 0 || index + direction >= preferences.dashboardLayout.length) return;
-        const newLayout = [...preferences.dashboardLayout];
-        const temp = newLayout[index];
-        newLayout[index] = newLayout[index + direction];
-        newLayout[index + direction] = temp;
-        updatePreference('dashboardLayout', newLayout);
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Size limit check (approx 50MB for videos/4K)
+        if (file.size > 50 * 1024 * 1024) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const url = event.target?.result as string;
+            const type = (file.type.startsWith('video') ? 'video' : 'image') as 'image' | 'video';
+            const newWallpaper = { type, url };
+            
+            // Add to gallery
+            const currentGallery = preferences.uploadedWallpapers || [];
+            updatePreference('uploadedWallpapers', [...currentGallery, newWallpaper]);
+            
+            // Apply it
+            updatePreference('customWallpaper', newWallpaper);
+            updatePreference('wallpaper', 'custom');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleDeleteWallpaper = (url: string) => {
+        const currentGallery = preferences.uploadedWallpapers || [];
+        const newGallery = currentGallery.filter(w => w.url !== url);
+        updatePreference('uploadedWallpapers', newGallery);
+        
+        // If the deleted one was active, revert to default
+        if (preferences.customWallpaper?.url === url) {
+            updatePreference('customWallpaper', undefined);
+            updatePreference('wallpaper', 'particles');
+        }
     };
 
     return (
@@ -64,7 +72,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-zinc-950 border-l border-white/10 z-50 overflow-y-auto"
+                        className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-black/40 backdrop-blur-2xl border-l border-white/10 z-50 overflow-y-auto"
                     >
                         <div className="p-6 md:p-8">
                             <div className="flex items-center justify-between mb-8">
@@ -81,90 +89,83 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                             </div>
 
                             <div className="space-y-10">
-                                {/* Theme Selection */}
-                                <section>
-                                    <div className="flex items-center gap-2 mb-4 text-white/60">
-                                        <Palette size={16} />
-                                        <h3 className="text-xs font-bold tracking-[0.2em] uppercase">Tonalidade</h3>
+                                {/* Upload & Gallery Section */}
+                                <section className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Sua Galeria</h4>
+                                        {preferences.wallpaper === 'custom' && (
+                                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Personalizado Ativo</span>
+                                        )}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {themeOptions.map((t) => (
-                                            <button
-                                                key={t.id}
-                                                onClick={() => updatePreference('theme', t.id)}
-                                                className={cn(
-                                                    "p-4 rounded-2xl flex items-center gap-3 transition-all border",
-                                                    preferences.theme === t.id
-                                                        ? "bg-white/10 border-white/30"
-                                                        : "bg-white/[0.02] border-white/5 hover:border-white/10"
-                                                )}
-                                            >
-                                                <div className={cn("w-4 h-4 rounded-full", t.color)} />
-                                                <span className="text-sm font-serif">{t.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
 
-                                {/* Wallpaper Selection */}
-                                <section>
-                                    <div className="flex items-center gap-2 mb-4 text-white/60">
-                                        <ImageIcon size={16} />
-                                        <h3 className="text-xs font-bold tracking-[0.2em] uppercase">Fundo Dinâmico</h3>
-                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        {wallpaperOptions.map((w) => (
-                                            <button
-                                                key={w.id}
-                                                onClick={() => updatePreference('wallpaper', w.id)}
-                                                className={cn(
-                                                    "p-4 rounded-2xl text-left transition-all border",
-                                                    preferences.wallpaper === w.id
-                                                        ? "bg-white/10 border-white/30"
-                                                        : "bg-white/[0.02] border-white/5 hover:border-white/10"
-                                                )}
-                                            >
-                                                <span className="text-sm font-serif block">{w.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
+                                        {/* Upload Button */}
+                                        <label className="flex flex-col items-center justify-center gap-2 h-24 rounded-2xl bg-white/[0.03] border border-white/10 border-dashed hover:bg-white/10 transition-all cursor-pointer group">
+                                            <Upload size={20} className="text-white/40 group-hover:text-white group-hover:scale-110 transition-all" />
+                                            <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">Novo Upload</span>
+                                            <input type="file" className="hidden" accept="video/mp4,image/*" onChange={handleFileUpload} />
+                                        </label>
 
-                                {/* Dashboard Layout Order */}
-                                <section>
-                                    <div className="flex items-center gap-2 mb-4 text-white/60">
-                                        <LayoutIcon size={16} />
-                                        <h3 className="text-xs font-bold tracking-[0.2em] uppercase">Ordem do Painel</h3>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {preferences.dashboardLayout.map((item, index) => (
-                                            <div
-                                                key={item}
-                                                className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between group"
-                                            >
-                                                <span className="font-serif text-sm text-white/80">{layoutLabels[item]}</span>
-                                                <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleLayoutMove(index, -1)}
-                                                        disabled={index === 0}
-                                                        className="p-1 rounded-md hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
-                                                    >
-                                                        ↑
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleLayoutMove(index, 1)}
-                                                        disabled={index === preferences.dashboardLayout.length - 1}
-                                                        className="p-1 rounded-md hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
-                                                    >
-                                                        ↓
-                                                    </button>
-                                                </div>
+                                        {/* User Gallery Items */}
+                                        {preferences.uploadedWallpapers?.map((p, idx) => (
+                                            <div key={idx} className="relative group h-24">
+                                                <button
+                                                    onClick={() => {
+                                                        updatePreference('customWallpaper', { type: p.type, url: p.url });
+                                                        updatePreference('wallpaper', 'custom');
+                                                    }}
+                                                    className={cn(
+                                                        "w-full h-full rounded-2xl overflow-hidden transition-all border-2",
+                                                        preferences.wallpaper === 'custom' && preferences.customWallpaper?.url === p.url
+                                                            ? "border-white shadow-lg shadow-white/10"
+                                                            : "border-transparent opacity-60 hover:opacity-100"
+                                                    )}
+                                                >
+                                                    {p.type === 'video' ? (
+                                                        <video src={p.url} className="w-full h-full object-cover" muted />
+                                                    ) : (
+                                                        <img src={p.url} alt="User Upload" className="w-full h-full object-cover" />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteWallpaper(p.url)}
+                                                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                                                    title="Remover da galeria"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
-                                    <p className="text-white/30 text-xs mt-3 italic text-center">
-                                        (Mova para definir o que aparece primeiro ao abrir o App)
-                                    </p>
+
+                                    {(!preferences.uploadedWallpapers || preferences.uploadedWallpapers.length === 0) && (
+                                        <p className="text-[10px] text-white/20 italic text-center py-4 uppercase tracking-widest">
+                                            Nenhum upload ainda
+                                        </p>
+                                    )}
+                                </section>
+
+                                {/* Glass Intensity Section */}
+                                <section className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Intensidade do Vidro</h4>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(['crystal', 'frosted', 'solid'] as const).map((style) => (
+                                            <button
+                                                key={style}
+                                                onClick={() => updatePreference('glassStyle', style)}
+                                                className={cn(
+                                                    "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
+                                                    (preferences.glassStyle || 'frosted') === style
+                                                        ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
+                                                        : "border-transparent bg-white/[0.03] text-white/40 hover:bg-white/5 hover:text-white/80"
+                                                )}
+                                            >
+                                                {style === 'crystal' ? 'Cristalino' : style === 'frosted' ? 'Fosco' : 'Sólido'}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </section>
 
                                 {/* Reset */}

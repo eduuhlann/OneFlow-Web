@@ -36,13 +36,14 @@ const Olyviah: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [aiAvatar, setAiAvatar] = useState<string | null>(localStorage.getItem('olyviah_avatar'));
-
+    const [aiAvatar, setAiAvatar] = useState<string | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        const savedAvatar = localStorage.getItem('olyviah_avatar');
+        if (savedAvatar) setAiAvatar(savedAvatar);
         loadThreads();
     }, []);
 
@@ -407,7 +408,7 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
                                 className="max-w-3xl mx-auto relative flex items-end gap-2 bg-[#2f2f2f] border border-white/10 rounded-[26px] p-2 focus-within:border-white/20 transition-all"
                             >
                                 <textarea
-                                    className="flex-1 bg-transparent border-none py-3 px-4 focus:ring-0 text-[15px] max-h-40 overflow-y-auto resize-none scrollbar-hide"
+                                    className="flex-1 bg-transparent border-none py-3 px-4 focus:ring-0 focus:outline-none text-[15px] max-h-40 overflow-y-auto resize-none scrollbar-hide"
                                     placeholder="Mensagem Olyviah"
                                     rows={1}
                                     value={input}

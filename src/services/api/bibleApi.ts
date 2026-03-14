@@ -28,9 +28,13 @@ export const bibleApi = {
         const cacheKey = `@bible_cache_${version}_${bookAbbrev}_${chapter}`;
         try {
             const cachedBody = localStorage.getItem(cacheKey);
-            if (cachedBody) return JSON.parse(cachedBody);
+            if (cachedBody) {
+                const parsed = JSON.parse(cachedBody);
+                if (parsed && typeof parsed === 'object') return parsed;
+            }
         } catch (e) {
-            console.warn('Error reading from cache:', e);
+            console.warn('Error reading from cache (corrupted storage?):', e);
+            localStorage.removeItem(cacheKey); // Clean up corrupted data
         }
 
         try {
