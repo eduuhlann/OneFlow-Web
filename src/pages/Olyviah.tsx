@@ -3,15 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     Send,
     ArrowLeft,
-    Sparkles,
     Plus,
-    MessageSquare,
-    MoreVertical,
     Trash2,
-    ChevronRight,
-    Bot,
-    User as UserIcon,
-    ImagePlus
+    ImagePlus,
+    MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +17,8 @@ import { callGroqChat } from '../services/ai/groqService';
 import { AnimatedMessage } from '../components/AnimatedMessage';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import PageTransition from '../components/PageTransition';
+import { OLYVIAH_PERSONALITY, OLYVIAH_THEOLOGICAL_PILLARS } from '../services/ai/olyviahKnowledge';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -39,9 +36,9 @@ const Olyviah: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [showSidebar, setShowSidebar] = useState(false);
     const [aiAvatar, setAiAvatar] = useState<string | null>(localStorage.getItem('olyviah_avatar'));
 
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,8 +81,7 @@ const Olyviah: React.FC = () => {
     const handleCreateThread = async () => {
         const id = await chatStorage.createThread('Nova conversa');
         setActiveThreadId(id);
-        loadThreads();
-        setShowSidebar(false);
+        await loadThreads();
     };
 
     const handleSendMessage = async (e?: React.FormEvent) => {
@@ -119,8 +115,19 @@ const Olyviah: React.FC = () => {
             }));
             history.push({ role: 'user', content: userMessage.content });
 
-            // Olyviah's Persona System Prompt - Direct and Concise
-            const systemPrompt = "Você é Olyviah, uma assistente espiritual do OneFlow. Seja extremamente direta ao ponto, concisa e prática. Ajude o usuário a entender a Bíblia e crescer espiritualmente com respostas curtas e objetivas. Nunca use emojis. Mantenha precisão teológica sem floreios.";
+            const pillars = OLYVIAH_THEOLOGICAL_PILLARS.map(p => `- ${p.pillar}: ${p.description}`).join('\n');
+            const systemPrompt = `
+Você é ${OLYVIAH_PERSONALITY.name}. ${OLYVIAH_PERSONALITY.role}.
+PERSONALIDADE: ${OLYVIAH_PERSONALITY.tone}
+MISSÃO: ${OLYVIAH_PERSONALITY.forged_in}
+
+PILARES TEOLÓGICOS (CRÍTICO):
+${pillars}
+
+DIRETRIZES DE RESPOSTA:
+${OLYVIAH_PERSONALITY.rules.map(r => `* ${r}`).join('\n')}
+
+IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de conhecimento teológico e espiritual profundo. Suas respostas devem refletir essa autoridade e precisão. Seja extremamente direta e concisa.`;
 
             const groqMessages = [
                 { role: 'system' as const, content: systemPrompt },
@@ -140,7 +147,7 @@ const Olyviah: React.FC = () => {
             };
 
             setMessages(prev => [...prev, assistantMessage]);
-            await chatStorage.saveMessage(activeThreadId, assistantMessage);
+            await chatStorage.saveMessage(activeThreadId!, assistantMessage);
         } catch (error) {
             console.error('Chat error:', error);
             const errorMessage: ChatMessage = {
@@ -152,25 +159,36 @@ const Olyviah: React.FC = () => {
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             setIsTyping(false);
-            loadThreads(); // Update thread list with last message
+            loadThreads();
         }
     };
 
     const clearHistory = async () => {
         if (activeThreadId) {
-            await chatStorage.clearMessages(activeThreadId);
-            setMessages([]);
+            if (confirm('Deseja limpar as mensagens desta conversa?')) {
+                await chatStorage.clearMessages(activeThreadId);
+                setMessages([]);
+            }
         }
     };
 
-    const deleteThread = async (id: string, e: React.MouseEvent) => {
+    const handleDeleteThread = async (e: React.MouseEvent, threadId: string) => {
         e.stopPropagation();
-        await chatStorage.deleteThread(id);
-        if (activeThreadId === id) {
-            setActiveThreadId(null);
-            setMessages([]);
+        if (confirm('Deseja excluir permanentemente toda esta conversa?')) {
+            await chatStorage.deleteThread(threadId);
+            const remainingThreads = await chatStorage.getThreads();
+            setThreads(remainingThreads);
+            
+            if (activeThreadId === threadId) {
+                if (remainingThreads.length > 0) {
+                    setActiveThreadId(remainingThreads[0].id);
+                } else {
+                    const newId = await chatStorage.createThread('Nova conversa');
+                    setActiveThreadId(newId);
+                    loadThreads();
+                }
+            }
         }
-        loadThreads();
     };
 
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,260 +205,241 @@ const Olyviah: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-black text-white overflow-hidden">
-            <input
-                type="file"
-                ref={avatarInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-            />
-            {/* Sidebar - Desktop */}
-            <aside className={cn(
-                "fixed inset-y-0 left-0 z-50 w-80 bg-[#0a0a0a] border-r border-white/5 transition-transform duration-300 transform lg:relative lg:translate-x-0",
-                showSidebar ? "translate-x-0" : "-translate-x-full"
-            )}>
-                <div className="flex flex-col h-full p-6">
-                    <div className="flex items-center justify-between mb-8">
-                        <h2 className="text-xl font-bold text-white/90">Conversas</h2>
-                        <button onClick={handleCreateThread} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
+        <PageTransition>
+            <div className="flex h-screen bg-[#0d0d0d] text-white overflow-hidden font-sans">
+                {/* Sidebar - ChatGPT Style */}
+                <AnimatePresence initial={false}>
+                    {isSidebarOpen && (
+                        <motion.aside
+                            initial={{ width: 0, opacity: 0 }}
+                            animate={{ width: 280, opacity: 1 }}
+                            exit={{ width: 0, opacity: 0 }}
+                            className="h-full bg-black border-r border-white/5 flex flex-col flex-shrink-0 overflow-hidden"
+                        >
+                            <div className="p-4 flex-1 flex flex-col gap-2 overflow-y-auto">
+                                <button
+                                    onClick={handleCreateThread}
+                                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium mb-4"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Novo Chat
+                                </button>
 
-                    <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-                        {threads.map(thread => (
+                                <div className="space-y-1">
+                                    <span className="px-3 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2 block">Histórico</span>
+                                    {threads.map(thread => (
+                                        <button
+                                            key={thread.id}
+                                            onClick={() => setActiveThreadId(thread.id)}
+                                            className={cn(
+                                                "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-sm text-left truncate group relative",
+                                                activeThreadId === thread.id ? "bg-white/10" : "hover:bg-white/5"
+                                            )}
+                                        >
+                                            <MessageSquare className="w-4 h-4 opacity-40 shrink-0" />
+                                            <span className="truncate flex-1 pr-6">{thread.title}</span>
+                                            <button
+                                                onClick={(e) => handleDeleteThread(e, thread.id)}
+                                                className="absolute right-2 opacity-0 group-hover:opacity-60 hover:opacity-100 p-1 transition-opacity"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                            </button>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-t border-white/5 space-y-2">
+                                <button
+                                    onClick={() => navigate('/dashboard')}
+                                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-white/5 transition-colors text-sm text-white/60 hover:text-white group"
+                                >
+                                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                                    Voltar ao Dashboard
+                                </button>
+                                
+                                <div className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group">
+                                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/10">
+                                        {profile?.avatar_url ? (
+                                            <img src={profile.avatar_url} className="w-full h-full object-cover" alt="avatar" />
+                                        ) : (
+                                            <span className="text-xs font-bold">{displayName[0]}</span>
+                                        )}
+                                    </div>
+                                    <span className="text-sm font-medium truncate flex-1">{displayName}</span>
+                                </div>
+                            </div>
+                        </motion.aside>
+                    )}
+                </AnimatePresence>
+
+                <div className="flex-1 flex flex-col relative bg-[#171717]">
+                    <input
+                        type="file"
+                        ref={avatarInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                    />
+
+                    {/* Minimal Header */}
+                    <header className="h-14 flex items-center justify-between px-4 z-20">
+                        <div className="flex items-center gap-1">
                             <button
-                                key={thread.id}
-                                onClick={() => {
-                                    setActiveThreadId(thread.id);
-                                    setShowSidebar(false);
-                                }}
-                                className={cn(
-                                    "w-full flex flex-col gap-1 p-4 rounded-2xl transition-all border text-left group",
-                                    activeThreadId === thread.id
-                                        ? "bg-white/10 border-white/10"
-                                        : "bg-transparent border-transparent hover:bg-white/5"
-                                )}
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/60 hover:text-white"
                             >
-                                <div className="flex items-center justify-between">
-                                    <span className={cn(
-                                        "font-bold text-sm truncate flex-1",
-                                        activeThreadId === thread.id ? "text-white" : "text-gray-400"
-                                    )}>
-                                        {thread.title}
-                                    </span>
-                                    <button
-                                        onClick={(e) => deleteThread(thread.id, e)}
-                                        className="p-1 px-3 hover:bg-white/10 rounded-lg text-white/20 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                                <p className="text-[10px] text-gray-600 truncate uppercase font-black tracking-widest">{thread.lastMessage || 'Sem mensagens'}</p>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                             </button>
-                        ))}
-                    </div>
-
-                    <button onClick={() => navigate('/dashboard')} className="mt-8 flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all group">
-                        <ArrowLeft className="w-5 h-5 text-gray-400 group-hover:-translate-x-1 transition-transform" />
-                        <span className="font-bold text-sm">Voltar ao Painel</span>
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Chat Area */}
-            <main className="flex-1 flex flex-col relative bg-black">
-                {/* Chat Header */}
-                <header className="h-20 flex items-center justify-between px-6 border-b border-white/5 bg-black/50 backdrop-blur-xl z-10">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setShowSidebar(true)} className="lg:hidden p-2 hover:bg-white/5 rounded-xl">
-                            <MessageSquare className="w-6 h-6" />
-                        </button>
-                        <div className="flex items-center gap-3">
-                            <div className="relative group">
-                                <div className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
-                                    {aiAvatar ? (
-                                        <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <img src={logo} alt="Olyviah" className="w-6 h-6 object-contain grayscale opacity-60" />
-                                    )}
-                                </div>
-                                <button
-                                    onClick={() => avatarInputRef.current?.click()}
-                                    className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <ImagePlus className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <div>
-                                <h1 className="font-bold text-lg">Olyviah</h1>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic opacity-60">IA Missionária Online</span>
-                                </div>
-                            </div>
+                            <button
+                                onClick={() => navigate('/dashboard')}
+                                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/60 hover:text-white flex items-center gap-2 group px-3 md:hidden"
+                            >
+                                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                            </button>
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                        <button onClick={clearHistory} className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-colors group">
-                            <Trash2 className="w-5 h-5 text-gray-600 group-hover:text-red-400" />
-                        </button>
-                    </div>
-                </header>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar scroll-smooth">
-                    {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto space-y-6">
-                            <div className="w-20 h-20 rounded-[32px] bg-white/[0.03] border border-white/5 flex items-center justify-center p-5 relative group overflow-hidden">
-                                {aiAvatar ? (
-                                    <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover rounded-2xl" />
-                                ) : (
-                                    <img src={logo} alt="OneFlow" className="w-full h-full object-contain grayscale opacity-20" />
-                                )}
-                                <button
-                                    onClick={() => avatarInputRef.current?.click()}
-                                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <ImagePlus className="w-6 h-6" />
-                                </button>
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold mb-2 text-white">Paz do Senhor, {displayName}</h2>
-                                <p className="text-white/40 leading-relaxed italic text-sm opacity-80">
-                                    Sou Olyviah. Estou aqui para caminhar com você em sua jornada espiritual. O que gostaria de compartilhar hoje?
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 w-full">
-                                {[
-                                    "Como entender Romanos 8?",
-                                    "Me dê uma palavra de conforto.",
-                                    "Quais os planos de Deus na minha vida?"
-                                ].map(q => (
-                                    <button
-                                        key={q}
-                                        onClick={() => setInput(q)}
-                                        className="p-4 bg-white/5 border border-white/5 rounded-2xl text-sm font-medium hover:bg-white/10 hover:border-white/10 transition-all text-left"
-                                    >
-                                        {q}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="flex items-baseline gap-1 absolute left-1/2 -translate-x-1/2">
+                            <span className="font-bold text-sm tracking-tight text-white/80">Olyviah</span>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest italic">Digital</span>
                         </div>
-                    ) : (
-                        <>
-                            {messages.map((message) => (
-                                <motion.div
-                                    key={message.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={cn(
-                                        "flex gap-4 max-w-3xl mx-auto",
-                                        message.role === 'user' ? "flex-row-reverse" : "flex-row"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden",
-                                        message.role === 'user' ? "bg-white/10" : "bg-white/5 border border-white/10 p-0"
-                                    )}>
-                                        {message.role === 'user' ? <UserIcon className="w-4 h-4" /> : (
-                                            aiAvatar ? (
+
+                        <button
+                            onClick={clearHistory}
+                            className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/20 hover:text-white group"
+                            title="Limpar mensagens"
+                        >
+                            <Trash2 className="w-3.5 h-3.5 group-hover:text-red-400" />
+                        </button>
+                    </header>
+
+                    {/* Main Chat Area */}
+                    <main className="flex-1 flex flex-col relative overflow-hidden">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth">
+                            <div className="max-w-3xl mx-auto w-full px-6 py-8">
+                                {messages.length === 0 ? (
+                                    <div className="h-[70vh] flex flex-col items-center justify-center text-center space-y-6">
+                                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden mb-4">
+                                            {aiAvatar ? (
                                                 <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover" />
                                             ) : (
-                                                <img src={logo} className="w-5 h-5 object-contain grayscale opacity-60" alt="Olyviah" />
-                                            )
-                                        )}
-                                    </div>
-                                    <div className={cn(
-                                        "flex flex-col gap-2",
-                                        message.role === 'user' ? "items-end" : "items-start"
-                                    )}>
-                                        <div className={cn(
-                                            "p-4 rounded-3xl text-base leading-relaxed",
-                                            message.role === 'user'
-                                                ? "bg-white text-black font-medium"
-                                                : "bg-white/[0.03] border border-white/[0.06] text-gray-200"
-                                        )}>
-                                            {message.role === 'user' ? (
-                                                <span className="whitespace-pre-wrap">{message.content}</span>
-                                            ) : (
-                                                <AnimatedMessage
-                                                    content={message.content}
-                                                    animate={message.id === messages[messages.length - 1]?.id && isTyping === false && message.role === 'assistant'}
-                                                    speed={12}
-                                                />
+                                                <img src={logo} alt="OneFlow" className="w-8 h-8 object-contain grayscale opacity-20" />
                                             )}
                                         </div>
-                                        <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">
-                                            {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
+                                        <h2 className="text-2xl font-semibold tracking-tight">O que posso te ajudar hoje?</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl pt-4">
+                                            {[
+                                                "Explique João 3:16",
+                                                "Conselho para ansiedade",
+                                                "Resumo de Romanos",
+                                                "Como orar melhor?"
+                                            ].map(q => (
+                                                <button
+                                                    key={q}
+                                                    onClick={() => setInput(q)}
+                                                    className="p-4 text-left border border-white/10 rounded-xl text-sm hover:bg-white/5 transition-colors group"
+                                                >
+                                                    <span className="block font-medium mb-1">{q}</span>
+                                                    <span className="text-white/30 text-xs">Começar nova conversa</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </motion.div>
-                            ))}
-                            {isTyping && (
-                                <div className="flex gap-4 max-w-3xl mx-auto">
-                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 mt-1 p-0 overflow-hidden">
-                                        {aiAvatar ? (
-                                            <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <img src={logo} className="w-5 h-5 object-contain grayscale opacity-60" alt="Olyviah" />
+                                ) : (
+                                    <div className="space-y-8">
+                                        {messages.map((message) => (
+                                            <div
+                                                key={message.id}
+                                                className={cn(
+                                                    "flex gap-4",
+                                                    message.role === 'user' ? "justify-end" : "justify-start"
+                                                )}
+                                            >
+                                                {message.role !== 'user' && (
+                                                    <div className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                                        {aiAvatar ? (
+                                                            <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <img src={logo} className="w-5 h-5 object-contain grayscale opacity-20" alt="Olyviah" />
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div className={cn(
+                                                    "max-w-[85%] px-4 py-3 rounded-2xl text-[15px] leading-relaxed",
+                                                    message.role === 'user'
+                                                        ? "bg-[#2f2f2f] text-white"
+                                                        : "bg-transparent text-gray-100"
+                                                )}>
+                                                    {message.role === 'user' ? (
+                                                        <span className="whitespace-pre-wrap">{message.content}</span>
+                                                    ) : (
+                                                        <AnimatedMessage
+                                                            content={message.content}
+                                                            animate={message.id === messages[messages.length - 1]?.id && !isTyping && message.role === 'assistant'}
+                                                            speed={10}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isTyping && (
+                                            <div className="flex gap-4">
+                                                <div className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                                    {aiAvatar ? <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover" /> : <img src={logo} className="w-5 h-5 grayscale opacity-20" />}
+                                                </div>
+                                                <div className="flex gap-1 items-center py-3">
+                                                    <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                                    <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                                    <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" />
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="bg-white/[0.03] border border-white/[0.06] p-4 rounded-3xl flex gap-1 items-center">
-                                        <div className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                        <div className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                        <div className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce" />
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
+                                )}
+                                <div ref={messagesEndRef} className="h-40" />
+                            </div>
+                        </div>
 
-                {/* Input Area */}
-                <div className="p-6 bg-gradient-to-t from-black via-black to-transparent">
-                    <form
-                        onSubmit={handleSendMessage}
-                        className="max-w-3xl mx-auto relative group"
-                    >
-                        <input
-                            type="text"
-                            placeholder="Fale com Olyviah..."
-                            className="w-full bg-white/5 border border-white/10 rounded-3xl py-5 pl-6 pr-16 focus:outline-none focus:border-white/30 transition-all font-medium text-lg placeholder:text-gray-700"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            disabled={isTyping || !activeThreadId}
-                        />
-                        <button
-                            type="submit"
-                            disabled={!input.trim() || isTyping || !activeThreadId}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-white text-black rounded-2xl hover:bg-gray-200 disabled:bg-white/5 disabled:text-gray-700 transition-all active:scale-90"
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
-                    </form>
-                    <p className="text-center text-[10px] font-bold text-gray-700 uppercase tracking-widest mt-4">
-                        Olyviah pode cometer erros. Sempre verifique as escritas sagradas.
-                    </p>
+                        {/* Sticky Bottom Input Area */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#171717] via-[#171717] to-transparent">
+                            <form
+                                onSubmit={handleSendMessage}
+                                className="max-w-3xl mx-auto relative flex items-end gap-2 bg-[#2f2f2f] border border-white/10 rounded-[26px] p-2 focus-within:border-white/20 transition-all"
+                            >
+                                <textarea
+                                    className="flex-1 bg-transparent border-none py-3 px-4 focus:ring-0 text-[15px] max-h-40 overflow-y-auto resize-none scrollbar-hide"
+                                    placeholder="Mensagem Olyviah"
+                                    rows={1}
+                                    value={input}
+                                    onChange={(e) => {
+                                        setInput(e.target.value);
+                                        e.target.style.height = 'inherit';
+                                        e.target.style.height = `${e.target.scrollHeight}px`;
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                    disabled={isTyping}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!input.trim() || isTyping}
+                                    className="p-2 bg-white text-black rounded-xl hover:opacity-90 disabled:opacity-30 disabled:hover:opacity-30 transition-all mb-1"
+                                >
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </form>
+                            <p className="text-center text-[10px] text-white/20 mt-3 font-medium">
+                                Olyviah pode cometer erros. Verifique informações importantes.
+                            </p>
+                        </div>
+                    </main>
                 </div>
-            </main>
-
-            {/* Overlay for mobile sidebar */}
-            <AnimatePresence>
-                {showSidebar && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setShowSidebar(false)}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden"
-                    />
-                )}
-            </AnimatePresence>
-        </div>
+            </div>
+        </PageTransition>
     );
 };
 

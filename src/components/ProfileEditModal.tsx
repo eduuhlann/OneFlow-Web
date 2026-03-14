@@ -4,6 +4,7 @@ import { X, Save, Upload, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useProfile } from '../contexts/ProfileContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
+import { translateAuthError } from '../services/authErrors';
 
 interface ProfileEditModalProps {
     onClose: () => void;
@@ -80,7 +81,7 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
             setSuccess(true);
             setTimeout(() => onClose(), 1200);
         } catch (err: any) {
-            setError(err.message || 'Erro ao salvar perfil.');
+            setError(translateAuthError(err.message));
         } finally {
             setLoading(false);
         }
