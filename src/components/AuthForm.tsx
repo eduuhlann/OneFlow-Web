@@ -13,6 +13,7 @@ import {
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { translateAuthError } from '../services/authErrors';
 
 type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD' | 'VERIFY_CODE';
 
@@ -84,7 +85,7 @@ export default function AuthForm({ onSuccess }: { onSuccess?: () => void } = {})
                 setMessage('E-mail de recuperação enviado!');
             }
         } catch (err: any) {
-            setError(err.message || 'Ocorreu um erro.');
+            setError(translateAuthError(err.message));
         } finally {
             setLoading(false);
         }

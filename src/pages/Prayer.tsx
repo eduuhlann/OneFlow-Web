@@ -1,39 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-    ArrowLeft,
-    Play,
-    Pause,
-    RotateCcw,
-    Volume2,
-    VolumeX,
-    CloudRain,
-    Trees,
-    Music,
-    Wind
-} from 'lucide-react';
+import { ArrowLeft, Play, Pause, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import PageTransition from '../components/PageTransition';
 
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
-
-type Ambience = 'none' | 'rain' | 'nature' | 'worship' | 'wind';
+const PRESETS = [5, 10, 15, 20, 30, 45, 60];
 
 const Prayer: React.FC = () => {
     const navigate = useNavigate();
 
-    // Timer State
-    const [timeLeft, setTimeLeft] = useState(15 * 60); // Default 15 mins
+    const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
+    const [customInput, setCustomInput] = useState('');
+    const [timeLeft, setTimeLeft] = useState(0);
     const [isActive, setIsActive] = useState(false);
-    const [initialTime, setInitialTime] = useState(15 * 60);
-
-    // Ambience State
-    const [ambience, setAmbience] = useState<Ambience>('none');
-    const [isMuted, setIsMuted] = useState(false);
+    const [started, setStarted] = useState(false);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -42,10 +22,9 @@ const Prayer: React.FC = () => {
             timerRef.current = setInterval(() => {
                 setTimeLeft(prev => prev - 1);
             }, 1000);
-        } else if (timeLeft === 0) {
+        } else if (timeLeft === 0 && isActive) {
             setIsActive(false);
             if (timerRef.current) clearInterval(timerRef.current);
-            // Play completion sound logic here
         } else {
             if (timerRef.current) clearInterval(timerRef.current);
         }
@@ -61,107 +40,171 @@ const Prayer: React.FC = () => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const toggleTimer = () => setIsActive(!isActive);
-
-    const resetTimer = () => {
-        setIsActive(false);
-        setTimeLeft(initialTime);
+    const handleStart = () => {
+        const mins = selectedMinutes ?? parseInt(customInput);
+        if (!mins || mins <= 0) return;
+        setTimeLeft(mins * 60);
+        setStarted(true);
+        setIsActive(true);
     };
 
-    const ambienceOptions = [
-        { id: 'rain', icon: CloudRain, label: 'Chuva' },
-        { id: 'nature', icon: Trees, label: 'Natureza' },
-        { id: 'wind', icon: Wind, label: 'Vento' },
-        { id: 'worship', icon: Music, label: 'Worship' },
-    ];
+    const handleReset = () => {
+        setIsActive(false);
+        setStarted(false);
+        setSelectedMinutes(null);
+        setCustomInput('');
+        setTimeLeft(0);
+    };
+
+    const progress = started && timeLeft > 0
+        ? 1 - timeLeft / ((selectedMinutes ?? parseInt(customInput || '1')) * 60)
+        : started ? 1 : 0;
+
+    const isFinished = started && timeLeft === 0;
 
     return (
         <PageTransition>
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
-            {/* Background Ambience Layer */}
+        <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col">
+            {/* Radial glow background */}
             <div className="fixed inset-0 pointer-events-none">
-                <AnimatePresence mode="wait">
-                    {ambience !== 'none' && (
-                        <motion.div
-                            key="ambience"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.05 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-white/10"
-                        />
-                    )}
-                </AnimatePresence>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05)_0%,transparent_100%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.04)_0%,transparent_70%)]" />
             </div>
 
             {/* Header */}
-            <header className="relative z-10">
-                <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group">
-                    <ArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-                    <span className="font-bold text-xs tracking-widest uppercase">Voltar</span>
+            <header className="relative z-10 p-6 md:p-12">
+                <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all md:-ml-10 flex items-center gap-3 group">
+                    <ArrowLeft size={24} className="text-white/40 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+                    <span className="font-bold text-xs tracking-widest uppercase text-white/40 group-hover:text-white transition-colors">Voltar</span>
                 </button>
             </header>
 
-            <main className="flex-1 max-w-3xl mx-auto w-full px-6 flex items-center justify-center relative z-10">
-                {/* Timer Section */}
-                <div className="flex flex-col items-center justify-center text-center">
-                    <motion.div
-                        animate={{ scale: isActive ? [1, 1.02, 1] : 1 }}
-                        transition={{ repeat: Infinity, duration: 4 }}
-                        className="relative mb-12"
-                    >
-                        <div className="text-[12rem] md:text-[16rem] font-black tracking-tighter italic leading-none tabular-nums select-none opacity-10 blur-xl absolute inset-0 text-white">
-                            {formatTime(timeLeft)}
-                        </div>
-                        <div className="text-[10rem] md:text-[13rem] font-black tracking-tighter italic leading-none tabular-nums select-none relative">
-                            {formatTime(timeLeft)}
-                        </div>
-                    </motion.div>
+            <main className="flex-1 flex items-center justify-center relative z-10 px-6">
+                <AnimatePresence mode="wait">
+                    {!started ? (
+                        /* Duration Picker */
+                        <motion.div
+                            key="picker"
+                            initial={{ opacity: 0, y: 24 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -16 }}
+                            transition={{ duration: 0.4, ease: 'easeOut' }}
+                            className="flex flex-col items-center text-center w-full max-w-lg"
+                        >
+                            <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase mb-4">Tempo de Oração</span>
+                            <h1 className="text-5xl font-black italic tracking-tighter mb-12">Quanto tempo?</h1>
 
-                    <div className="flex items-center gap-6 mb-16">
-                        <button
-                            onClick={resetTimer}
-                            className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all active:scale-90"
-                        >
-                            <RotateCcw className="w-8 h-8" />
-                        </button>
-                        <button
-                            onClick={toggleTimer}
-                            className="w-24 h-24 bg-white text-black rounded-[2rem] flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/20"
-                        >
-                            {isActive ? <Pause className="w-10 h-10 fill-black" /> : <Play className="w-10 h-10 fill-black ml-1" />}
-                        </button>
-                        <button
-                            onClick={() => setIsMuted(!isMuted)}
-                            className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all active:scale-90"
-                        >
-                            {isMuted ? <VolumeX className="w-8 h-8 text-red-400" /> : <Volume2 className="w-8 h-8" />}
-                        </button>
-                    </div>
+                            {/* Preset grid */}
+                            <div className="grid grid-cols-4 gap-3 w-full mb-8">
+                                {PRESETS.map(min => (
+                                    <button
+                                        key={min}
+                                        onClick={() => { setSelectedMinutes(min); setCustomInput(''); }}
+                                        className={`py-5 rounded-2xl font-black text-sm transition-all border ${
+                                            selectedMinutes === min
+                                                ? 'bg-white text-black border-white scale-105'
+                                                : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        {min}<span className="text-[10px] font-bold opacity-60 ml-0.5">min</span>
+                                    </button>
+                                ))}
 
-                    <div className="flex flex-wrap justify-center gap-4">
-                        {ambienceOptions.map(option => (
+                                {/* Custom input */}
+                                <div className={`py-5 rounded-2xl border transition-all flex items-center justify-center gap-1 col-span-1 ${
+                                    customInput ? 'bg-white text-black border-white' : 'bg-white/5 border-white/10'
+                                }`}>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="180"
+                                        placeholder="?"
+                                        value={customInput}
+                                        onChange={e => { setCustomInput(e.target.value); setSelectedMinutes(null); }}
+                                        className={`w-10 bg-transparent text-center font-black text-sm outline-none placeholder:text-white/20 ${
+                                            customInput ? 'text-black' : 'text-white/60'
+                                        }`}
+                                    />
+                                    <span className={`text-[10px] font-bold opacity-60 ${customInput ? 'text-black' : ''}`}>min</span>
+                                </div>
+                            </div>
+
                             <button
-                                key={option.id}
-                                onClick={() => setAmbience(ambience === option.id ? 'none' : option.id as Ambience)}
-                                className={cn(
-                                    "px-6 py-4 rounded-2xl flex items-center gap-3 transition-all border font-bold text-xs tracking-widest uppercase",
-                                    ambience === option.id
-                                        ? "bg-white text-black border-white"
-                                        : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:border-white/20"
-                                )}
+                                onClick={handleStart}
+                                disabled={!selectedMinutes && !customInput}
+                                className="w-full py-6 bg-white text-black rounded-[2rem] font-black text-xs tracking-[0.3em] uppercase flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-20 disabled:pointer-events-none"
                             >
-                                <option.icon size={18} />
-                                {option.label}
+                                <Play size={18} className="fill-black" />
+                                Iniciar Oração
                             </button>
-                        ))}
-                    </div>
-                </div>
+                        </motion.div>
+                    ) : (
+                        /* Timer */
+                        <motion.div
+                            key="timer"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ duration: 0.4, ease: 'easeOut' }}
+                            className="flex flex-col items-center text-center"
+                        >
+                            {/* Progress ring */}
+                            <div className="relative mb-10">
+                                <svg width="320" height="320" className="rotate-[-90deg]">
+                                    <circle cx="160" cy="160" r="140" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
+                                    <circle
+                                        cx="160" cy="160" r="140"
+                                        fill="none"
+                                        stroke="rgba(255,255,255,0.15)"
+                                        strokeWidth="2"
+                                        strokeDasharray={`${2 * Math.PI * 140}`}
+                                        strokeDashoffset={`${2 * Math.PI * 140 * (1 - progress)}`}
+                                        strokeLinecap="round"
+                                        style={{ transition: 'stroke-dashoffset 1s linear' }}
+                                    />
+                                </svg>
+
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <motion.div
+                                        animate={{ scale: isActive ? [1, 1.015, 1] : 1 }}
+                                        transition={{ repeat: Infinity, duration: 4 }}
+                                    >
+                                        <div className="text-[5.5rem] font-black tracking-tighter italic leading-none tabular-nums">
+                                            {isFinished ? '✓' : formatTime(timeLeft)}
+                                        </div>
+                                    </motion.div>
+                                    {isFinished && (
+                                        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mt-2">Concluído</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-6">
+                                <button
+                                    onClick={handleReset}
+                                    className="p-5 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all active:scale-90"
+                                >
+                                    <RotateCcw className="w-7 h-7" />
+                                </button>
+                                {!isFinished && (
+                                    <button
+                                        onClick={() => setIsActive(!isActive)}
+                                        className="w-20 h-20 bg-white text-black rounded-[1.75rem] flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/10"
+                                    >
+                                        {isActive
+                                            ? <Pause className="w-9 h-9 fill-black" />
+                                            : <Play className="w-9 h-9 fill-black ml-1" />
+                                        }
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </main>
 
-            {/* Quote Footer */}
+            {/* Quote footer */}
             <footer className="p-12 text-center relative z-10">
-                <p className="text-white/20 font-serif italic text-lg select-none">
+                <p className="text-white/15 font-serif italic text-base select-none">
                     "Onde dois ou três estiverem reunidos em meu nome, ali eu estarei com eles."
                 </p>
             </footer>

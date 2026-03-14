@@ -62,10 +62,8 @@ const Navbar = ({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onO
         </motion.div>
 
         <div className="hidden md:flex items-center gap-8 text-[10px] uppercase tracking-[0.2em] font-bold text-white/40">
-          <a href="#features" className="hover:text-white transition-colors">Recursos</a>
-          <a href="#preview" className="hover:text-white transition-colors">Preview</a>
           
-          <div className="flex items-center gap-3 border-l border-white/10 pl-8 ml-4">
+          <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-2">
                 {/* Profile Avatar */}
@@ -146,8 +144,7 @@ const Navbar = ({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onO
               </button>
             )}
 
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-serif italic text-white/60 hover:text-white transition-colors">Recursos</a>
-            <a href="#preview" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-serif italic text-white/60 hover:text-white transition-colors">Preview</a>
+            <a href="#manifesto" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-serif italic text-white/60 hover:text-white transition-colors">O que é</a>
             <button
               onClick={() => { user ? navigate('/dashboard') : onOpenAuth(); setMobileMenuOpen(false); }}
               className="w-full py-5 bg-white text-black rounded-2xl font-bold text-lg mt-4"
@@ -218,9 +215,6 @@ const Hero = ({ onOpenAuth }: { onOpenAuth: () => void }) => {
             {user ? 'Ir para o App' : 'Começar Jornada'}
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </button>
-          <button className="px-10 py-5 bg-transparent text-white border border-white/10 rounded-full font-bold hover:bg-white/5 hover:border-white/30 transition-all">
-            Explorar Recursos
-          </button>
         </motion.div>
 
 
@@ -248,69 +242,6 @@ const Hero = ({ onOpenAuth }: { onOpenAuth: () => void }) => {
     </section>
   );
 };
-
-const FeatureCard = ({ icon: Icon, title, description, delay }: { icon: any, title: string, description: string, delay: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ delay, duration: 0.8 }}
-    className="relative p-10 rounded-[2.5rem] border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all group overflow-hidden"
-  >
-    <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
-      <Icon size={120} />
-    </div>
-    <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-8 group-hover:bg-white group-hover:text-black transition-all duration-500 shadow-xl shadow-black">
-      <Icon size={28} />
-    </div>
-    <h3 className="text-2xl font-serif font-bold mb-4 tracking-tight">{title}</h3>
-    <p className="text-white/40 leading-relaxed font-light text-lg">{description}</p>
-  </motion.div>
-);
-
-const Features = () => {
-  return (
-    <section id="features" className="py-40 px-6 relative">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-8">
-          <div className="max-w-2xl">
-            <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/20 mb-6 block">A Arte do Silêncio</span>
-            <h2 className="text-5xl md:text-8xl font-serif font-bold leading-[0.9] tracking-tighter">
-              Onde a tecnologia <br />
-              <span className="italic font-normal text-white/30">encontra o sagrado.</span>
-            </h2>
-          </div>
-          <p className="text-white/40 max-w-xs font-light leading-relaxed border-l border-white/10 pl-8">
-            Cada pixel foi pensado para não ser notado. O OneFlow desaparece para que a Palavra apareça.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <FeatureCard
-            icon={Zap}
-            delay={0.1}
-            title="Fluxo Instantâneo"
-            description="Sem telas de carregamento, sem logins. A Bíblia carrega em milissegundos, pronta para o seu momento."
-          />
-          <FeatureCard
-            icon={Moon}
-            delay={0.2}
-            title="Imersão Total"
-            description="Interface adaptativa que se ajusta à luz do seu ambiente. Foco absoluto no texto, nada mais."
-          />
-          <FeatureCard
-            icon={Shield}
-            delay={0.3}
-            title="Santuário Privado"
-            description="Seus dados são sagrados. Nada sai do seu dispositivo. Sua jornada é apenas sua e de Deus."
-          />
-        </div>
-      </div>
-    </section>
-  );
-};
-
-
 
 
 const ExperienceManifesto = () => {
@@ -383,8 +314,6 @@ const Footer = () => {
           <div>
             <h4 className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/20 mb-8">Navegação</h4>
             <ul className="space-y-4 text-white/50 font-light">
-              <li><a href="#features" className="hover:text-white transition-colors">Recursos</a></li>
-              <li><a href="#preview" className="hover:text-white transition-colors">Preview</a></li>
               <li><a href="#" className="hover:text-white transition-colors">App Web</a></li>
             </ul>
           </div>
@@ -425,7 +354,6 @@ export default function Home() {
       <Navbar onOpenAuth={() => setIsAuthModalOpen(true)} onOpenEditProfile={() => setIsEditProfileOpen(true)} />
       <main className="relative z-10">
         <Hero onOpenAuth={() => setIsAuthModalOpen(true)} />
-        <Features />
         <ExperienceManifesto />
       </main>
       <Footer />

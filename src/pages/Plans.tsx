@@ -58,8 +58,8 @@ const Plans: React.FC = () => {
         <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
             <div className="max-w-4xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
-                    <div className="flex items-center gap-6">
-                        <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all">
+                    <div className="flex items-center gap-12">
+                        <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all md:-ml-16">
                             <ArrowLeft size={24} />
                         </button>
                         <div>
@@ -104,6 +104,7 @@ const Plans: React.FC = () => {
                         CRIAR AGORA
                     </button>
                 </motion.div>
+
 
                 <div className="space-y-12">
                     <section>

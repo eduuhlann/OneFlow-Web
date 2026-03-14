@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
+import { translateAuthError } from '../services/authErrors';
 
 type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD' | 'VERIFY_CODE';
 
@@ -82,7 +83,7 @@ export default function Auth() {
                 setMessage('E-mail de recuperação enviado!');
             }
         } catch (err: any) {
-            setError(err.message || 'Ocorreu um erro.');
+            setError(translateAuthError(err.message));
         } finally {
             setLoading(false);
         }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Save, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { translateAuthError } from '../../services/authErrors';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -46,7 +47,7 @@ const SecurityView: React.FC = () => {
             setConfirmPassword('');
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            setError(err.message || 'Erro ao atualizar senha.');
+            setError(translateAuthError(err.message));
         } finally {
             setIsSaving(false);
         }
