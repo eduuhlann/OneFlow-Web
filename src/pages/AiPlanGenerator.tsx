@@ -86,12 +86,21 @@ export default function AiPlanGenerator() {
             
             let parsedData;
             try {
-                // Try parsing the naked response or extracting JSON block if markdown formatting was used
-                const jsonMatch = response.match(/\{[\s\S]*\}/);
-                parsedData = JSON.parse(jsonMatch ? jsonMatch[0] : response);
-            } catch (parseError) {
-                console.error("Failed to parse AI JSON:", parseError);
-                throw new Error("Invalid output format from AI");
+                // Priority 1: Clean JSON parse
+                parsedData = JSON.parse(response);
+            } catch (e) {
+                try {
+                    // Priority 2: Extract JSON from markdown blocks or generic {} matches
+                    const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/) || response.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                    } else {
+                        throw new Error("No JSON match found");
+                    }
+                } catch (parseError) {
+                    console.error("Failed to parse AI JSON:", parseError);
+                    throw new Error("Invalid output format from AI");
+                }
             }
 
             setGeneratedTitle(parsedData.title || `Jornada sobre ${config.theme}`);

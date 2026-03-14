@@ -31,7 +31,6 @@ const Settings: React.FC = () => {
     const navigate = useNavigate();
     const { signOut } = useAuth();
     const [activeTab, setActiveTab] = useState<SettingsTab>('main');
-    const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const handleSignOut = async () => {
         await signOut();
@@ -138,13 +137,6 @@ const Settings: React.FC = () => {
                                 <LogOut size={20} className="text-white/40 group-hover:text-white transition-colors" />
                                 Sair da Conta
                             </button>
-                            <button
-                                onClick={() => setShowResetConfirm(true)}
-                                className="w-full py-5 bg-red-500/5 border border-red-500/10 rounded-2xl font-bold text-red-500 flex items-center justify-center gap-3 hover:bg-red-500/10 transition-all group"
-                            >
-                                <Trash2 size={20} className="text-red-500/40 group-hover:text-red-500 transition-colors" />
-                                Redefinir Tudo
-                            </button>
                         </div>
                     </div>
                 );
@@ -182,49 +174,7 @@ const Settings: React.FC = () => {
                 </AnimatePresence>
             </div>
 
-            {/* Reset Confirmation Modal */}
-            <AnimatePresence>
-                {showResetConfirm && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowResetConfirm(false)}
-                            className="absolute inset-0 bg-black/90 backdrop-blur-md"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#111] border border-red-500/20 p-12 rounded-[3.5rem] max-w-sm w-full relative z-10 text-center"
-                        >
-                            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                                <Trash2 size={32} />
-                            </div>
-                            <h3 className="text-3xl font-black italic tracking-tighter mb-4">Apagar Tudo?</h3>
-                            <p className="text-white/40 text-sm mb-10 leading-relaxed font-medium">Isso irá remover permanentemente todo o seu progresso, capítulos lidos e favoritos. Esta ação não poderá ser desfeita.</p>
-                            <div className="flex flex-col gap-4">
-                                <button
-                                    onClick={() => setShowResetConfirm(false)}
-                                    className="py-5 bg-white text-black rounded-2xl font-black text-xs tracking-widest"
-                                >
-                                    MANTER MEUS DADOS
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        localStorage.clear();
-                                        window.location.reload();
-                                    }}
-                                    className="py-5 bg-white/5 text-red-500 rounded-2xl font-bold text-xs tracking-widest border border-white/5"
-                                >
-                                    REDEFINIR AGORA
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* Reset Confirmation Modal Removed */}
         </div>
         </PageTransition>
     );

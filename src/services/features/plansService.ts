@@ -49,8 +49,15 @@ export const STATIC_PLANS: Plan[] = [
 
 export const plansService = {
     getCustomPlans(): Plan[] {
-        const data = localStorage.getItem(CUSTOM_PLANS_KEY);
-        return data ? JSON.parse(data) : [];
+        try {
+            const data = localStorage.getItem(CUSTOM_PLANS_KEY);
+            if (!data) return [];
+            const parsed = JSON.parse(data);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.error('Error loading custom plans:', e);
+            return [];
+        }
     },
 
     saveCustomPlan(plan: Plan) {
@@ -69,8 +76,15 @@ export const plansService = {
     },
 
     getActivePlans(): UserPlan[] {
-        const data = localStorage.getItem(ACTIVE_PLANS_KEY);
-        return data ? JSON.parse(data) : [];
+        try {
+            const data = localStorage.getItem(ACTIVE_PLANS_KEY);
+            if (!data) return [];
+            const parsed = JSON.parse(data);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.error('Error loading active plans:', e);
+            return [];
+        }
     },
 
     joinPlan(planId: string) {

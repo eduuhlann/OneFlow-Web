@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { usePreferences } from '../contexts/PreferencesContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -10,6 +11,8 @@ function cn(...inputs: ClassValue[]) {
 const ParticleBackground = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { preferences } = usePreferences();
+    const location = useLocation();
+    const isDashboard = location.pathname === '/dashboard';
 
     // Setup particles if that's the chosen wallpaper
     useEffect(() => {
@@ -88,6 +91,29 @@ const ParticleBackground = () => {
         )}>
             {preferences.wallpaper === 'particles' && (
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-40 mix-blend-screen" />
+            )}
+
+            {isDashboard && preferences.wallpaper === 'custom' && preferences.customWallpaper && (
+                <div className="absolute inset-0 w-full h-full overflow-hidden">
+                    {preferences.customWallpaper.type === 'video' ? (
+                        <video
+                            src={preferences.customWallpaper.url}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <img
+                            src={preferences.customWallpaper.url}
+                            alt="Background"
+                            className="w-full h-full object-cover"
+                        />
+                    )}
+                    {/* Subtle dark overlay for readability without sacrificing 4K details */}
+                    <div className="absolute inset-0 bg-black/15" />
+                </div>
             )}
         </div>
     );

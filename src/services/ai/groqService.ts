@@ -62,8 +62,28 @@ export const generateChapterLesson = async (book: string, chapter: number, versi
       }`;
 
         const text = await callGroqAPI(prompt);
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        return JSON.parse(jsonMatch ? jsonMatch[0] : text);
+        
+        let jsonData = null;
+        try {
+            // Priority 1: Clean JSON parse
+            jsonData = JSON.parse(text);
+        } catch (e) {
+            try {
+                // Priority 2: Extract JSON from markdown blocks or generic {} matches
+                const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    jsonData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                }
+            } catch (innerE) {
+                console.error('Inner parsing error:', innerE);
+            }
+        }
+
+        if (!jsonData) {
+            throw new Error('Could not parse valid JSON from AI response');
+        }
+
+        return jsonData;
     } catch (error) {
         console.error('Error generating chapter lesson:', error);
         return null;
