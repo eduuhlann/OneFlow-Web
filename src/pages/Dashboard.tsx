@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion, useMotionValue, useTransform } from 'motion/react';
+import { FloatingDock } from '../components/ui/floating-dock';
 import {
   DndContext,
   closestCenter,
@@ -39,6 +40,14 @@ import {
     Compass,
     Palette as PaletteIcon
 } from 'lucide-react';
+import {
+    IconBook,
+    IconMap,
+    IconBrain,
+    IconCalendar,
+    IconClock,
+    IconPalette
+} from "@tabler/icons-react";
 import CustomizationModal from '../components/CustomizationModal';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
@@ -120,7 +129,6 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
         zIndex: isDragging ? 50 : 1,
     };
 
-    // Calculate glass classes based on preference
     const getGlassClasses = () => {
         if (isDragging) {
             return "bg-white/20 border-white/40 shadow-[0_20px_25px_-5px_rgba(0,0,0,0.2)]";
@@ -233,7 +241,6 @@ export default function Dashboard() {
             { id: 'customize', icon: PaletteIcon, label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
         ];
 
-        // Sort based on saved preferences
         if (preferences.menuOrder) {
             return [...items].sort((a, b) => {
                 const indexA = preferences.menuOrder!.indexOf(a.id);
@@ -379,7 +386,7 @@ export default function Dashboard() {
         <PageTransition>
             <div className="min-h-screen bg-black text-white p-6 md:p-12 overflow-x-hidden selection:bg-white selection:text-black relative">
                 <ParticleBackground />
-                <div className="max-w-7xl mx-auto relative z-10">
+                <div className="max-w-full relative z-10">
 
                     {/* Header */}
                     <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
@@ -419,45 +426,52 @@ export default function Dashboard() {
                         </div>
                     </header>
 
-                    <div className="space-y-8">
-                        {/* Main Content: Mapped according to preferences.dashboardLayout */}
-                        {preferences.dashboardLayout.map((layoutBlock) => {
-                            if (layoutBlock === 'nav') {
-                                return (
-                                    <DndContext
-                                        key={layoutBlock}
-                                        sensors={sensors}
-                                        collisionDetection={closestCenter}
-                                        onDragEnd={handleDragEnd}
-                                    >
-                                        <SortableContext
-                                            items={menuItems.map(i => i.id)}
-                                            strategy={rectSortingStrategy}
-                                        >
-                                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-12 relative">
-                                                {menuItems.map((item) => (
-                                                    <SortableCard 
-                                                        key={item.id} 
-                                                        id={item.id} 
-                                                        item={item} 
-                                                        navigate={navigate} 
-                                                        glassStyle={preferences.glassStyle || 'frosted'} 
-                                                    />
-                                                ))}
-                                            </div>
-                                        </SortableContext>
-                                    </DndContext>
-                                );
-                            }
-                            return null;
-                        })}
-                    </div>
+                    {preferences.dashboardStyle === 'cards' ? (
+                        <div className="space-y-8">
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={menuItems.map(i => i.id)}
+                                    strategy={rectSortingStrategy}
+                                >
+                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-12 relative">
+                                        {menuItems.map((item) => (
+                                            <SortableCard 
+                                                key={item.id} 
+                                                id={item.id} 
+                                                item={item} 
+                                                navigate={navigate} 
+                                                glassStyle={preferences.glassStyle || 'frosted'} 
+                                            />
+                                        ))}
+                                    </div>
+                                </SortableContext>
+                            </DndContext>
+                        </div>
+                    ) : (
+                        <div className="fixed bottom-0 left-0 right-0 pb-8 flex justify-center z-[100] pointer-events-none">
+                            <div className="pointer-events-auto">
+                                <FloatingDock
+                                    mobileClassName="translate-y-20"
+                                    items={menuItems.map(item => ({
+                                        title: item.label,
+                                        icon: <item.icon className="h-full w-full text-neutral-500 dark:text-neutral-300" />,
+                                        href: item.path || '#',
+                                        onClick: item.action
+                                    }))}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <CustomizationModal 
-                isOpen={isCustomizationOpen} 
-                onClose={() => setIsCustomizationOpen(false)} 
+            <CustomizationModal
+                isOpen={isCustomizationOpen}
+                onClose={() => setIsCustomizationOpen(false)}
             />
         </PageTransition>
     );

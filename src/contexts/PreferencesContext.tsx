@@ -17,6 +17,7 @@ export interface UserPreferences {
     menuOrder?: string[]; // IDs of the cards
     uploadedWallpapers?: CustomWallpaper[];
     glassStyle?: 'crystal' | 'frosted' | 'solid';
+    dashboardStyle?: 'cards' | 'dock';
 }
 
 const defaultPreferences: UserPreferences = {
@@ -25,7 +26,8 @@ const defaultPreferences: UserPreferences = {
     dashboardLayout: ['nav'],
     menuOrder: ['bible', 'journey', 'olyviah', 'plans', 'prayer', 'customize'],
     uploadedWallpapers: [],
-    glassStyle: 'frosted'
+    glassStyle: 'frosted',
+    dashboardStyle: 'dock'
 };
 
 interface PreferencesContextType {
