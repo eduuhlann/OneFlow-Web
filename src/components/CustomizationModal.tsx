@@ -145,6 +145,29 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                     )}
                                 </section>
 
+                                {/* Dashboard Style Section */}
+                                <section className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Estilo de Navegação</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {(['cards', 'dock'] as const).map((style) => (
+                                            <button
+                                                key={style}
+                                                onClick={() => updatePreference('dashboardStyle', style)}
+                                                className={cn(
+                                                    "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
+                                                    (preferences.dashboardStyle || 'dock') === style
+                                                        ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
+                                                        : "border-transparent bg-white/[0.03] text-white/40 hover:bg-white/5 hover:text-white/80"
+                                                )}
+                                            >
+                                                {style === 'cards' ? 'Cards (Grid)' : 'Floating Dock'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </section>
+
                                 {/* Glass Intensity Section */}
                                 <section className="space-y-4">
                                     <div className="flex items-center justify-between">
