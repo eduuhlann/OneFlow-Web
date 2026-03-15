@@ -21,6 +21,7 @@ import { Chapter, Book } from '../types';
 import { statsService } from '../services/features/statsService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { OlyviahExegesisPanel } from '../components/olyviah/OlyviahExegesisPanel';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -40,9 +41,19 @@ const Bible: React.FC = () => {
     const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('serif');
     const [showInsights, setShowInsights] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Novas Variáveis de Exegesis
+    const [selectedVerseForStudy, setSelectedVerseForStudy] = useState<{ number: number; text: string } | null>(null);
+    const [isExegesisOpen, setIsExegesisOpen] = useState(false);
+    const [aiAvatar, setAiAvatar] = useState<string | null>(null);
 
     const chapterNum = chapter ? parseInt(chapter) : null;
     const bookAbbrev = book?.toLowerCase() || null;
+
+    useEffect(() => {
+        const savedAvatar = localStorage.getItem('olyviah_avatar');
+        if (savedAvatar) setAiAvatar(savedAvatar);
+    }, []);
 
     useEffect(() => {
         if (bookAbbrev) {
@@ -367,16 +378,28 @@ const Bible: React.FC = () => {
                         )}
 
                         {/* Verses */}
-                        <div className="space-y-4 pl-10">
+                        <div className="space-y-4 pl-10 pr-4 md:pr-0">
                             {chapterData.verses.map(v => (
-                                <div key={v.number} className="group relative">
-                                    <span className="absolute -left-10 top-1 text-xs font-black text-white/15 tabular-nums select-none">{v.number}</span>
-                                    <p className="inline leading-relaxed text-white/80">
-                                        {v.number === 1 && (
-                                            <span className="text-5xl font-bold float-left mr-3 mt-1 leading-[0.9] text-white">{v.text.charAt(0)}</span>
-                                        )}
-                                        {v.number === 1 ? v.text.slice(1) : v.text}
-                                    </p>
+                                <div key={v.number} className="group relative flex items-start gap-4">
+                                    <div className="flex-1 relative">
+                                        <span className="absolute -left-10 top-1 text-xs font-black text-white/15 tabular-nums select-none">{v.number}</span>
+                                        <p className="inline leading-relaxed text-white/80">
+                                            {v.number === 1 && (
+                                                <span className="text-5xl font-bold float-left mr-3 mt-1 leading-[0.9] text-white">{v.text.charAt(0)}</span>
+                                            )}
+                                            {v.number === 1 ? v.text.slice(1) : v.text}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedVerseForStudy({ number: v.number, text: v.text });
+                                            setIsExegesisOpen(true);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-2 text-white/30 hover:text-white hover:bg-white/10 rounded-full transition-all shrink-0 active:scale-95"
+                                        title="Estudar com Olyviah"
+                                    >
+                                        <Lightbulb className="w-5 h-5" />
+                                    </button>
                                 </div>
                             ))}
                         </div>
@@ -406,7 +429,10 @@ const Bible: React.FC = () => {
 
             {/* Floating bar - mark as read */}
             {!loading && !error && chapterData && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+                <div className={cn(
+                    "fixed bottom-8 left-1/2 -translate-x-1/2 z-50 transition-all duration-300",
+                    isExegesisOpen && "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto md:-translate-x-[calc(50%+225px)]" // Shift left on desktop, hide on mobile
+                )}>
                     <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-1.5 flex items-center gap-1.5 shadow-2xl">
                         <button
                             onClick={() => {
@@ -429,6 +455,17 @@ const Bible: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Olyviah Exegesis Panel */}
+            <OlyviahExegesisPanel
+                isOpen={isExegesisOpen}
+                onClose={() => setIsExegesisOpen(false)}
+                book={selectedBook?.name || ''}
+                chapter={chapterNum || 1}
+                verseNumber={selectedVerseForStudy?.number || 1}
+                verseText={selectedVerseForStudy?.text || ''}
+                aiAvatar={aiAvatar}
+            />
         </div>
     );
 };
