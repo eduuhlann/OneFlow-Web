@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { motion, useMotionValue, useTransform } from 'motion/react';
+import { motion, useMotionValue, useTransform, useSpring } from 'motion/react';
 import { FloatingDock } from '../components/ui/floating-dock';
 import {
   DndContext,
@@ -49,7 +49,7 @@ import {
     IconPalette
 } from "@tabler/icons-react";
 import CustomizationModal from '../components/CustomizationModal';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
 import PageTransition from '../components/PageTransition';
@@ -123,10 +123,37 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
         isDragging
     } = useSortable({ id });
 
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+
+    const mouseXSpring = useSpring(x);
+    const mouseYSpring = useSpring(y);
+
+    const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["17.5deg", "-17.5deg"]);
+    const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-17.5deg", "17.5deg"]);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const xPct = mouseX / width - 0.5;
+        const yPct = mouseY / height - 0.5;
+        x.set(xPct);
+        y.set(yPct);
+    };
+
+    const handleMouseLeave = () => {
+        x.set(0);
+        y.set(0);
+    };
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 50 : 1,
+        perspective: "1000px",
     };
 
     const getGlassClasses = () => {
@@ -146,8 +173,21 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
     };
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none h-full relative cursor-grab active:cursor-grabbing">
+        <div 
+            ref={setNodeRef} 
+            style={style} 
+            {...attributes} 
+            {...listeners} 
+            className="touch-none h-full relative cursor-grab active:cursor-grabbing"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+        >
             <motion.div
+                style={{
+                    rotateX,
+                    rotateY,
+                    transformStyle: "preserve-3d",
+                }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={(e) => {
@@ -162,14 +202,33 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
                     getGlassClasses()
                 )}
             >
-                <div className="w-full h-full text-left pointer-events-none">
-                    <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 transition-all">
+                <div 
+                    className="w-full h-full text-left pointer-events-none"
+                    style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
+                >
+                    <div 
+                        className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 transition-all"
+                        style={{ transform: "translateZ(30px)" }}
+                    >
                         <item.icon size={20} className="text-white" />
                     </div>
 
-                    <h3 className="text-base font-bold mb-1 tracking-tight">{item.label}</h3>
-                    <p className="text-white/30 text-xs font-normal italic leading-relaxed">{item.description}</p>
-                    <div className="mt-5 flex items-center gap-1.5 text-[9px] font-bold tracking-[0.2em] text-white/20 group-hover:text-white transition-colors uppercase">
+                    <h3 
+                        className="text-base font-bold mb-1 tracking-tight"
+                        style={{ transform: "translateZ(40px)" }}
+                    >
+                        {item.label}
+                    </h3>
+                    <p 
+                        className="text-white font-normal italic leading-relaxed text-[11px]"
+                        style={{ transform: "translateZ(35px)" }}
+                    >
+                        {item.description}
+                    </p>
+                    <div 
+                        className="mt-5 flex items-center gap-1.5 text-[9px] font-bold tracking-[0.2em] text-white transition-colors uppercase"
+                        style={{ transform: "translateZ(20px)" }}
+                    >
                         {item.action ? 'Abrir' : 'Acessar'} <ChevronRight size={10} />
                     </div>
                 </div>
@@ -391,7 +450,9 @@ export default function Dashboard() {
                     {/* Header */}
                     <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
                         <div className="flex items-center gap-6">
-                            <img src={logo} alt="OneFlow" className="w-24 md:w-28 h-auto object-contain" />
+                            <Link to="/" className="hover:opacity-80 transition-opacity">
+                                <img src={logo} alt="OneFlow" className="w-24 md:w-28 h-auto object-contain" />
+                            </Link>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Bem-vindo</span>
                                 <h1 className="text-4xl md:text-5xl font-bold tracking-tighter">
@@ -400,28 +461,28 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             {/* Profile Avatar */}
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center">
                                 {profile?.avatar_url ? (
                                     <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
                                 ) : (
-                                    <User size={18} className="text-white/40" />
+                                    <User size={22} className="text-white/40" />
                                 )}
                             </div>
                             <button
                                 onClick={() => navigate('/settings')}
                                 title="Configurações e Perfil"
-                                className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
+                                className="p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
                             >
-                                <Settings size={20} />
+                                <Settings size={24} />
                             </button>
                             <button
                                 onClick={handleSignOut}
                                 title="Sair"
-                                className="p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 text-red-500/80 hover:text-red-400 shadow-lg shadow-black/20"
+                                className="p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 text-red-500/80 hover:text-red-400 shadow-lg shadow-black/20"
                             >
-                                <LogOut size={20} />
+                                <LogOut size={24} />
                             </button>
                         </div>
                     </header>
