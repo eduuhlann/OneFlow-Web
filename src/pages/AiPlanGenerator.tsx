@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Clock, BookOpen, Sun, Moon, Sunrise, Bell } from 'lucide-react';
+import { ArrowLeft, Sparkles, Clock, BookOpen, Sun, Moon, Sunrise, Bell, ChevronRight } from 'lucide-react';
 import ParticleBackground from '../components/ParticleBackground';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { plansService } from '../services/features/plansService';
 import { callGroqChat } from '../services/ai/groqService';
 import logo from '../assets/logo.png';
+import { Loading } from '../components/Loading';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -15,13 +16,14 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-type Step = 'theme' | 'testament' | 'period' | 'notification' | 'generating' | 'success';
+type Step = 'theme' | 'duration' | 'testament' | 'depth' | 'period' | 'generating' | 'success';
 
 interface PlanConfig {
     theme: string;
+    duration: number;
     testament: string;
+    depth: string;
     period: string;
-    notificationTime: string;
 }
 
 export default function AiPlanGenerator() {
@@ -33,9 +35,10 @@ export default function AiPlanGenerator() {
     const [currentStep, setCurrentStep] = useState<Step>('theme');
     const [config, setConfig] = useState<PlanConfig>({
         theme: '',
+        duration: 7,
         testament: '',
+        depth: 'Devocional',
         period: '',
-        notificationTime: '08:00'
     });
     
     const [generatedTitle, setGeneratedTitle] = useState('');
@@ -48,16 +51,18 @@ export default function AiPlanGenerator() {
     }, []);
 
     const handleNext = () => {
-        if (currentStep === 'theme' && config.theme.trim()) setCurrentStep('testament');
-        else if (currentStep === 'testament' && config.testament) setCurrentStep('period');
-        else if (currentStep === 'period' && config.period) setCurrentStep('notification');
-        else if (currentStep === 'notification') generatePlan();
+        if (currentStep === 'theme' && config.theme.trim()) setCurrentStep('duration');
+        else if (currentStep === 'duration' && config.duration) setCurrentStep('testament');
+        else if (currentStep === 'testament' && config.testament) setCurrentStep('depth');
+        else if (currentStep === 'depth' && config.depth) setCurrentStep('period');
+        else if (currentStep === 'period' && config.period) generatePlan();
     };
 
     const handleBack = () => {
-        if (currentStep === 'testament') setCurrentStep('theme');
-        else if (currentStep === 'period') setCurrentStep('testament');
-        else if (currentStep === 'notification') setCurrentStep('period');
+        if (currentStep === 'duration') setCurrentStep('theme');
+        else if (currentStep === 'testament') setCurrentStep('duration');
+        else if (currentStep === 'depth') setCurrentStep('testament');
+        else if (currentStep === 'period') setCurrentStep('depth');
         else if (currentStep === 'theme') navigate('/plans');
     };
 
@@ -67,9 +72,10 @@ export default function AiPlanGenerator() {
 
         try {
             const systemPrompt = `Você é Olyviah, assistente do aplicativo cristão OneFlow. 
-            Crie um plano de leitura bíblica de exatos 7 DIAS.
+            Crie um plano de leitura bíblica de exatos ${config.duration} DIAS.
             Tema: ${config.theme}
             Testamento: ${config.testament}
+            Objetivo: ${config.depth} (Se for Estudo Profundo, foque em referências mais densas; se for Devocional, foque em aplicação prática; se for Leitura Rápida, foque em visão geral).
 
             VOCÊ DEVE RETORNAR APENAS UM JSON VÁLIDO. NÃO INCLUA NENHUM TEXTO ANTES OU DEPOIS DO JSON.
             O formato JSON DEVE ser exatamente este:
@@ -78,7 +84,7 @@ export default function AiPlanGenerator() {
                 "description": "descrição curta (até 15 palavras)",
                 "days": [
                     { "day": 1, "title": "título do dia", "verse": "Referência Bíblica (ex: João 3:16)", "content": "reflexão curta (até 30 palavras)" },
-                    ... repita até o day 7
+                    ... repita até o dia ${config.duration}
                 ]
             }`;
 
@@ -112,7 +118,7 @@ export default function AiPlanGenerator() {
                 id: newPlanId,
                 title: parsedData.title,
                 description: parsedData.description,
-                durationDays: 7, 
+                durationDays: config.duration, 
                 category: 'ai',
                 content: parsedData.days
             });
@@ -131,9 +137,9 @@ export default function AiPlanGenerator() {
                 id: newPlanId,
                 title: `Trilha: ${config.theme}`,
                 description: `Um plano personalizado focado em ${config.theme.toLowerCase()}.`,
-                durationDays: 7,
+                durationDays: config.duration,
                 category: 'ai',
-                content: Array.from({ length: 7 }).map((_, i) => ({
+                content: Array.from({ length: config.duration }).map((_, i) => ({
                     day: i + 1,
                     title: `Reflexão Diária ${i + 1}`,
                     verse: 'Salmos 119:105',
@@ -153,17 +159,21 @@ export default function AiPlanGenerator() {
             title: "O que o seu coração busca?",
             subtitle: "Descreva o tema ou área da sua vida que precisa de luz (ex: Ansiedade, Liderança, Paz)."
         },
+        duration: {
+            title: "Quanto tempo caminharemos?",
+            subtitle: "Escolha a duração ideal para esta jornada espiritual."
+        },
         testament: {
             title: "Onde começamos?",
             subtitle: "Escolha de onde extrairemos a sabedoria para sua jornada."
         },
+        depth: {
+            title: "Qual o seu objetivo?",
+            subtitle: "Defina a profundidade do conteúdo que você deseja receber."
+        },
         period: {
             title: "Qual o seu momento de paz?",
             subtitle: "Em qual parte do dia você prefere realizar suas leituras e reflexões?"
-        },
-        notification: {
-            title: "Quando devo te chamar?",
-            subtitle: "Defina um horário para Olyviah te lembrar do seu compromisso."
         },
         generating: {
             title: "Olyviah está orando por você...",
@@ -205,6 +215,33 @@ export default function AiPlanGenerator() {
                     </motion.div>
                 );
 
+            case 'duration':
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                    >
+                        {[3, 7, 14, 21].map(d => (
+                            <button
+                                key={d}
+                                onClick={() => {
+                                    setConfig({ ...config, duration: d });
+                                    setCurrentStep('testament');
+                                }}
+                                className={cn(
+                                    "p-8 bg-white/5 border rounded-3xl flex flex-col items-center justify-center text-center group transition-all",
+                                    config.duration === d ? "border-white bg-white/10" : "border-white/10 hover:border-white/30"
+                                )}
+                            >
+                                <h4 className="text-3xl font-bold font-serif mb-2">{d}</h4>
+                                <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Dias</p>
+                            </button>
+                        ))}
+                    </motion.div>
+                );
+
             case 'testament':
                 return (
                     <motion.div
@@ -222,7 +259,7 @@ export default function AiPlanGenerator() {
                                 key={t.id}
                                 onClick={() => {
                                     setConfig({ ...config, testament: t.id });
-                                    setCurrentStep('period'); // Auto advance
+                                    setCurrentStep('depth'); // Auto advance
                                 }}
                                 className={cn(
                                     "w-full p-6 bg-white/5 border rounded-3xl flex items-center gap-6 group transition-all text-left",
@@ -232,10 +269,48 @@ export default function AiPlanGenerator() {
                                 <div className="p-4 bg-white/5 rounded-2xl text-white/50 group-hover:text-white transition-colors">
                                     <t.icon size={24} />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <h4 className="text-xl font-bold font-serif">{t.id}</h4>
                                     <p className="text-white/40 text-sm font-serif italic mt-1">{t.desc}</p>
                                 </div>
+                                <ChevronRight className="text-white/20 group-hover:text-white transition-colors" size={20} />
+                            </button>
+                        ))}
+                    </motion.div>
+                );
+
+            case 'depth':
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="space-y-4"
+                    >
+                        {[
+                            { id: 'Devocional', icon: Sparkles, desc: 'Foco em aplicação prática e encorajamento' },
+                            { id: 'Estudo Profundo', icon: BookOpen, desc: 'Análise detalhada e contexto histórico' },
+                            { id: 'Leitura Rápida', icon: Clock, desc: 'Resumo geral e principais ensinamentos' }
+                        ].map(d => (
+                            <button
+                                key={d.id}
+                                onClick={() => {
+                                    setConfig({ ...config, depth: d.id });
+                                    setCurrentStep('period');
+                                }}
+                                className={cn(
+                                    "w-full p-6 bg-white/5 border rounded-3xl flex items-center gap-6 group transition-all text-left",
+                                    config.depth === d.id ? "border-white bg-white/10" : "border-white/10 hover:border-white/30"
+                                )}
+                            >
+                                <div className="p-4 bg-white/5 rounded-2xl text-white/50 group-hover:text-white transition-colors">
+                                    <d.icon size={24} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-xl font-bold font-serif">{d.id}</h4>
+                                    <p className="text-white/40 text-sm font-serif italic mt-1">{d.desc}</p>
+                                </div>
+                                <ChevronRight className="text-white/20 group-hover:text-white transition-colors" size={20} />
                             </button>
                         ))}
                     </motion.div>
@@ -258,7 +333,7 @@ export default function AiPlanGenerator() {
                                 key={p.id}
                                 onClick={() => {
                                     setConfig({ ...config, period: p.id });
-                                    setCurrentStep('notification'); // Auto advance
+                                    generatePlan();
                                 }}
                                 className={cn(
                                     "p-8 bg-white/5 border rounded-3xl flex flex-col items-center justify-center text-center group transition-all",
@@ -275,35 +350,6 @@ export default function AiPlanGenerator() {
                     </motion.div>
                 );
 
-            case 'notification':
-                return (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="space-y-12"
-                    >
-                        <div className="flex flex-col items-center justify-center">
-                            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center border border-white/10 mb-8 relative">
-                                <Bell size={32} className="text-white/40" />
-                                <div className="absolute top-0 right-0 w-4 h-4 rounded-full bg-white border-4 border-black animate-pulse" />
-                            </div>
-                            <input
-                                type="time"
-                                value={config.notificationTime}
-                                onChange={(e) => setConfig({ ...config, notificationTime: e.target.value })}
-                                className="bg-transparent text-5xl font-serif text-white outline-none text-center border-b border-white/20 pb-4 focus:border-white transition-colors"
-                            />
-                        </div>
-                        <button
-                            onClick={handleNext}
-                            className="w-full py-5 bg-white text-black rounded-2xl font-bold text-xs tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors flex items-center justify-center gap-3"
-                        >
-                            <Sparkles size={16} /> Gerar Meu Plano
-                        </button>
-                    </motion.div>
-                );
-
             case 'generating':
                 return (
                     <motion.div
@@ -311,15 +357,7 @@ export default function AiPlanGenerator() {
                         animate={{ opacity: 1 }}
                         className="flex flex-col items-center justify-center py-20"
                     >
-                        <div className="w-24 h-24 bg-white/[0.03] border border-white/10 rounded-full flex items-center justify-center mb-8 relative overflow-hidden group">
-                           <img src={logo} alt="Olyviah" className="w-12 h-12 object-contain grayscale opacity-60 mix-blend-screen" />
-                           <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent rotate-180 animate-pulse" />
-                        </div>
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:-0.3s]" />
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:-0.15s]" />
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce" />
-                        </div>
+                        <Loading fullScreen={false} />
                     </motion.div>
                 );
 
@@ -335,7 +373,7 @@ export default function AiPlanGenerator() {
                         </div>
                         <div>
                             <span className="px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold tracking-[0.3em] uppercase border border-white/10 text-white/60 mb-6 inline-block">
-                                Plano 7 Dias • {config.period}
+                                Plano {config.duration} Dias • {config.period}
                             </span>
                             <h2 className="text-4xl font-serif font-bold tracking-tight mb-4">{generatedTitle}</h2>
                             <p className="text-white/60 font-serif italic text-lg max-w-md mx-auto">{generatedDescription}</p>
@@ -382,11 +420,11 @@ export default function AiPlanGenerator() {
                                      <motion.div 
                                         className="h-full bg-white"
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${(['theme', 'testament', 'period', 'notification'].indexOf(currentStep) + 1) * 25}%` }}
+                                        animate={{ width: `${(['theme', 'duration', 'testament', 'depth', 'period'].indexOf(currentStep) + 1) * 20}%` }}
                                      />
                                 </div>
                                 <span className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase w-12 text-right">
-                                    {['theme', 'testament', 'period', 'notification'].indexOf(currentStep) + 1}/4
+                                    {['theme', 'duration', 'testament', 'depth', 'period'].indexOf(currentStep) + 1}/5
                                 </span>
                             </div>
 

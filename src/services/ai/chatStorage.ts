@@ -67,5 +67,15 @@ export const chatStorage = {
         const threads = await this.getThreads();
         const filtered = threads.filter(t => t.id !== threadId);
         localStorage.setItem(THREAD_KEY, JSON.stringify(filtered));
+    },
+
+    async updateThreadTitle(threadId: string, title: string) {
+        const threads = await this.getThreads();
+        const index = threads.findIndex(t => t.id === threadId);
+        if (index > -1) {
+            threads[index].title = title;
+            threads[index].updatedAt = Date.now();
+            localStorage.setItem(THREAD_KEY, JSON.stringify(threads));
+        }
     }
 };

@@ -25,18 +25,24 @@ function cn(...inputs: ClassValue[]) {
 
 const Plans: React.FC = () => {
     const navigate = useNavigate();
-    const [activePlans, setActivePlans] = useState<UserPlan[]>(plansService.getActivePlans());
+    const [activePlans, setActivePlans] = useState<UserPlan[]>([]);
+    const [customPlans, setCustomPlans] = useState<Plan[]>([]);
     const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    useEffect(() => {
+    const refreshData = () => {
         setActivePlans(plansService.getActivePlans());
+        setCustomPlans(plansService.getCustomPlans());
+    };
+
+    useEffect(() => {
+        refreshData();
     }, []);
 
     const handleJoin = (planId: string) => {
         plansService.joinPlan(planId);
-        setActivePlans(plansService.getActivePlans());
-        const plan = STATIC_PLANS.find(p => p.id === planId);
+        refreshData();
+        const plan = [...STATIC_PLANS, ...customPlans].find(p => p.id === planId);
         setSuccessMessage(`Você iniciou o plano: ${plan?.title}`);
         setTimeout(() => setSuccessMessage(null), 3000);
     };
@@ -47,7 +53,7 @@ const Plans: React.FC = () => {
         } else {
             plansService.leavePlan(planId);
         }
-        setActivePlans(plansService.getActivePlans());
+        refreshData();
         setShowConfirmDelete(null);
     };
 
@@ -177,12 +183,24 @@ const Plans: React.FC = () => {
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {[...STATIC_PLANS, ...plansService.getCustomPlans()].filter(p => !isPlanActive(p.id)).map(plan => (
+                            {[...STATIC_PLANS, ...customPlans].filter(p => !isPlanActive(p.id)).map(plan => (
                                 <motion.div
                                     key={plan.id}
                                     whileHover={{ y: -5 }}
-                                    className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col justify-between group"
+                                    className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col justify-between group relative"
                                 >
+                                    {plan.category === 'ai' && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowConfirmDelete(plan.id);
+                                            }}
+                                            className="absolute top-6 right-6 p-3 bg-white/5 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all opacity-0 group-hover:opacity-100 z-10"
+                                            title="Excluir plano"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                     <div>
                                         <div className="flex items-center justify-between mb-6">
                                             <div className="p-4 bg-white/5 rounded-2xl text-white/20 group-hover:text-white transition-colors">
@@ -195,12 +213,14 @@ const Plans: React.FC = () => {
                                         <h4 className="text-xl font-bold mb-3 tracking-tight">{plan.title}</h4>
                                         <p className="text-white/40 text-sm italic opacity-80">{plan.description}</p>
                                     </div>
-                                    <button
-                                        onClick={() => handleJoin(plan.id)}
-                                        className="w-full py-4 bg-white/5 hover:bg-white text-white hover:text-black border border-white/10 rounded-2xl font-bold text-xs tracking-widest transition-all uppercase"
-                                    >
-                                        Iniciar Plano
-                                    </button>
+                                    <div className="mt-8">
+                                        <button
+                                            onClick={() => handleJoin(plan.id)}
+                                            className="w-full py-4 bg-white/5 hover:bg-white text-white hover:text-black border border-white/10 rounded-2xl font-bold text-xs tracking-widest transition-all uppercase"
+                                        >
+                                            Iniciar Plano
+                                        </button>
+                                    </div>
                                 </motion.div>
                             ))}
                         </div>

@@ -22,6 +22,7 @@ import { statsService } from '../services/features/statsService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { OlyviahExegesisPanel } from '../components/olyviah/OlyviahExegesisPanel';
+import { Loading } from '../components/Loading';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -304,9 +305,8 @@ const Bible: React.FC = () => {
 
             <main className="max-w-2xl mx-auto px-6 pt-28 pb-40">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-48 gap-4">
-                        <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
-                        <p className="text-white/30 text-sm italic">Carregando...</p>
+                    <div className="flex flex-col items-center justify-center py-48">
+                        <Loading fullScreen={false} />
                     </div>
                 ) : error ? (
                     <div className="bg-white/5 border border-white/10 p-10 rounded-3xl text-center">
