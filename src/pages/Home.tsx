@@ -38,7 +38,7 @@ const Navbar = ({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onO
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const { profile } = useProfile();
 
   useEffect(() => {
@@ -46,6 +46,8 @@ const Navbar = ({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onO
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  if (loading) return null;
 
   return (
     <nav className={cn(
@@ -338,9 +340,15 @@ const Footer = () => {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+
+  useEffect(() => {
+    if (window.location.hash === '#auth' && !user && !loading) {
+      setIsAuthModalOpen(true);
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     if (user && isAuthModalOpen) {

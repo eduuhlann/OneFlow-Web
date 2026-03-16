@@ -166,28 +166,24 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
 
     const clearHistory = async () => {
         if (activeThreadId) {
-            if (confirm('Deseja limpar as mensagens desta conversa?')) {
-                await chatStorage.clearMessages(activeThreadId);
-                setMessages([]);
-            }
+            await chatStorage.clearMessages(activeThreadId);
+            setMessages([]);
         }
     };
 
     const handleDeleteThread = async (e: React.MouseEvent, threadId: string) => {
         e.stopPropagation();
-        if (confirm('Deseja excluir permanentemente toda esta conversa?')) {
-            await chatStorage.deleteThread(threadId);
-            const remainingThreads = await chatStorage.getThreads();
-            setThreads(remainingThreads);
-            
-            if (activeThreadId === threadId) {
-                if (remainingThreads.length > 0) {
-                    setActiveThreadId(remainingThreads[0].id);
-                } else {
-                    const newId = await chatStorage.createThread('Nova conversa');
-                    setActiveThreadId(newId);
-                    loadThreads();
-                }
+        await chatStorage.deleteThread(threadId);
+        const remainingThreads = await chatStorage.getThreads();
+        setThreads(remainingThreads);
+        
+        if (activeThreadId === threadId) {
+            if (remainingThreads.length > 0) {
+                setActiveThreadId(remainingThreads[0].id);
+            } else {
+                const newId = await chatStorage.createThread('Nova conversa');
+                setActiveThreadId(newId);
+                loadThreads();
             }
         }
     };
