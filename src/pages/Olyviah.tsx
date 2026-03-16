@@ -50,6 +50,8 @@ const Olyviah: React.FC = () => {
     useEffect(() => {
         if (activeThreadId) {
             loadMessages(activeThreadId);
+        } else {
+            setMessages([]);
         }
     }, [activeThreadId]);
 
@@ -59,14 +61,11 @@ const Olyviah: React.FC = () => {
 
     const loadThreads = async () => {
         let data = await chatStorage.getThreads();
-        if (data.length === 0) {
-            const id = await chatStorage.createThread('Nova conversa');
-            data = await chatStorage.getThreads();
-            setActiveThreadId(id);
-        }
         setThreads(data);
         if (data.length > 0 && !activeThreadId) {
             setActiveThreadId(data[0].id);
+        } else if (data.length === 0) {
+            setActiveThreadId(null);
         }
     };
 
@@ -83,6 +82,25 @@ const Olyviah: React.FC = () => {
         const id = await chatStorage.createThread('Nova conversa');
         setActiveThreadId(id);
         await loadThreads();
+    };
+
+    const generateChatTitle = async (userMsg: string, aiMsg: string) => {
+        try {
+            const prompt = `Resuma o assunto dessa conversa entre um usuário e uma IA teológica em no máximo 3 ou 4 palavras. 
+            Usuário: "${userMsg.substring(0, 200)}"
+            IA: "${aiMsg.substring(0, 200)}..."
+            Retorne APENAS o resumo curto, sem aspas, sem menção a nomes próprios se não for o tema central, e sem pontuação final.`;
+
+            const summary = await callGroqChat([
+                { role: 'system', content: 'Você é um assistente que cria títulos curtos e precisos para conversas.' },
+                { role: 'user', content: prompt }
+            ]);
+
+            return summary.replace(/[".]/g, '').trim();
+        } catch (error) {
+            console.error('Error generating title:', error);
+            return null;
+        }
     };
 
     const handleSendMessage = async (e?: React.FormEvent) => {
@@ -148,7 +166,17 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
             };
 
             setMessages(prev => [...prev, assistantMessage]);
-            await chatStorage.saveMessage(activeThreadId!, assistantMessage);
+            await chatStorage.saveMessage(threadId!, assistantMessage);
+
+            // Auto-generate title if it's the first exchange or title is generic
+            const currentThreads = await chatStorage.getThreads();
+            const currentThread = currentThreads.find(t => t.id === threadId);
+            if (currentThread && (currentThread.title === 'Nova conversa' || currentThread.title === '')) {
+                const newTitle = await generateChatTitle(userMessage.content, assistantMessage.content);
+                if (newTitle) {
+                    await chatStorage.updateThreadTitle(threadId!, newTitle);
+                }
+            }
         } catch (error) {
             console.error('Chat error:', error);
             const errorMessage: ChatMessage = {
@@ -181,9 +209,7 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
             if (remainingThreads.length > 0) {
                 setActiveThreadId(remainingThreads[0].id);
             } else {
-                const newId = await chatStorage.createThread('Nova conversa');
-                setActiveThreadId(newId);
-                loadThreads();
+                setActiveThreadId(null);
             }
         }
     };
@@ -296,18 +322,9 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
                             </button>
                         </div>
 
-                        <div className="flex items-baseline gap-1 absolute left-1/2 -translate-x-1/2">
-                            <span className="font-bold text-sm tracking-tight text-white/80">Olyviah</span>
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest italic">Digital</span>
-                        </div>
 
-                        <button
-                            onClick={clearHistory}
-                            className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/20 hover:text-white group"
-                            title="Limpar mensagens"
-                        >
-                            <Trash2 className="w-3.5 h-3.5 group-hover:text-red-400" />
-                        </button>
+
+
                     </header>
 
                     {/* Main Chat Area */}
@@ -316,14 +333,9 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
                             <div className="max-w-3xl mx-auto w-full px-6 py-8">
                                 {messages.length === 0 ? (
                                     <div className="h-[70vh] flex flex-col items-center justify-center text-center space-y-6">
-                                        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden mb-4">
-                                            {aiAvatar ? (
-                                                <img src={aiAvatar} alt="Olyviah" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <img src={logo} alt="OneFlow" className="w-8 h-8 object-contain grayscale opacity-20" />
-                                            )}
-                                        </div>
-                                        <h2 className="text-2xl font-semibold tracking-tight">O que posso te ajudar hoje?</h2>
+                                        <h2 className="text-4xl md:text-5xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50 pb-2">
+                                            O que posso te ajudar hoje, {displayName}?
+                                        </h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl pt-4">
                                             {[
                                                 "Explique João 3:16",
