@@ -133,7 +133,7 @@ const Profile: React.FC = () => {
         setError('');
         try {
             if (user?.app_metadata?.provider !== 'discord') {
-                setError('Para sincronizar molduras e assets, você precisa entrar com o Discord.');
+                setError('Sincronização disponível apenas para login via Discord.');
                 setSyncingDiscord(false);
                 return;
             }
@@ -142,7 +142,7 @@ const Profile: React.FC = () => {
             const providerToken = session?.provider_token;
 
             if (!providerToken) {
-                setError('Sessão do Discord expirada. Tente realizar login novamente.');
+                setError('Sessão expirada. Refaça o login com Discord.');
                 setSyncingDiscord(false);
                 return;
             }
@@ -160,14 +160,21 @@ const Profile: React.FC = () => {
                 setPreviewUrl(url);
             }
 
-            // 3. Banner (GIF ou Cor)
+            // 3. Banner (Imagem ou Cor Hex)
             if (discordData.banner) {
                 const url = discordService.getBannerUrl(discordData.id, discordData.banner);
                 setBannerUrl(url);
                 setBannerPreviewUrl(url);
-            } else if (discordData.banner_color) {
-                setBannerPreviewUrl(discordData.banner_color);
-                setBannerUrl(discordData.banner_color);
+            } else {
+                // Tenta pegar a cor do banner via accent_color (convertido no serviço)
+                const bannerColor = discordData.banner_color || (discordData.accent_color ? discordService.intToHex(discordData.accent_color) : null);
+                if (bannerColor) {
+                    setBannerUrl(bannerColor);
+                    setBannerPreviewUrl(bannerColor);
+                } else {
+                    setBannerUrl('');
+                    setBannerPreviewUrl('');
+                }
             }
 
             // 4. Decoração do Avatar
@@ -188,8 +195,7 @@ const Profile: React.FC = () => {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            console.error(err);
-            setError('Falha ao sincronizar dados do Discord.');
+            setError('Erro ao sincronizar. Verifique se o Discord App tem permissão.");
         } finally {
             setSyncingDiscord(false);
         }
@@ -231,7 +237,7 @@ const Profile: React.FC = () => {
 
                 <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
                     
-                    {/* Discord Profile Effect Overlay - Real High Premium Style */}
+                    {/* Discord Profile Effect Overlay */}
                     {discordProfileEffectId && (
                         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                             <motion.div 
@@ -240,7 +246,6 @@ const Profile: React.FC = () => {
                                 className="absolute inset-0 bg-gradient-to-br from-[#5865f2]/20 via-transparent to-[#eb459e]/20"
                             />
                             <div className="absolute -inset-[100%] animate-[spin_10s_linear_infinite] opacity-30 bg-[conic-gradient(from_0deg,transparent,rgba(88,101,242,0.2),transparent)]" />
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
                         </div>
                     )}
 
@@ -270,7 +275,7 @@ const Profile: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Avatar Overlay - Circular Discord Style with Decoration */}
+                        {/* Avatar Overlay */}
                         <div className="absolute -bottom-16 left-6 z-20">
                             <input
                                 ref={fileInputRef}
@@ -280,7 +285,6 @@ const Profile: React.FC = () => {
                                 onChange={(e) => handleFileChange(e, 'avatar')}
                             />
                             <div className="relative">
-                                {/* Effect Glow around Avatar */}
                                 {discordProfileEffectId && (
                                     <div className="absolute inset-0 rounded-full blur-2xl bg-[#5865f2]/40 animate-pulse z-0" />
                                 )}
@@ -289,7 +293,6 @@ const Profile: React.FC = () => {
                                     className="w-32 h-32 rounded-full bg-[#1e1f22] p-[6px] cursor-pointer group/avatar relative z-10"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
-                                    {/* Avatar Decoration Overlay */}
                                     {discordDecorationUrl && (
                                         <div className="absolute inset-[-15%] pointer-events-none z-30">
                                             <img src={discordDecorationUrl} alt="Decoration" className="w-full h-full object-contain" />
@@ -316,7 +319,7 @@ const Profile: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Profile Branding Header */}
+                    {/* Profile Header */}
                     <div className="pt-20 px-6 pb-6 border-b border-white/5 relative z-10">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                             <div className="flex flex-col">
@@ -328,8 +331,8 @@ const Profile: React.FC = () => {
                                         <Sparkles size={18} className="text-[#5865f2] animate-pulse" />
                                     )}
                                 </div>
-                                <p className="text-white/30 text-xs mt-1 font-medium">
-                                    {user?.app_metadata?.provider === 'discord' ? 'Vinculado ao Discord' : 'Sincronizado via OneFlow Identity'}
+                                <p className="text-white/30 text-xs mt-1 font-medium italic">
+                                    {user?.app_metadata?.provider === 'discord' ? 'Perfil Discord Sincronizado' : 'Perfil OneFlow'}
                                 </p>
                             </div>
 
@@ -338,37 +341,35 @@ const Profile: React.FC = () => {
                                     <button
                                         onClick={handleSyncDiscord}
                                         disabled={syncingDiscord}
-                                        className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20 shadow-lg shadow-[#5865f2]/5"
+                                        className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20"
                                     >
                                         <Zap size={16} className={cn(syncingDiscord && "animate-pulse")} />
-                                        {syncingDiscord ? 'Sincronizando...' : 'Puxar do Discord'}
+                                        {syncingDiscord ? 'Puxando...' : 'Puxar do Discord'}
                                     </button>
                                     
                                     <button
                                         onClick={handleSave}
                                         disabled={isSaving || uploading}
-                                        className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-[#5865f2]/10"
+                                        className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {isSaving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
-                                        Salvar Alterações
+                                        Salvar Perfil
                                     </button>
                                 </div>
                                 {showSaveWarning && (
                                     <motion.p 
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
+                                        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
                                         className="text-[10px] text-[#5865f2] font-black uppercase tracking-widest"
                                     >
-                                        Sincronização concluída! Clique em "Salvar" para aplicar no seu perfil.
+                                        Dados sincronizados! Clique em "Salvar" para aplicar.
                                     </motion.p>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Detailed Info Card */}
-                    <div className="p-6 space-y-8 bg-[#18191c] relative z-10">
-                        {/* Feedback Messages */}
+                    {/* Detailed Info */}
+                    <div className="p-6 space-y-8 bg-[#18191c] relative z-10 min-h-[300px]">
                         {error && (
                             <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 flex items-center gap-3 text-xs font-bold">
                                 <AlertCircle size={16} /> {error}
@@ -376,7 +377,7 @@ const Profile: React.FC = () => {
                         )}
                         {success && !showSaveWarning && (
                             <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 flex items-center gap-3 text-xs font-bold">
-                                <CheckCircle2 size={16} /> Perfil Salvo com Sucesso!
+                                <CheckCircle2 size={16} /> Sucesso! Alterações salvas.
                             </div>
                         )}
 
@@ -387,7 +388,7 @@ const Profile: React.FC = () => {
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm"
+                                    className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm text-white"
                                     placeholder="Seu nome"
                                 />
                             </div>
@@ -397,15 +398,14 @@ const Profile: React.FC = () => {
                                 <textarea
                                     value={bio}
                                     onChange={(e) => setBio(e.target.value)}
-                                    className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm resize-none"
+                                    className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm text-white resize-none"
                                     placeholder="Conte um pouco sobre você..."
                                     rows={4}
                                 />
                             </div>
 
-                            {/* Options to clear syncing */}
                             {(discordDecorationUrl || discordProfileEffectId) && (
-                                <div className="flex gap-4">
+                                <div className="flex gap-4 pt-4">
                                     {discordDecorationUrl && (
                                         <button 
                                             onClick={() => setDiscordDecorationUrl('')}
@@ -435,7 +435,7 @@ const Profile: React.FC = () => {
                     <div className="mt-8 p-6 bg-[#5865f2]/5 border border-[#5865f2]/10 rounded-2xl flex items-center justify-between gap-6">
                         <div className="space-y-1">
                             <p className="text-sm font-bold text-white/80">Quer usar seus assets animados do Discord?</p>
-                            <p className="text-xs text-white/40">Saia e entre novamente usando a opção "Continuar com Discord".</p>
+                            <p className="text-xs text-white/40">Faça login pelo Discord para liberar GIFs e Molduras.</p>
                         </div>
                         <button 
                             onClick={() => navigate('/auth')}

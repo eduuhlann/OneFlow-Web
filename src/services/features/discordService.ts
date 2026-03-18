@@ -22,6 +22,14 @@ export interface DiscordUserData {
 
 export const discordService = {
     /**
+     * Converte o accent_color do Discord (decimal) para Hexadecimal
+     */
+    intToHex(intColor: number | null): string | null {
+        if (intColor === null || intColor === undefined) return null;
+        return `#${intColor.toString(16).padStart(6, '0')}`;
+    },
+
+    /**
      * Constrói a URL do avatar do Discord (suporta GIF)
      */
     getAvatarUrl(userId: string, hash: string): string {
@@ -58,6 +66,13 @@ export const discordService = {
             throw new Error('Falha ao buscar dados do Discord');
         }
 
-        return response.json();
+        const data = await response.json();
+        
+        // Injetar a cor em hex no objeto data
+        if (data.accent_color) {
+            data.banner_color = this.intToHex(data.accent_color);
+        }
+        
+        return data;
     }
 };
