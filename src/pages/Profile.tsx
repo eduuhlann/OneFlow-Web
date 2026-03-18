@@ -38,6 +38,7 @@ const Profile: React.FC = () => {
     const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
     const [bannerPreviewUrl, setBannerPreviewUrl] = useState(profile?.banner_url || '');
     const [discordDecorationUrl, setDiscordDecorationUrl] = useState(profile?.discord_decoration_url || '');
+    const [discordProfileEffectId, setDiscordProfileEffectId] = useState(profile?.discord_profile_effect_id || '');
     
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -58,6 +59,7 @@ const Profile: React.FC = () => {
             setBannerUrl(profile.banner_url || '');
             setBannerPreviewUrl(profile.banner_url || '');
             setDiscordDecorationUrl(profile.discord_decoration_url || '');
+            setDiscordProfileEffectId(profile.discord_profile_effect_id || '');
         }
     }, [profile]);
 
@@ -128,46 +130,64 @@ const Profile: React.FC = () => {
         setSyncingDiscord(true);
         setError('');
         try {
-            // No fluxo OAuth2 real, o Supabase já traz os metadados
-            // Se o login foi feito com Discord, os dados estão no user_metadata
-            const discordMetadata = user?.user_metadata;
-            
+            // Verificar se o provedor é Discord
             if (user?.app_metadata?.provider !== 'discord') {
-                setError('Para sincronizar molduras automaticamente, você precisa entrar com o Discord.');
+                setError('Para sincronizar molduras e assets, você precisa entrar com o Discord.');
+                setSyncingDiscord(false);
                 return;
             }
 
-            // Para pegar a moldura (decoration), precisamos do token de acesso do provedor
-            // O Supabase armazena isso na sessão se habilitado
             const { data: { session } } = await supabase.auth.getSession();
             const providerToken = session?.provider_token;
 
-            if (providerToken) {
-                const discordData = await discordService.getUserData(providerToken);
-                if (discordData.avatar_decoration_data) {
-                    const decorationUrl = discordService.getDecorationUrl(discordData.avatar_decoration_data.asset);
-                    setDiscordDecorationUrl(decorationUrl);
-                }
-                
-                // Sync avatar
-                if (discordData.avatar) {
-                    const cdnAvatar = `https://cdn.discordapp.com/avatars/${discordData.id}/${discordData.avatar}.png?size=512`;
-                    setAvatarUrl(cdnAvatar);
-                    setPreviewUrl(cdnAvatar);
-                }
-                
-                setSuccess(true);
-                setTimeout(() => setSuccess(false), 3000);
-            } else {
-                // Fallback para metadados básicos se o token não estiver disponível
-                if (discordMetadata?.avatar_url) {
-                    setAvatarUrl(discordMetadata.avatar_url);
-                    setPreviewUrl(discordMetadata.avatar_url);
-                }
-                setError('Sessão do Discord expirada. Tente sair e entrar novamente com Discord.');
+            if (!providerToken) {
+                setError('Sessão do Discord expirada. Tente realizar login novamente.');
+                setSyncingDiscord(false);
+                return;
             }
+
+            const discordData = await discordService.getUserData(providerToken);
+            
+            // 1. Nome de exibição (Priorizar Nome Global)
+            if (discordData.global_name) {
+                setName(discordData.global_name);
+            } else {
+                setName(discordData.username);
+            }
+
+            // 2. Avatar (Suporte a GIF)
+            if (discordData.avatar) {
+                const url = discordService.getAvatarUrl(discordData.id, discordData.avatar);
+                setAvatarUrl(url);
+                setPreviewUrl(url);
+            }
+
+            // 3. Banner (Suporte a GIF)
+            if (discordData.banner) {
+                const url = discordService.getBannerUrl(discordData.id, discordData.banner);
+                setBannerUrl(url);
+                setBannerPreviewUrl(url);
+            }
+
+            // 4. Decoração do Avatar
+            if (discordData.avatar_decoration_data) {
+                setDiscordDecorationUrl(discordService.getDecorationUrl(discordData.avatar_decoration_data.asset));
+            } else {
+                setDiscordDecorationUrl('');
+            }
+
+            // 5. Efeito de Perfil
+            if (discordData.profile_effect_data) {
+                setDiscordProfileEffectId(discordData.profile_effect_data.id);
+            } else {
+                setDiscordProfileEffectId('');
+            }
+
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            setError('Falha ao sincronizar. Certifique-se de que o provedor Discord está configurado no Supabase.');
+            console.error(err);
+            setError('Falha ao sincronizar dados do Discord.');
         } finally {
             setSyncingDiscord(false);
         }
@@ -183,7 +203,8 @@ const Profile: React.FC = () => {
                 bio, 
                 avatar_url: avatarUrl || null,
                 banner_url: bannerUrl || null,
-                discord_decoration_url: discordDecorationUrl || null
+                discord_decoration_url: discordDecorationUrl || null,
+                discord_profile_effect_id: discordProfileEffectId || null
             });
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
@@ -205,9 +226,16 @@ const Profile: React.FC = () => {
                     <h1 className="text-xl font-bold tracking-tight text-white">Editar Perfil</h1>
                 </header>
 
-                <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+                <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
+                    {/* Discord Profile Effect Overlay - Background */}
+                    {discordProfileEffectId && (
+                        <div className="absolute inset-0 pointer-events-none opacity-40 z-0">
+                            <div className="w-full h-full bg-[#5865f2]/5 animate-pulse" />
+                        </div>
+                    )}
+
                     {/* Banner Section */}
-                    <div className="relative group/banner">
+                    <div className="relative group/banner z-10">
                         <input
                             ref={bannerInputRef}
                             type="file"
@@ -232,7 +260,7 @@ const Profile: React.FC = () => {
                         </div>
 
                         {/* Avatar Overlay - Circular Discord Style with Decoration */}
-                        <div className="absolute -bottom-16 left-6 z-10">
+                        <div className="absolute -bottom-16 left-6 z-20">
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -247,7 +275,7 @@ const Profile: React.FC = () => {
                                 >
                                     {/* Avatar Decoration Overlay */}
                                     {discordDecorationUrl && (
-                                        <div className="absolute inset-[-15%] pointer-events-none z-20">
+                                        <div className="absolute inset-[-15%] pointer-events-none z-30">
                                             <img src={discordDecorationUrl} alt="Decoration" className="w-full h-full object-contain" />
                                         </div>
                                     )}
@@ -273,7 +301,7 @@ const Profile: React.FC = () => {
                     </div>
 
                     {/* Profile Branding Header */}
-                    <div className="pt-20 px-6 pb-6 border-b border-white/5">
+                    <div className="pt-20 px-6 pb-6 border-b border-white/5 relative z-10">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                             <div>
                                 <h2 className="text-2xl font-bold">
@@ -307,7 +335,7 @@ const Profile: React.FC = () => {
                     </div>
 
                     {/* Detailed Info Card */}
-                    <div className="p-6 space-y-8 bg-[#18191c]">
+                    <div className="p-6 space-y-8 bg-[#18191c] relative z-10">
                         {/* Feedback Messages */}
                         {error && (
                             <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 flex items-center gap-3 text-xs font-bold">
@@ -343,14 +371,26 @@ const Profile: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Options to clear decoration */}
-                            {discordDecorationUrl && (
-                                <button 
-                                    onClick={() => setDiscordDecorationUrl('')}
-                                    className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
-                                >
-                                    Remover Moldura do Discord
-                                </button>
+                            {/* Options to clear syncing */}
+                            {(discordDecorationUrl || discordProfileEffectId) && (
+                                <div className="flex gap-4">
+                                    {discordDecorationUrl && (
+                                        <button 
+                                            onClick={() => setDiscordDecorationUrl('')}
+                                            className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
+                                        >
+                                            Remover Moldura
+                                        </button>
+                                    )}
+                                    {discordProfileEffectId && (
+                                        <button 
+                                            onClick={() => setDiscordProfileEffectId('')}
+                                            className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
+                                        >
+                                            Remover Efeito
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -359,7 +399,7 @@ const Profile: React.FC = () => {
                 {user?.app_metadata?.provider !== 'discord' && (
                     <div className="mt-8 p-6 bg-[#5865f2]/5 border border-[#5865f2]/10 rounded-2xl flex items-center justify-between gap-6">
                         <div className="space-y-1">
-                            <p className="text-sm font-bold text-white/80">Quer usar suas molduras do Discord?</p>
+                            <p className="text-sm font-bold text-white/80">Quer usar seus assets animados do Discord?</p>
                             <p className="text-xs text-white/40">Saia e entre novamente usando a opção "Continuar com Discord".</p>
                         </div>
                         <button 

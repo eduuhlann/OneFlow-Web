@@ -6,14 +6,36 @@ const CDN_BASE = 'https://cdn.discordapp.com';
 export interface DiscordUserData {
     id: string;
     username: string;
+    global_name: string | null;
     avatar: string | null;
+    banner: string | null;
+    accent_color: number | null;
     avatar_decoration_data: {
         asset: string;
         sku_id: string;
     } | null;
+    profile_effect_data: {
+        id: string;
+    } | null;
 }
 
 export const discordService = {
+    /**
+     * Constrói a URL do avatar do Discord (suporta GIF)
+     */
+    getAvatarUrl(userId: string, hash: string): string {
+        const ext = hash.startsWith('a_') ? 'gif' : 'png';
+        return `${CDN_BASE}/avatars/${userId}/${hash}.${ext}?size=512`;
+    },
+
+    /**
+     * Constrói a URL do banner do Discord (suporta GIF)
+     */
+    getBannerUrl(userId: string, hash: string): string {
+        const ext = hash.startsWith('a_') ? 'gif' : 'png';
+        return `${CDN_BASE}/banners/${userId}/${hash}.${ext}?size=1024`;
+    },
+
     /**
      * Constrói a URL da decoração do avatar do Discord
      */
@@ -22,7 +44,16 @@ export const discordService = {
     },
 
     /**
-     * Busca dados do usuário via token (se fornecido manualmente ou via OAuth)
+     * Constrói a URL do efeito de perfil do Discord
+     */
+    getProfileEffectUrl(effectId: string): string {
+        // Os efeitos de perfil são assets complexos, mas podemos apontar para o preset se soubermos a URL
+        // Geralmente são arquivos Lottie ou spritesheets. Vamos focar no ID por enquanto.
+        return `${CDN_BASE}/profile-effects/${effectId}.png`;
+    },
+
+    /**
+     * Busca dados do usuário via token OAuth2
      */
     async getUserData(accessToken: string): Promise<DiscordUserData> {
         const response = await fetch(`${DISCORD_API_BASE}/users/@me`, {
@@ -33,24 +64,6 @@ export const discordService = {
 
         if (!response.ok) {
             throw new Error('Falha ao buscar dados do Discord');
-        }
-
-        return response.json();
-    },
-
-    /**
-     * Busca dados de um usuário específico via ID (requer Bot Token)
-     * NOTA: Isso só funciona se o Bot tiver acesso ao usuário (estar em um servidor comum)
-     */
-    async getUserDataById(userId: string, botToken: string): Promise<DiscordUserData> {
-        const response = await fetch(`${DISCORD_API_BASE}/users/${userId}`, {
-            headers: {
-                Authorization: `Bot ${botToken}`,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error('Falha ao buscar usuário pelo ID');
         }
 
         return response.json();
