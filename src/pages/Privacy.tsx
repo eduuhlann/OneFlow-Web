@@ -21,10 +21,10 @@ export default function Privacy() {
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <motion.button
             whileHover={{ x: -5 }}
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/40 hover:text-white transition-colors"
           >
-            <ArrowLeft size={14} /> Voltar para Home
+            <ArrowLeft size={14} /> Voltar para o App
           </motion.button>
           <img src={logo} alt="OneFlow" className="w-24 h-auto object-contain" />
         </div>
