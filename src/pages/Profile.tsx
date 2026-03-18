@@ -195,7 +195,7 @@ const Profile: React.FC = () => {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            setError('Erro ao sincronizar. Verifique se o Discord App tem permissão.");
+            setError('Erro ao sincronizar. Verifique se o Discord App tem permissão.');
         } finally {
             setSyncingDiscord(false);
         }
