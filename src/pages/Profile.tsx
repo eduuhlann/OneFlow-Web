@@ -12,15 +12,13 @@ import {
     CheckCircle2,
     MessageSquare,
     Zap,
-    Sparkles,
-    Palette
+    Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { supabase } from '../services/supabase';
 import { discordService } from '../services/features/discordService';
-import { COMMUNITY_DECORATIONS } from '../constants/decorations';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
 import PageTransition from '../components/PageTransition';
@@ -162,12 +160,13 @@ const Profile: React.FC = () => {
                 setPreviewUrl(url);
             }
 
-            // 3. Banner
+            // 3. Banner (Imagem ou Cor Hex)
             if (discordData.banner) {
                 const url = discordService.getBannerUrl(discordData.id, discordData.banner);
                 setBannerUrl(url);
                 setBannerPreviewUrl(url);
             } else {
+                // Tenta pegar a cor do banner via accent_color (convertido no serviço)
                 const bannerColor = discordData.banner_color || (discordData.accent_color ? discordService.intToHex(discordData.accent_color) : null);
                 if (bannerColor) {
                     setBannerUrl(bannerColor);
@@ -178,14 +177,14 @@ const Profile: React.FC = () => {
                 }
             }
 
-            // 4. Decoração
+            // 4. Decoração do Avatar
             if (discordData.avatar_decoration_data) {
                 setDiscordDecorationUrl(discordService.getDecorationUrl(discordData.avatar_decoration_data.asset));
             } else {
                 setDiscordDecorationUrl('');
             }
 
-            // 5. Efeito
+            // 5. Efeito de Perfil
             if (discordData.profile_effect_data) {
                 setDiscordProfileEffectId(discordData.profile_effect_data.id);
             } else {
@@ -196,7 +195,7 @@ const Profile: React.FC = () => {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            setError('Erro ao sincronizar. Verifique as credenciais.');
+            setError('Erro ao sincronizar. Verifique se o Discord App tem permissão.');
         } finally {
             setSyncingDiscord(false);
         }
@@ -225,13 +224,6 @@ const Profile: React.FC = () => {
         }
     };
 
-    const applyDecoration = (url: string) => {
-        setDiscordDecorationUrl(url);
-        setShowSaveWarning(true);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
-    };
-
     return (
         <PageTransition>
         <div className="min-h-screen bg-[#0f0f10] text-white overflow-x-hidden font-sans">
@@ -243,7 +235,7 @@ const Profile: React.FC = () => {
                     <h1 className="text-xl font-bold tracking-tight text-white">Editar Perfil</h1>
                 </header>
 
-                <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative mb-12">
+                <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
                     
                     {/* Discord Profile Effect Overlay */}
                     {discordProfileEffectId && (
@@ -349,7 +341,7 @@ const Profile: React.FC = () => {
                                     <button
                                         onClick={handleSyncDiscord}
                                         disabled={syncingDiscord}
-                                        className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20 shadow-lg shadow-[#5865f2]/5"
+                                        className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20"
                                     >
                                         <Zap size={16} className={cn(syncingDiscord && "animate-pulse")} />
                                         {syncingDiscord ? 'Puxando...' : 'Puxar do Discord'}
@@ -358,15 +350,18 @@ const Profile: React.FC = () => {
                                     <button
                                         onClick={handleSave}
                                         disabled={isSaving || uploading}
-                                        className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-[#5865f2]/10"
+                                        className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {isSaving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
                                         Salvar Perfil
                                     </button>
                                 </div>
                                 {showSaveWarning && (
-                                    <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] text-[#5865f2] font-black uppercase tracking-widest">
-                                        Clique em "Salvar" para aplicar as mudanças.
+                                    <motion.p 
+                                        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                                        className="text-[10px] text-[#5865f2] font-black uppercase tracking-widest"
+                                    >
+                                        Dados sincronizados! Clique em "Salvar" para aplicar.
                                     </motion.p>
                                 )}
                             </div>
@@ -374,7 +369,18 @@ const Profile: React.FC = () => {
                     </div>
 
                     {/* Detailed Info */}
-                    <div className="p-6 space-y-8 bg-[#18191c] relative z-10">
+                    <div className="p-6 space-y-8 bg-[#18191c] relative z-10 min-h-[300px]">
+                        {error && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 flex items-center gap-3 text-xs font-bold">
+                                <AlertCircle size={16} /> {error}
+                            </div>
+                        )}
+                        {success && !showSaveWarning && (
+                            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 flex items-center gap-3 text-xs font-bold">
+                                <CheckCircle2 size={16} /> Sucesso! Alterações salvas.
+                            </div>
+                        )}
+
                         <div className="space-y-6">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Nome de Exibição</label>
@@ -397,65 +403,31 @@ const Profile: React.FC = () => {
                                     rows={4}
                                 />
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Decorations Gallery Section */}
-                <div className="bg-[#1e1f22] rounded-3xl p-8 border border-white/5 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 text-white/5">
-                        <Palette size={120} />
-                    </div>
-                    
-                    <div className="relative z-10 flex flex-col gap-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-[#5865f2]/20 rounded-lg text-[#5865f2]">
-                                <Sparkles size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-bold">Molduras da Comunidade</h3>
-                                <p className="text-white/30 text-xs">Escolha um estilo para o seu avatar</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {COMMUNITY_DECORATIONS.map((decor) => (
-                                <motion.div
-                                    key={decor.id}
-                                    whileHover={{ y: -4 }}
-                                    onClick={() => applyDecoration(decor.url)}
-                                    className={cn(
-                                        "bg-[#2b2d31] p-4 rounded-2xl border cursor-pointer transition-all",
-                                        discordDecorationUrl === decor.url ? "border-[#5865f2] shadow-lg shadow-[#5865f2]/10" : "border-white/5 hover:border-white/20"
+                            {(discordDecorationUrl || discordProfileEffectId) && (
+                                <div className="flex gap-4 pt-4">
+                                    {discordDecorationUrl && (
+                                        <button 
+                                            onClick={() => setDiscordDecorationUrl('')}
+                                            className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
+                                        >
+                                            Remover Moldura
+                                        </button>
                                     )}
-                                >
-                                    <div className="relative w-24 h-24 mx-auto mb-4 bg-black/20 rounded-full flex items-center justify-center overflow-hidden">
-                                        <div className="absolute inset-0 z-10 pointer-events-none">
-                                            <img src={decor.url} alt={decor.name} className="w-full h-full object-contain" />
-                                        </div>
-                                        <User size={32} className="text-white/10" />
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-xs font-bold text-white/90 truncate">{decor.name}</p>
-                                        {decor.author && (
-                                            <p className="text-[9px] text-white/30 uppercase tracking-widest mt-1 font-black">Por {decor.author}</p>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    {discordProfileEffectId && (
+                                        <button 
+                                            onClick={() => {
+                                                setDiscordProfileEffectId('');
+                                                setShowSaveWarning(true);
+                                            }}
+                                            className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
+                                        >
+                                            Remover Efeito
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
-
-                        {discordDecorationUrl && (
-                            <button 
-                                onClick={() => {
-                                    setDiscordDecorationUrl('');
-                                    setShowSaveWarning(true);
-                                }}
-                                className="mt-4 text-[10px] text-red-500/60 hover:text-red-500 font-bold uppercase tracking-widest text-center"
-                            >
-                                Remover Moldura Ativa
-                            </button>
-                        )}
                     </div>
                 </div>
 
