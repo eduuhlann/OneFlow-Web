@@ -7,7 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AnimatePresence } from 'motion/react';
 
 // Pages
-import Home from './pages/Home';
+import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Bible from './pages/Bible';
 import Olyviah from './pages/Olyviah';
@@ -27,10 +27,10 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
-        <Route path="/auth" element={<Navigate to="/#auth" replace />} />
+        <Route path="/auth" element={<Auth />} />
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />

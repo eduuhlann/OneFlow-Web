@@ -8,15 +8,19 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-const ParticleBackground = () => {
+interface ParticleBackgroundProps {
+    forceParticles?: boolean;
+}
+
+const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ forceParticles = false }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { preferences } = usePreferences();
     const location = useLocation();
     const isDashboard = location.pathname === '/dashboard';
 
-    // Setup particles if that's the chosen wallpaper
+    // Setup particles if that's the chosen wallpaper or if forced
     useEffect(() => {
-        if (preferences.wallpaper !== 'particles') return;
+        if (!forceParticles && preferences.wallpaper !== 'particles') return;
 
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -80,7 +84,7 @@ const ParticleBackground = () => {
             window.removeEventListener('resize', resize);
             cancelAnimationFrame(animationFrameId);
         };
-    }, [preferences.wallpaper]);
+    }, [preferences.wallpaper, forceParticles]);
 
     return (
         <div className={cn(
@@ -89,8 +93,8 @@ const ParticleBackground = () => {
             preferences.wallpaper === 'aurora' && "bg-wallpaper-aurora",
             preferences.wallpaper === 'none' && "bg-wallpaper-none"
         )}>
-            {preferences.wallpaper === 'particles' && (
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-40 mix-blend-screen" />
+            {(forceParticles || preferences.wallpaper === 'particles') && (
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-60 mix-blend-screen" />
             )}
 
             {isDashboard && preferences.wallpaper === 'custom' && preferences.customWallpaper && (

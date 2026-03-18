@@ -285,7 +285,7 @@ export default function Dashboard() {
 
     const handleSignOut = async () => {
         await signOut();
-        navigate('/');
+        navigate('/auth');
     };
 
     const displayName = profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário';
@@ -450,7 +450,7 @@ export default function Dashboard() {
                     {/* Header */}
                     <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
                         <div className="flex items-center gap-6">
-                            <Link to="/" className="hover:opacity-80 transition-opacity">
+                            <Link to="/dashboard" className="hover:opacity-80 transition-opacity">
                                 <img src={logo} alt="OneFlow" className="w-24 md:w-28 h-auto object-contain" />
                             </Link>
                             <div className="space-y-1">
