@@ -78,7 +78,6 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h2 className="text-2xl font-bold font-serif tracking-tight">Estilo do App</h2>
-                                    <p className="text-white/40 text-sm italic font-serif mt-1">Sua experiência, sua visão.</p>
                                 </div>
                                 <button
                                     onClick={onClose}
@@ -93,9 +92,6 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                 <section className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Sua Galeria</h4>
-                                        {preferences.wallpaper === 'custom' && (
-                                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Personalizado Ativo</span>
-                                        )}
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">

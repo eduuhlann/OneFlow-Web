@@ -6,6 +6,8 @@ export interface UserProfile {
     id: string;
     username: string | null;
     avatar_url: string | null;
+    banner_url: string | null;
+    discord_decoration_url: string | null;
     bio: string | null;
     total_xp: number;
     completed_lessons: number;

@@ -58,6 +58,24 @@ export default function Auth() {
         }
     };
 
+    const handleDiscordLogin = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: {
+                    redirectTo: window.location.origin + '/dashboard',
+                    scopes: 'identify email',
+                },
+            });
+            if (error) throw error;
+        } catch (err: any) {
+            setError(translateAuthError(err.message));
+            setLoading(false);
+        }
+    };
+
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -269,7 +287,7 @@ export default function Auth() {
                                             type="button"
                                             onClick={handleGoogleLogin}
                                             disabled={loading}
-                                            className="w-full bg-white/[0.03] border border-white/5 text-white/50 py-5 rounded-2xl font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white/5 hover:text-white hover:border-white/10 transition-all disabled:opacity-50 uppercase"
+                                            className="w-full bg-white/[0.03] border border-white/5 text-white/50 py-5 rounded-2xl font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-white/5 hover:text-white hover:border-white/10 transition-all disabled:opacity-50 uppercase mb-3"
                                         >
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -278,6 +296,18 @@ export default function Auth() {
                                                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335" />
                                             </svg>
                                             CONTINUAR COM GOOGLE
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleDiscordLogin}
+                                            disabled={loading}
+                                            className="w-full bg-[#5865F2]/10 border border-[#5865F2]/20 text-[#5865F2] py-5 rounded-2xl font-black text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#5865F2]/20 hover:text-white transition-all disabled:opacity-50 uppercase"
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M19.27 4.51C17.81 3.84 16.25 3.35 14.6 3.08C14.58 3.08 14.56 3.09 14.55 3.11C14.35 3.47 14.13 3.95 13.98 4.31C12.19 4.05 10.42 4.05 8.65 4.31C8.5 3.95 8.27 3.47 8.07 3.11C8.06 3.09 8.04 3.08 8.02 3.08C6.37 3.35 4.81 3.84 3.35 4.51C3.34 4.51 3.33 4.52 3.33 4.53C0.37 8.97 -0.44 13.3 0.17 17.58C0.17 17.59 0.18 17.6 0.19 17.61C2.15 19.05 4.04 19.92 5.89 20.49C5.91 20.5 5.93 20.49 5.95 20.47C6.38 19.88 6.77 19.24 7.09 18.57C7.11 18.53 7.09 18.49 7.05 18.47C6.43 18.24 5.84 17.94 5.28 17.61C5.23 17.58 5.23 17.51 5.28 17.48C5.4 17.39 5.52 17.3 5.63 17.21C5.64 17.2 5.66 17.2 5.68 17.21C9.4 18.92 13.43 18.92 17.1 17.21C17.12 17.2 17.14 17.2 17.15 17.21C17.27 17.3 17.38 17.39 17.5 17.48C17.55 17.51 17.55 17.58 17.5 17.61C16.94 17.94 16.35 18.24 15.73 18.47C15.69 18.48 15.67 18.53 15.69 18.57C16.02 19.24 16.41 19.88 16.84 20.47C16.85 20.49 16.88 20.5 16.9 20.49C18.76 19.92 20.66 19.05 22.62 17.61C22.63 17.61 22.64 17.6 22.64 17.59C23.35 12.33 21.49 8.08 19.29 4.53C19.29 4.52 19.28 4.51 19.27 4.51ZM8.02 15.33C6.91 15.33 6 14.31 6 13.06C6 11.81 6.91 10.79 8.02 10.79C9.13 10.79 10.04 11.81 10.02 13.06C10.02 14.31 9.13 15.33 8.02 15.33ZM14.6 15.33C13.49 15.33 12.58 14.31 12.58 13.06C12.58 11.81 13.49 10.79 14.6 10.79C15.71 10.79 16.62 11.81 16.6 13.06C16.6 14.31 15.71 15.33 14.6 15.33Z" />
+                                            </svg>
+                                            CONTINUAR COM DISCORD
                                         </button>
                                     </>
                                 )}
