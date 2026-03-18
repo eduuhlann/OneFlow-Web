@@ -9,6 +9,7 @@ export interface DiscordUserData {
     global_name: string | null;
     avatar: string | null;
     banner: string | null;
+    banner_color: string | null;
     accent_color: number | null;
     avatar_decoration_data: {
         asset: string;
@@ -41,15 +42,6 @@ export const discordService = {
      */
     getDecorationUrl(assetHash: string): string {
         return `${CDN_BASE}/avatar-decoration-presets/${assetHash}.png?size=240`;
-    },
-
-    /**
-     * Constrói a URL do efeito de perfil do Discord
-     */
-    getProfileEffectUrl(effectId: string): string {
-        // Os efeitos de perfil são assets complexos, mas podemos apontar para o preset se soubermos a URL
-        // Geralmente são arquivos Lottie ou spritesheets. Vamos focar no ID por enquanto.
-        return `${CDN_BASE}/profile-effects/${effectId}.png`;
     },
 
     /**

@@ -11,7 +11,8 @@ import {
     AlertCircle,
     CheckCircle2,
     MessageSquare,
-    Zap
+    Zap,
+    Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,6 +46,7 @@ const Profile: React.FC = () => {
     const [syncingDiscord, setSyncingDiscord] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [showSaveWarning, setShowSaveWarning] = useState(false);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +132,6 @@ const Profile: React.FC = () => {
         setSyncingDiscord(true);
         setError('');
         try {
-            // Verificar se o provedor é Discord
             if (user?.app_metadata?.provider !== 'discord') {
                 setError('Para sincronizar molduras e assets, você precisa entrar com o Discord.');
                 setSyncingDiscord(false);
@@ -148,25 +149,25 @@ const Profile: React.FC = () => {
 
             const discordData = await discordService.getUserData(providerToken);
             
-            // 1. Nome de exibição (Priorizar Nome Global)
-            if (discordData.global_name) {
-                setName(discordData.global_name);
-            } else {
-                setName(discordData.username);
-            }
+            // 1. Nome
+            if (discordData.global_name) setName(discordData.global_name);
+            else setName(discordData.username);
 
-            // 2. Avatar (Suporte a GIF)
+            // 2. Avatar (GIF)
             if (discordData.avatar) {
                 const url = discordService.getAvatarUrl(discordData.id, discordData.avatar);
                 setAvatarUrl(url);
                 setPreviewUrl(url);
             }
 
-            // 3. Banner (Suporte a GIF)
+            // 3. Banner (GIF ou Cor)
             if (discordData.banner) {
                 const url = discordService.getBannerUrl(discordData.id, discordData.banner);
                 setBannerUrl(url);
                 setBannerPreviewUrl(url);
+            } else if (discordData.banner_color) {
+                setBannerPreviewUrl(discordData.banner_color);
+                setBannerUrl(discordData.banner_color);
             }
 
             // 4. Decoração do Avatar
@@ -183,6 +184,7 @@ const Profile: React.FC = () => {
                 setDiscordProfileEffectId('');
             }
 
+            setShowSaveWarning(true);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
@@ -206,6 +208,7 @@ const Profile: React.FC = () => {
                 discord_decoration_url: discordDecorationUrl || null,
                 discord_profile_effect_id: discordProfileEffectId || null
             });
+            setShowSaveWarning(false);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
@@ -227,10 +230,17 @@ const Profile: React.FC = () => {
                 </header>
 
                 <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
-                    {/* Discord Profile Effect Overlay - Background */}
+                    
+                    {/* Discord Profile Effect Overlay - Real High Premium Style */}
                     {discordProfileEffectId && (
-                        <div className="absolute inset-0 pointer-events-none opacity-40 z-0">
-                            <div className="w-full h-full bg-[#5865f2]/5 animate-pulse" />
+                        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 0.6 }}
+                                className="absolute inset-0 bg-gradient-to-br from-[#5865f2]/20 via-transparent to-[#eb459e]/20"
+                            />
+                            <div className="absolute -inset-[100%] animate-[spin_10s_linear_infinite] opacity-30 bg-[conic-gradient(from_0deg,transparent,rgba(88,101,242,0.2),transparent)]" />
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
                         </div>
                     )}
 
@@ -244,12 +254,13 @@ const Profile: React.FC = () => {
                             onChange={(e) => handleFileChange(e, 'banner')}
                         />
                         <div 
-                            className="w-full aspect-[2.5/1] bg-black relative cursor-pointer overflow-hidden transition-all"
+                            className="w-full aspect-[2.5/1] relative cursor-pointer overflow-hidden transition-all bg-black"
                             onClick={() => bannerInputRef.current?.click()}
+                            style={bannerPreviewUrl && bannerPreviewUrl.startsWith('#') ? { backgroundColor: bannerPreviewUrl } : {}}
                         >
-                            {bannerPreviewUrl ? (
+                            {bannerPreviewUrl && !bannerPreviewUrl.startsWith('#') ? (
                                 <img src={bannerPreviewUrl} alt="Banner" className="w-full h-full object-cover" />
-                            ) : (
+                            ) : !bannerPreviewUrl && (
                                 <div className="w-full h-full bg-[#111214] flex items-center justify-center text-white/5">
                                     <Upload size={32} />
                                 </div>
@@ -269,8 +280,13 @@ const Profile: React.FC = () => {
                                 onChange={(e) => handleFileChange(e, 'avatar')}
                             />
                             <div className="relative">
+                                {/* Effect Glow around Avatar */}
+                                {discordProfileEffectId && (
+                                    <div className="absolute inset-0 rounded-full blur-2xl bg-[#5865f2]/40 animate-pulse z-0" />
+                                )}
+                                
                                 <div 
-                                    className="w-32 h-32 rounded-full bg-[#1e1f22] p-[6px] cursor-pointer group/avatar relative"
+                                    className="w-32 h-32 rounded-full bg-[#1e1f22] p-[6px] cursor-pointer group/avatar relative z-10"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
                                     {/* Avatar Decoration Overlay */}
@@ -303,33 +319,49 @@ const Profile: React.FC = () => {
                     {/* Profile Branding Header */}
                     <div className="pt-20 px-6 pb-6 border-b border-white/5 relative z-10">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                            <div>
-                                <h2 className="text-2xl font-bold">
-                                    {name || user?.user_metadata?.username || user?.email?.split('@')[0]}
-                                </h2>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-2xl font-bold">
+                                        {name || user?.user_metadata?.username || user?.email?.split('@')[0]}
+                                    </h2>
+                                    {discordProfileEffectId && (
+                                        <Sparkles size={18} className="text-[#5865f2] animate-pulse" />
+                                    )}
+                                </div>
                                 <p className="text-white/30 text-xs mt-1 font-medium">
                                     {user?.app_metadata?.provider === 'discord' ? 'Vinculado ao Discord' : 'Sincronizado via OneFlow Identity'}
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleSyncDiscord}
-                                    disabled={syncingDiscord}
-                                    className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20 shadow-lg shadow-[#5865f2]/5"
-                                >
-                                    <Zap size={16} className={cn(syncingDiscord && "animate-pulse")} />
-                                    {syncingDiscord ? 'Sincronizando...' : 'Sincronizar Discord'}
-                                </button>
-                                
-                                <button
-                                    onClick={handleSave}
-                                    disabled={isSaving || uploading}
-                                    className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-[#5865f2]/10"
-                                >
-                                    {isSaving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
-                                    Salvar Alterações
-                                </button>
+                            <div className="flex flex-col items-end gap-3">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleSyncDiscord}
+                                        disabled={syncingDiscord}
+                                        className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20 shadow-lg shadow-[#5865f2]/5"
+                                    >
+                                        <Zap size={16} className={cn(syncingDiscord && "animate-pulse")} />
+                                        {syncingDiscord ? 'Sincronizando...' : 'Puxar do Discord'}
+                                    </button>
+                                    
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving || uploading}
+                                        className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-[#5865f2]/10"
+                                    >
+                                        {isSaving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
+                                        Salvar Alterações
+                                    </button>
+                                </div>
+                                {showSaveWarning && (
+                                    <motion.p 
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-[10px] text-[#5865f2] font-black uppercase tracking-widest"
+                                    >
+                                        Sincronização concluída! Clique em "Salvar" para aplicar no seu perfil.
+                                    </motion.p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -342,9 +374,9 @@ const Profile: React.FC = () => {
                                 <AlertCircle size={16} /> {error}
                             </div>
                         )}
-                        {success && (
+                        {success && !showSaveWarning && (
                             <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 flex items-center gap-3 text-xs font-bold">
-                                <CheckCircle2 size={16} /> Sucesso!
+                                <CheckCircle2 size={16} /> Perfil Salvo com Sucesso!
                             </div>
                         )}
 
@@ -384,7 +416,10 @@ const Profile: React.FC = () => {
                                     )}
                                     {discordProfileEffectId && (
                                         <button 
-                                            onClick={() => setDiscordProfileEffectId('')}
+                                            onClick={() => {
+                                                setDiscordProfileEffectId('');
+                                                setShowSaveWarning(true);
+                                            }}
                                             className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
                                         >
                                             Remover Efeito
