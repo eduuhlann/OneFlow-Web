@@ -97,15 +97,15 @@ const Discipleship: React.FC = () => {
         if (!user) return;
         setLoading(true);
         try {
-            const [disciples, leaderData, groups] = await Promise.all([
+            const [disciples, leaders, groups] = await Promise.all([
                 discipleshipService.getDisciples(user.id),
-                discipleshipService.getLeader(user.id),
+                discipleshipService.getLeaders(user.id),
                 discipleshipService.getGroups(user.id)
             ]);
-
+            
             // Normalize connections for the list
             let all = [
-                ...(leaderData ? [{ ...leaderData, type: 'leader', profile: leaderData.profiles }] : []),
+                ...leaders.map(l => ({ ...l, type: 'leader', profile: l.profiles })),
                 ...disciples.map(d => ({ ...d, type: 'disciple', profile: d.profiles })),
                 ...groups.map(g => ({ ...g, type: 'group' }))
             ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
