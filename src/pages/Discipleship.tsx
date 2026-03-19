@@ -604,7 +604,7 @@ const Discipleship: React.FC = () => {
                                                 {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Paperclip className="w-5 h-5" />}
                                             </button>
                                         </div>
-                                        <div className="flex-1 bg-white/[0.02] rounded-[32px] flex flex-col p-2 border border-white/5 focus-within:border-white/10 transition-all group/input">
+                                        <div className="flex-1 bg-white/[0.03] rounded-[32px] flex flex-col p-2 transition-all group/input">
                                             <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem espiritual..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
                                             <div className="flex justify-end p-2 opacity-60 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => handleSendMessage()} disabled={!noteInput.trim() && !isUploading} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
