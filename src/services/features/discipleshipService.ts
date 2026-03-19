@@ -139,7 +139,7 @@ export const discipleshipService = {
         return data || [];
     },
 
-    async createReadingChallenge(leaderId: string, discipleId: string, book: string, start: number, end: number): Promise<void> {
+    async createReadingChallenge(leaderId: string, discipleId: string, book: string, start: number, end: number, groupId?: string): Promise<void> {
         const { error } = await supabase
             .from('discipleship_tasks')
             .insert({
@@ -147,7 +147,7 @@ export const discipleshipService = {
                 disciple_id: discipleId,
                 title: `Desafio: ${book} ${start}-${end}`,
                 type: 'reading',
-                target_id: JSON.stringify({ book, start, end }),
+                target_id: JSON.stringify({ book, start, end, groupId }),
                 is_completed: false
             });
         
@@ -240,7 +240,7 @@ export const discipleshipService = {
         // Auto-add leader as an active member
         await supabase
             .from('discipleship_group_members')
-            .insert({ group_id: data.id, user_id: leaderId, status: 'active' });
+            .insert({ group_id: data.id, user_id: leaderId, status: 'active', role: 'admin' });
         
         return data.id;
     },

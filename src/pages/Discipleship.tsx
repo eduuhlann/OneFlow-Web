@@ -155,10 +155,32 @@ const Discipleship: React.FC = () => {
             if (selectedConnection.type === 'group') {
                 const groupId = selectedConnection.id;
                 const leaderId = selectedConnection.leader_id;
-                [noteList, members] = await Promise.all([
+                const isLeader = leaderId === user.id;
+
+                [noteList, members, taskList] = await Promise.all([
                     discipleshipService.getNotes(leaderId, null, groupId),
-                    discipleshipService.getGroupMembers(groupId)
+                    discipleshipService.getGroupMembers(groupId),
+                    isLeader ? discipleshipService.getTasks(user.id, true) : discipleshipService.getTasks(user.id, false)
                 ]);
+                
+                // If leader, filter tasks that belong to this group (by parsing target_id)
+                if (isLeader) {
+                    taskList = taskList.filter(t => {
+                        try {
+                            const target = JSON.parse(t.target_id);
+                            return target.groupId === groupId;
+                        } catch (e) { return false; }
+                    });
+                } else {
+                    // If member, only see tasks assigned to me in this group
+                    taskList = taskList.filter(t => {
+                        try {
+                            const target = JSON.parse(t.target_id);
+                            return target.groupId === groupId && t.disciple_id === user.id;
+                        } catch (e) { return false; }
+                    });
+                }
+                
                 setGroupMembers(members);
             } else {
                 const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
@@ -320,12 +342,22 @@ const Discipleship: React.FC = () => {
 
     const handleCreateChallenge = async () => {
         if (!user || !selectedConnection) return;
-        const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
         try {
-            await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
+            if (selectedConnection.type === 'group') {
+                // Create challenge for all group members except the leader
+                const members = await discipleshipService.getGroupMembers(selectedConnection.id);
+                const results = members
+                    .filter(m => m.user_id !== user.id && m.status === 'active')
+                    .map(m => discipleshipService.createReadingChallenge(user.id, m.user_id, challengeData.book, challengeData.start, challengeData.end, selectedConnection.id));
+                await Promise.all(results);
+            } else {
+                const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
+                await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
+            }
             setIsChallengeModalOpen(false);
             loadChatData();
         } catch (error) {
+            console.error('Challenge error:', error);
             alert('Erro ao criar desafio.');
         }
     };
@@ -669,7 +701,7 @@ const Discipleship: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 relative">
-                                        {selectedConnection.type !== 'self' && (selectedConnection.leader_id === user!.id || selectedConnection.type === 'disciple') && (
+                                        {selectedConnection.type !== 'self' && (selectedConnection.leader_id === user?.id || selectedConnection.type === 'disciple' || groupMembers.find(m => m.user_id === user?.id)?.role === 'admin') && (
                                             <button onClick={() => setIsChallengeModalOpen(true)} className="p-2.5 md:p-3 bg-amber-500/10 hover:bg-amber-500/20 rounded-2xl transition-all border border-amber-500/10" title="Criar Desafio de Leitura">
                                                 <TrendingUp className="w-5 h-5 text-amber-500" />
                                             </button>
