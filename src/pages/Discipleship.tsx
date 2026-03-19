@@ -53,6 +53,7 @@ const Discipleship: React.FC = () => {
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchMode, setSearchMode] = useState<'global' | 'group'>('global');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -185,7 +186,7 @@ const Discipleship: React.FC = () => {
     const handleInvite = async (targetUser: any) => {
         if (!user) return;
         try {
-            if (isGroupModalOpen && selectedConnection?.type === 'group') {
+            if (searchMode === 'group' && selectedConnection?.type === 'group') {
                 await discipleshipService.inviteToGroup(selectedConnection.id, targetUser.id);
             } else {
                 await discipleshipService.sendDirectInvite(user.id, targetUser.id);
@@ -194,6 +195,8 @@ const Discipleship: React.FC = () => {
             setTimeout(() => {
                 setInviteSuccess(null);
                 setIsSearchOpen(false);
+                setSearchQuery('');
+                setSearchResults([]);
                 loadConnections();
             }, 2000);
         } catch (error) {
@@ -320,7 +323,7 @@ const Discipleship: React.FC = () => {
                             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between">
                                     <h3 className="text-xl font-bold tracking-tight">
-                                        {selectedConnection?.type === 'group' ? `Convidar para ${selectedConnection.name}` : 'Novo Discipulado'}
+                                        {searchMode === 'group' ? `Convidar para ${selectedConnection?.name}` : 'Novo Discipulado'}
                                     </h3>
                                     <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
                                 </div>
@@ -330,15 +333,24 @@ const Discipleship: React.FC = () => {
                                         <input type="text" autoFocus placeholder="Buscar por usuário..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full bg-black/40 border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
                                     </div>
                                     <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar pr-2">
-                                        {searchResults.map(r => (
-                                            <div key={r.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">{r.avatar_url && <img src={r.avatar_url} className="w-full h-full object-cover" />}</div>
-                                                    <span className="font-bold text-sm">{r.username}</span>
+                                        {inviteSuccess ? (
+                                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                                <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center text-green-500 animate-bounce">
+                                                    <Check className="w-8 h-8" />
                                                 </div>
-                                                <button onClick={() => handleInvite(r)} className="px-4 py-2 bg-white text-black rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Convidar</button>
+                                                <p className="text-sm font-bold text-white/60">Convite enviado para <span className="text-white">{inviteSuccess}</span>!</p>
                                             </div>
-                                        ))}
+                                        ) : (
+                                            searchResults.map(r => (
+                                                <div key={r.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">{r.avatar_url && <img src={r.avatar_url} className="w-full h-full object-cover" />}</div>
+                                                        <span className="font-bold text-sm">{r.username}</span>
+                                                    </div>
+                                                    <button onClick={() => handleInvite(r)} className="px-4 py-2 bg-white text-black rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Convidar</button>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
@@ -377,7 +389,7 @@ const Discipleship: React.FC = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setIsGroupModalOpen(true)} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl"><Users className="w-5 h-5" /></button>
-                                    <button onClick={() => setIsSearchOpen(true)} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
+                                    <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
                                 </div>
                             </div>
                         </header>
@@ -478,7 +490,7 @@ const Discipleship: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-2 relative">
                                         {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
-                                            <button onClick={() => setIsSearchOpen(true)} className="p-2.5 md:p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-2xl transition-all border border-indigo-500/10">
+                                            <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); }} className="p-2.5 md:p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-2xl transition-all border border-indigo-500/10">
                                                 <UserPlus className="w-5 h-5 text-indigo-400" />
                                             </button>
                                         )}
