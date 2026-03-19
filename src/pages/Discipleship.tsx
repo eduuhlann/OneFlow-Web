@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
     ArrowLeft, 
     User, 
     Users, 
     Plus, 
-    Copy, 
-    Check, 
+    Search,
     Send, 
     BookOpen, 
     Clock, 
@@ -14,7 +13,10 @@ import {
     MessageSquare,
     ChevronRight,
     TrendingUp,
-    Target
+    Target,
+    X,
+    MoreVertical,
+    Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,6 +26,7 @@ import { statsService, BibleStats } from '../services/features/statsService';
 import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { supabase } from '../services/supabase';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -33,531 +36,421 @@ const Discipleship: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { profile } = useProfile();
-    const [activeTab, setActiveTab] = useState<'me' | 'leadership'>('me');
     const [loading, setLoading] = useState(true);
+    const [view, setView] = useState<'list' | 'chat'>('list');
     
-    // Leadership data
-    const [disciples, setDisciples] = useState<any[]>([]);
-    const [inviteCode, setInviteCode] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
-    const [selectedDisciple, setSelectedDisciple] = useState<any | null>(null);
-    const [discipleStats, setDiscipleStats] = useState<BibleStats | null>(null);
+    // UI States
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
     
-    // Disciple data
-    const [leader, setLeader] = useState<any | null>(null);
-    const [joinCode, setJoinCode] = useState('');
-    const [tasks, setTasks] = useState<DiscipleshipTask[]>([]);
+    // Data States
+    const [connections, setConnections] = useState<any[]>([]);
+    const [selectedConnection, setSelectedConnection] = useState<any | null>(null);
     const [notes, setNotes] = useState<DiscipleshipNote[]>([]);
+    const [tasks, setTasks] = useState<DiscipleshipTask[]>([]);
+    const [stats, setStats] = useState<BibleStats | null>(null);
     const [noteInput, setNoteInput] = useState('');
+    
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        loadData();
-    }, [user, activeTab]);
+        loadConnections();
+    }, [user]);
 
-    const loadData = async () => {
+    useEffect(() => {
+        if (selectedConnection) {
+            loadChatData();
+            const channel = subscribeToMessages();
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
+    }, [selectedConnection]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [notes]);
+
+    const loadConnections = async () => {
         if (!user) return;
         setLoading(true);
         try {
-            if (activeTab === 'leadership') {
-                const [dList, code] = await Promise.all([
-                    discipleshipService.getDisciples(user.id),
-                    discipleshipService.getInviteCode(user.id)
-                ]);
-                setDisciples(dList);
-                setInviteCode(code);
-            } else {
-                const [lData, taskList] = await Promise.all([
-                    discipleshipService.getLeader(user.id),
-                    discipleshipService.getTasks(user.id, false)
-                ]);
-                console.log('Disciple data loaded:', { lData, taskList });
-                setLeader(lData);
-                setTasks(taskList);
-                
-                if (lData) {
-                    console.log('Leader found, fetching notes...');
-                    const noteList = await discipleshipService.getNotes(lData.leader_id, user.id);
-                    setNotes(noteList);
-                } else {
-                    console.log('No leader found for user:', user.id);
-                }
-            }
+            const [disciples, leaderData] = await Promise.all([
+                discipleshipService.getDisciples(user.id),
+                discipleshipService.getLeader(user.id)
+            ]);
+            
+            // Normalize connections for the list
+            const all = [
+                ...(leaderData ? [{ ...leaderData, type: 'leader', profile: leaderData.profiles }] : []),
+                ...disciples.map(d => ({ ...d, type: 'disciple', profile: d.profiles }))
+            ];
+            setConnections(all);
         } catch (error) {
-            console.error('Error loading discipleship data:', error);
+            console.error('Error loading connections:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleGenerateCode = async () => {
+    const loadChatData = async () => {
+        if (!user || !selectedConnection) return;
+        try {
+            const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
+            const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
+            
+            const [noteList, taskList, bibleStats] = await Promise.all([
+                discipleshipService.getNotes(leaderId, discipleId),
+                discipleshipService.getTasks(discipleId, false),
+                statsService.getUserStats(discipleId)
+            ]);
+            
+            setNotes(noteList);
+            setTasks(taskList);
+            setStats(bibleStats);
+        } catch (error) {
+            console.error('Error loading chat data:', error);
+        }
+    };
+
+    const subscribeToMessages = () => {
+        const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user!.id;
+        const discipleId = selectedConnection.type === 'leader' ? user!.id : selectedConnection.disciple_id;
+
+        return supabase
+            .channel(`discipleship-chat-${selectedConnection.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'discipleship_notes',
+                    filter: `leader_id=eq.${leaderId}`
+                },
+                (payload) => {
+                    // Only add if it's for this specific connection
+                    if (payload.new.disciple_id === discipleId) {
+                        setNotes(prev => [...prev, payload.new as DiscipleshipNote]);
+                    }
+                }
+            )
+            .subscribe();
+    };
+
+    const handleSearch = async (q: string) => {
+        setSearchQuery(q);
+        if (q.length >= 3) {
+            const results = await discipleshipService.searchUsers(q);
+            setSearchResults(results.filter(r => r.id !== user?.id));
+        } else {
+            setSearchResults([]);
+        }
+    };
+
+    const handleInvite = async (targetUser: any) => {
         if (!user) return;
         try {
-            const code = await discipleshipService.createInviteCode(user.id);
-            setInviteCode(code);
+            await discipleshipService.sendDirectInvite(user.id, targetUser.id);
+            setInviteSuccess(targetUser.username);
+            setTimeout(() => {
+                setInviteSuccess(null);
+                setIsSearchOpen(false);
+                loadConnections();
+            }, 2000);
         } catch (error) {
-            alert('Erro ao gerar código.');
+            alert('Erro ao enviar convite.');
         }
     };
 
-    const handleCopyCode = () => {
-        if (inviteCode) {
-            navigator.clipboard.writeText(inviteCode);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
+    const handleSendMessage = async () => {
+        if (!user || !noteInput.trim() || !selectedConnection) return;
+        const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
+        const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
 
-    const handleJoin = async () => {
-        if (!user || !joinCode) return;
-        try {
-            await discipleshipService.joinDiscipleship(user.id, joinCode);
-            setJoinCode('');
-            loadData();
-        } catch (error: any) {
-            alert(error.message || 'Código inválido ou erro ao entrar.');
-        }
-    };
-
-    const handleDiscipleClick = async (disciple: any) => {
-        setSelectedDisciple(disciple);
-        const stats = await statsService.getUserStats(disciple.disciple_id);
-        const dTasks = await discipleshipService.getTasks(disciple.disciple_id, false);
-        const dNotes = await discipleshipService.getNotes(user!.id, disciple.disciple_id);
-        setDiscipleStats(stats);
-        setTasks(dTasks);
-        setNotes(dNotes);
-    };
-
-    const handleAddTask = async (title: string, type: string) => {
-        if (!user || !selectedDisciple) return;
-        try {
-            await discipleshipService.assignTask(user.id, selectedDisciple.disciple_id, title, type);
-            const dTasks = await discipleshipService.getTasks(selectedDisciple.disciple_id, false);
-            setTasks(dTasks);
-        } catch (error) {
-            alert('Erro ao atribuir tarefa.');
-        }
-    };
-
-    const handleCompleteTask = async (taskId: string) => {
-        try {
-            await discipleshipService.completeTask(taskId);
-            const taskList = await discipleshipService.getTasks(user!.id, false);
-            setTasks(taskList);
-        } catch (error) {
-            alert('Erro ao completar tarefa.');
-        }
-    };
-
-    const handleAddNote = async () => {
-        if (!user || !noteInput.trim()) return;
-        const leaderId = activeTab === 'leadership' ? user.id : leader.leader_id;
-        const discipleId = activeTab === 'leadership' ? selectedDisciple.disciple_id : user.id;
-        
         try {
             await discipleshipService.addNote(leaderId, discipleId, user.id, noteInput);
             setNoteInput('');
-            const noteList = await discipleshipService.getNotes(leaderId, discipleId);
-            setNotes(noteList);
         } catch (error) {
-            alert('Erro ao enviar nota.');
+            console.error('Error sending message:', error);
         }
+    };
+
+    const handleSelectConnection = (conn: any) => {
+        setSelectedConnection(conn);
+        setView('chat');
     };
 
     return (
         <PageTransition>
-            <div className="min-h-screen bg-[#0d0d0d] text-white p-4 md:p-8 font-sans selection:bg-white selection:text-black">
-                <div className="max-w-6xl mx-auto pb-24">
-                    {/* Header */}
-                    <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                        <div className="flex items-center gap-4">
-                            <button 
-                                onClick={() => selectedDisciple ? setSelectedDisciple(null) : navigate('/dashboard')} 
-                                className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all group"
+            <div className="h-screen bg-[#0d0d0d] text-white flex flex-col font-sans overflow-hidden">
+                {/* Search Modal */}
+                <AnimatePresence>
+                    {isSearchOpen && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+                        >
+                            <motion.div 
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl"
                             >
-                                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                            </button>
-                            <div>
-                                <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">
-                                    {selectedDisciple ? 'Acompanhamento' : 'Discipulado OneFlow'}
-                                </span>
-                                <h1 className="text-3xl md:text-4xl font-black italic -rotate-1 tracking-tighter">
-                                    {selectedDisciple ? selectedDisciple.profiles.username : (activeTab === 'me' ? 'Meu Caminho' : 'Liderança')}
-                                </h1>
-                            </div>
-                        </div>
-
-                        {!selectedDisciple && (
-                            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-fit">
-                                <button
-                                    onClick={() => setActiveTab('me')}
-                                    className={cn(
-                                        "px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
-                                        activeTab === 'me' ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white"
-                                    )}
-                                >
-                                    Meu Caminho
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('leadership')}
-                                    className={cn(
-                                        "px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
-                                        activeTab === 'leadership' ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white"
-                                    )}
-                                >
-                                    Liderança
-                                </button>
-                            </div>
-                        )}
-                    </header>
-
-                    {loading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        </div>
-                    ) : (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {/* Leadership Tab */}
-                            {activeTab === 'leadership' && !selectedDisciple && (
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                    <div className="lg:col-span-2 space-y-6">
-                                        <h2 className="text-xl font-bold flex items-center gap-2">
-                                            <Users className="w-5 h-5 text-blue-500" />
-                                            Seus Discípulos ({disciples.length})
-                                        </h2>
-                                        
-                                        {disciples.length === 0 ? (
-                                            <div className="p-12 border-2 border-dashed border-white/10 rounded-3xl text-center space-y-4">
-                                                <p className="text-white/40">Você ainda não tem discípulos conectados.</p>
-                                                <div className="max-w-xs mx-auto p-4 bg-white/5 rounded-2xl">
-                                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-2">Seu código de convite</p>
-                                                    {inviteCode ? (
-                                                        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-white/10 rounded-xl border border-white/10">
-                                                            <span className="text-lg font-black tracking-widest">{inviteCode}</span>
-                                                            <button onClick={handleCopyCode} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                                                                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <button onClick={handleGenerateCode} className="w-full py-3 bg-white text-black rounded-xl font-bold text-sm">
-                                                            Gerar Código
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {disciples.map(d => (
-                                                    <button 
-                                                        key={d.id}
-                                                        onClick={() => handleDiscipleClick(d)}
-                                                        className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all group text-left"
-                                                    >
-                                                        <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden">
-                                                            {d.profiles.avatar_url ? (
-                                                                <img src={d.profiles.avatar_url} className="w-full h-full object-cover" alt="avatar" />
-                                                            ) : (
-                                                                <User className="w-6 h-6 text-white/20" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <h3 className="font-bold">{d.profiles.username}</h3>
-                                                            <p className="text-[10px] text-white/40 font-medium">Desde {new Date(d.created_at).toLocaleDateString()}</p>
-                                                        </div>
-                                                        <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-6">
-                                        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl space-y-4">
-                                            <h3 className="font-bold flex items-center gap-2">
-                                                <Plus className="w-4 h-4 text-blue-500" />
-                                                Convite
-                                            </h3>
-                                            <p className="text-[11px] text-white/40 leading-relaxed italic">
-                                                Compartilhe seu código com quem você deseja discipular. Eles poderão entrar via aba "Meu Caminho".
-                                            </p>
-                                            {inviteCode && (
-                                                <div className="flex items-center justify-between gap-3 px-4 py-3 bg-black/40 rounded-xl border border-white/10">
-                                                    <span className="text-lg font-black tracking-widest">{inviteCode}</span>
-                                                    <button onClick={handleCopyCode} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                                                        {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                    <h3 className="text-xl font-bold tracking-tight">Novo Discipulado</h3>
+                                    <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
                                 </div>
-                            )}
+                                <div className="p-6 space-y-6">
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                                        <input 
+                                            type="text" 
+                                            autoFocus
+                                            placeholder="Buscar por usuário..." 
+                                            value={searchQuery}
+                                            onChange={(e) => handleSearch(e.target.value)}
+                                            className="w-full bg-black/40 border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium"
+                                        />
+                                    </div>
 
-                            {/* Leadership -> Disciple Detail View */}
-                            {activeTab === 'leadership' && selectedDisciple && (
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                    {/* Stats & Progress */}
-                                    <div className="space-y-6">
-                                        <div className="p-8 bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-white/10 rounded-[32px] space-y-6 shadow-2xl">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-16 h-16 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden">
-                                                    {selectedDisciple.profiles.avatar_url ? (
-                                                        <img src={selectedDisciple.profiles.avatar_url} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <User className="w-8 h-8 text-white/20" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-bold tracking-tight">{selectedDisciple.profiles.username}</h3>
-                                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Em Discípulado</p>
-                                                </div>
-                                            </div>
-
-                                            {discipleStats && (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
-                                                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">Lidos</p>
-                                                        <p className="text-xl font-black italic">{discipleStats.totalChaptersRead}</p>
-                                                        <p className="text-[9px] text-white/20 mt-1">Capítulos</p>
-                                                    </div>
-                                                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
-                                                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">Completo</p>
-                                                        <p className="text-xl font-black italic">{Math.round(discipleStats.completionPercentage)}%</p>
-                                                        <p className="text-[9px] text-white/20 mt-1">Bíblia toda</p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <button 
-                                                onClick={() => handleAddTask('Ler João 1-3', 'chapter')}
-                                                className="w-full py-4 bg-white text-black rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                            >
-                                                <Plus className="w-4 h-4" /> Atribuir Tarefa
-                                            </button>
-                                        </div>
-
-                                        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl space-y-4">
-                                            <h3 className="font-bold flex items-center gap-2">
-                                                <Clock className="w-4 h-4 text-white/40" />
-                                                Progresso Recente
-                                            </h3>
-                                            <div className="space-y-4">
-                                                {/* Mock of recent progress - in real app would fetch recent logs */}
+                                    <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                                        {searchResults.map(r => (
+                                            <div key={r.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                    <span className="text-xs text-white/60">Gênesis 1 concluído</span>
+                                                    <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
+                                                        {r.avatar_url && <img src={r.avatar_url} className="w-full h-full object-cover" />}
+                                                    </div>
+                                                    <span className="font-bold text-sm">{r.username}</span>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Tasks & Notes */}
-                                    <div className="lg:col-span-2 space-y-8">
-                                        <section className="space-y-4">
-                                            <h3 className="text-xl font-bold flex items-center gap-2">
-                                                <Target className="w-5 h-5 text-blue-500" />
-                                                Tarefas Atribuídas
-                                            </h3>
-                                            <div className="space-y-3">
-                                                {tasks.length === 0 ? (
-                                                    <p className="text-sm text-white/20 italic">Nenhuma tarefa ativa.</p>
-                                                ) : (
-                                                    tasks.map(t => (
-                                                        <div key={t.id} className="flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", t.is_completed ? "bg-green-500/10 text-green-500" : "bg-blue-500/10 text-blue-400")}>
-                                                                    {t.is_completed ? <CheckCircle2 className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-bold">{t.title}</p>
-                                                                    <p className="text-[10px] text-white/40">{t.type === 'chapter' ? 'Leitura Bíblica' : 'Plano de Estudo'}</p>
-                                                                </div>
-                                                            </div>
-                                                            {t.is_completed && <span className="text-[9px] font-bold text-green-500/60 uppercase tracking-widest">Concluída</span>}
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </section>
-
-                                        <section className="space-y-4">
-                                            <h3 className="text-xl font-bold flex items-center gap-2">
-                                                <MessageSquare className="w-5 h-5 text-blue-500" />
-                                                Diário Compartilhado
-                                            </h3>
-                                            <div className="p-6 bg-white/[0.03] border border-white/10 rounded-[32px] flex flex-col h-[400px]">
-                                                <div className="flex-1 overflow-y-auto space-y-4 mb-4 custom-scrollbar">
-                                                    {notes.length === 0 ? (
-                                                        <p className="text-center text-white/20 text-xs py-8 italic">Inicie uma conversa ou deixe orientações aqui.</p>
-                                                    ) : (
-                                                        notes.map(n => (
-                                                            <div key={n.id} className={cn("flex flex-col gap-1 max-w-[80%]", n.author_id === user!.id ? "ml-auto items-end" : "items-start")}>
-                                                                <p className={cn("px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed", n.author_id === user!.id ? "bg-white text-black font-medium" : "bg-white/10 text-white")}>
-                                                                    {n.content}
-                                                                </p>
-                                                                <span className="text-[8px] text-white/20 uppercase tracking-widest">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 focus-within:border-white/20 transition-all">
-                                                    <input 
-                                                        type="text" 
-                                                        value={noteInput}
-                                                        onChange={(e) => setNoteInput(e.target.value)}
-                                                        placeholder="Mande uma mensagem ou orientação..." 
-                                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-2"
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                                                    />
-                                                    <button onClick={handleAddNote} className="p-2.5 bg-white text-black rounded-xl hover:scale-105 active:scale-95 transition-all">
-                                                        <Send className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </section>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* My Path Tab (Disciple View) */}
-                            {activeTab === 'me' && (
-                                <>
-                                    {!leader ? (
-                                        <div className="max-w-xl mx-auto mt-12 space-y-8 text-center animate-in fade-in zoom-in duration-500">
-                                            <div className="w-24 h-24 bg-white/5 rounded-[40px] border border-white/10 flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                                                <Users className="w-10 h-10 text-white/20" />
-                                            </div>
-                                            <div className="space-y-4">
-                                                <h2 className="text-3xl font-black tracking-tighter italic">Encontre um Líder</h2>
-                                                <p className="text-white/40 leading-relaxed text-sm">
-                                                    O discipulado é um convite para andar acompanhado. Insira o código enviado pelo seu discipulador para começar.
-                                                </p>
-                                            </div>
-                                            <div className="p-8 bg-white/5 border border-white/10 rounded-[32px] space-y-4">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="CÓDIGO DE CONVITE" 
-                                                    value={joinCode}
-                                                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                                                    className="w-full bg-black/40 border-white/10 rounded-2xl p-4 text-center font-black tracking-[0.5em] focus:border-white/30 transition-all"
-                                                />
                                                 <button 
-                                                    onClick={handleJoin}
-                                                    disabled={!joinCode}
-                                                    className="w-full py-4 bg-white text-black rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30"
+                                                    onClick={() => handleInvite(r)}
+                                                    className="px-4 py-2 bg-white text-black rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
                                                 >
-                                                    Conectar
+                                                    Convidar
                                                 </button>
                                             </div>
+                                        ))}
+                                        {searchQuery.length > 0 && searchQuery.length < 3 && (
+                                            <p className="text-center py-4 text-white/20 text-xs italic">Digite ao menos 3 letras...</p>
+                                        )}
+                                        {searchQuery.length >= 3 && searchResults.length === 0 && (
+                                            <p className="text-center py-4 text-white/20 text-xs italic">Nenhum usuário encontrado.</p>
+                                        )}
+                                    </div>
+                                    
+                                    <AnimatePresence>
+                                        {inviteSuccess && (
+                                            <motion.div 
+                                                initial={{ y: 20, opacity: 0 }} 
+                                                animate={{ y: 0, opacity: 1 }}
+                                                className="bg-green-500/20 border border-green-500/20 text-green-500 p-4 rounded-2xl flex items-center gap-3"
+                                            >
+                                                <div className="bg-green-500 text-white rounded-full p-1"><Check className="w-3 h-3" /></div>
+                                                <span className="text-xs font-bold">Convite enviado para @{inviteSuccess}!</span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Sidebar / Chat List */}
+                    <aside className={cn(
+                        "w-full md:w-[380px] border-r border-white/5 flex flex-col transition-all",
+                        view === 'chat' ? 'hidden md:flex' : 'flex'
+                    )}>
+                        <header className="p-6 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all">
+                                        <ArrowLeft className="w-5 h-5" />
+                                    </button>
+                                    <h1 className="text-2xl font-black italic -rotate-1 tracking-tighter">Mensagens</h1>
+                                </div>
+                                <button onClick={() => setIsSearchOpen(true)} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl">
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar conversa..." 
+                                    className="w-full bg-white/5 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-1 focus:ring-white/10 transition-all font-medium"
+                                />
+                            </div>
+                        </header>
+
+                        <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar pb-24">
+                            {connections.length === 0 ? (
+                                <div className="py-12 text-center space-y-4">
+                                    <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center mx-auto">
+                                        <Users className="w-8 h-8 text-white/10" />
+                                    </div>
+                                    <p className="text-xs text-white/30 italic">Nenhum discipulado ativo.</p>
+                                </div>
+                            ) : (
+                                connections.map(conn => (
+                                    <button 
+                                        key={conn.id}
+                                        onClick={() => handleSelectConnection(conn)}
+                                        className={cn(
+                                            "w-full p-4 rounded-[28px] flex items-center gap-4 transition-all group",
+                                            selectedConnection?.id === conn.id ? "bg-white/10 border border-white/10 shadow-lg" : "hover:bg-white/5 border border-transparent"
+                                        )}
+                                    >
+                                        <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                            {conn.profile?.avatar_url ? (
+                                                <img src={conn.profile.avatar_url} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="w-6 h-6 text-white/20" />
+                                            )}
                                         </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                            {/* Leader Info */}
-                                            <div className="space-y-6">
-                                                <div className="p-8 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-white/10 rounded-[32px] space-y-6 shadow-2xl">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-16 h-16 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden">
-                                                            {leader.profiles.avatar_url ? (
-                                                                <img src={leader.profiles.avatar_url} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <User className="w-8 h-8 text-white/20" />
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="text-xl font-bold tracking-tight">{leader?.profiles?.username || 'Seu Líder'}</h3>
-                                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Seu Discipulador</p>
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-xs text-white/60 leading-relaxed italic">
-                                                        "Onde não há conselho os projetos saem vãos, mas na multidão de conselheiros se confirmam." — Pv 15:22
-                                                    </p>
-                                                </div>
-
-                                                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl space-y-4">
-                                                    <h3 className="font-bold flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40">
-                                                        Resumo de Tarefas
-                                                    </h3>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm font-medium">Pendentes</span>
-                                                        <span className="text-xl font-black italic">{tasks.filter(t => !t.is_completed).length}</span>
-                                                    </div>
-                                                </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-bold">{conn.profile?.username || 'Usuário'}</span>
+                                                <span className="text-[9px] text-white/20 font-black uppercase tracking-widest">{conn.type === 'leader' ? 'Líder' : 'Discípulo'}</span>
                                             </div>
-
-                                            {/* Tasks & Journal (Disciple View) */}
-                                            <div className="lg:col-span-2 space-y-8">
-                                                <section className="space-y-4">
-                                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                                        <Target className="w-5 h-5 text-indigo-500" />
-                                                        Minhas Tarefas
-                                                    </h3>
-                                                    <div className="space-y-3">
-                                                        {tasks.length === 0 ? (
-                                                            <p className="text-sm text-white/20 italic">Seu líder ainda não atribuiu tarefas.</p>
-                                                        ) : (
-                                                            tasks.map(t => (
-                                                                <div key={t.id} className="flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl group">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", t.is_completed ? "bg-green-500/10 text-green-500" : "bg-indigo-500/10 text-indigo-400")}>
-                                                                            {t.is_completed ? <CheckCircle2 className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="font-bold">{t.title}</p>
-                                                                            <p className="text-[10px] text-white/40">{t.type === 'chapter' ? 'Leitura Bíblica' : 'Plano de Estudo'}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    {!t.is_completed && (
-                                                                        <button 
-                                                                            onClick={() => handleCompleteTask(t.id)}
-                                                                            className="px-4 py-2 bg-white text-black rounded-xl text-xs font-bold hover:scale-105 active:scale-95 transition-all opacity-0 group-hover:opacity-100"
-                                                                        >
-                                                                            Concluir
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                </section>
-
-                                                <section className="space-y-4">
-                                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                                        <MessageSquare className="w-5 h-5 text-indigo-500" />
-                                                        Diário Compartilhado
-                                                    </h3>
-                                                    <div className="p-6 bg-white/[0.03] border border-white/10 rounded-[32px] flex flex-col h-[400px]">
-                                                        <div className="flex-1 overflow-y-auto space-y-4 mb-4 custom-scrollbar">
-                                                            {notes.map(n => (
-                                                                <div key={n.id} className={cn("flex flex-col gap-1 max-w-[80%]", n.author_id === user!.id ? "ml-auto items-end" : "items-start")}>
-                                                                    <p className={cn("px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed", n.author_id === user!.id ? "bg-white text-black font-medium" : "bg-white/10 text-white")}>
-                                                                        {n.content}
-                                                                    </p>
-                                                                    <span className="text-[8px] text-white/20 uppercase tracking-widest">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <div className="flex gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 focus-within:border-white/20 transition-all">
-                                                            <input 
-                                                                type="text" 
-                                                                value={noteInput}
-                                                                onChange={(e) => setNoteInput(e.target.value)}
-                                                                placeholder="Mande uma nota ou reflexão..." 
-                                                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-2"
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                                                            />
-                                                            <button onClick={handleAddNote} className="p-2.5 bg-white text-black rounded-xl hover:scale-105 active:scale-95 transition-all">
-                                                                <Send className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </section>
-                                            </div>
+                                            <p className="text-[11px] text-white/40 line-clamp-1">Toque para ver a jornada...</p>
                                         </div>
-                                    )}
-                                </>
+                                    </button>
+                                ))
                             )}
                         </div>
-                    )}
+                    </aside>
+
+                    {/* Chat Area */}
+                    <main className={cn(
+                        "flex-1 flex flex-col bg-[#0d0d0d] transition-all relative",
+                        view === 'list' ? 'hidden md:flex' : 'flex'
+                    )}>
+                        {selectedConnection ? (
+                            <>
+                                <header className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md sticky top-0 z-10">
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => setView('list')} className="md:hidden p-2.5 bg-white/5 rounded-xl">
+                                            <ArrowLeft className="w-5 h-5" />
+                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+                                                {selectedConnection.profile?.avatar_url && <img src={selectedConnection.profile.avatar_url} className="w-full h-full object-cover" />}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-sm md:text-base">{selectedConnection.profile?.username}</h3>
+                                                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Ativo Agora</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                                            <Target className="w-5 h-5 text-indigo-400" />
+                                        </button>
+                                        <button className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                                            <MoreVertical className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </header>
+
+                                {/* Chat Feed */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                                    <div className="max-w-xl mx-auto space-y-6">
+                                        {/* Journey Progress (Compact Header in Chat) */}
+                                        {stats && (
+                                            <div className="mb-12 p-6 bg-indigo-600/10 border border-indigo-500/20 rounded-[32px] flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center">
+                                                        <TrendingUp className="w-6 h-6 text-indigo-400" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Progresso Real-time</p>
+                                                        <p className="text-lg font-black italic">{Math.round(stats.completionPercentage)}% da Bíblia Lida</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-white/30 font-bold uppercase">{stats.totalChaptersRead} Cap.</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-4">
+                                            {notes.map((n, idx) => (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    key={n.id} 
+                                                    className={cn(
+                                                        "flex flex-col gap-1 max-w-[85%] md:max-w-[70%]", 
+                                                        n.author_id === user!.id ? "ml-auto items-end" : "items-start"
+                                                    )}
+                                                >
+                                                    <div className={cn(
+                                                        "px-5 py-3 rounded-[24px] text-[14px] leading-relaxed shadow-xl", 
+                                                        n.author_id === user!.id 
+                                                            ? "bg-white text-black font-semibold rounded-tr-none" 
+                                                            : "bg-[#1a1a1a] border border-white/5 text-white rounded-tl-none"
+                                                    )}>
+                                                        {n.content}
+                                                    </div>
+                                                    <span className="text-[9px] text-white/20 font-bold uppercase px-1">
+                                                        {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </motion.div>
+                                            ))}
+                                            <div ref={messagesEndRef} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Chat Input */}
+                                <footer className="p-6 bg-black/40 backdrop-blur-md border-t border-white/5">
+                                    <div className="max-w-3xl mx-auto flex gap-3 items-center">
+                                        <button className="p-4 bg-white/5 text-white/40 rounded-3xl hover:bg-white/10 transition-all">
+                                            <Plus className="w-5 h-5" />
+                                        </button>
+                                        <div className="flex-1 bg-white/5 rounded-3xl flex items-center px-6 py-1 focus-within:ring-2 focus-within:ring-white/10 transition-all">
+                                            <input 
+                                                type="text" 
+                                                value={noteInput}
+                                                onChange={(e) => setNoteInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                                placeholder="Sua mensagem fiel..." 
+                                                className="w-full bg-transparent border-none focus:ring-0 text-sm py-4"
+                                            />
+                                            <button onClick={handleSendMessage} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg ml-2">
+                                                <Send className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </footer>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center p-12 text-center bg-gradient-to-b from-transparent to-white/[0.02]">
+                                <div className="max-w-sm space-y-6">
+                                    <div className="w-24 h-24 bg-white/5 rounded-[48px] border border-white/10 flex items-center justify-center mx-auto shadow-2xl">
+                                        <MessageSquare className="w-10 h-10 text-white/10" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h2 className="text-2xl font-black italic -rotate-1 tracking-tighter">Seja bem-vindo</h2>
+                                        <p className="text-xs text-white/30 leading-relaxed font-medium">
+                                            Selecione uma conversa ao lado para iniciar seu acompanhamento espiritual ou convide um novo discípulo.
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setIsSearchOpen(true)} className="px-8 py-3 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
+                                        Iniciar Conversa
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </main>
                 </div>
             </div>
         </PageTransition>
