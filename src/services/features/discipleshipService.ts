@@ -164,5 +164,36 @@ export const discipleshipService = {
         
         if (error) return [];
         return data || [];
+    },
+
+    // User Search & Direct Invites
+    async searchUsers(query: string): Promise<any[]> {
+        if (!query || query.length < 3) return [];
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .ilike('username', `%${query}%`)
+            .limit(10);
+        
+        if (error) return [];
+        return data || [];
+    },
+
+    async sendDirectInvite(leaderId: string, discipleId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_connections')
+            .upsert(
+                { leader_id: leaderId, disciple_id: discipleId, status: 'pending' },
+                { onConflict: 'leader_id,disciple_id' }
+            );
+        if (error) throw error;
+    },
+
+    async respondToInvite(connectionId: string, accept: boolean): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_connections')
+            .update({ status: accept ? 'active' : 'inactive' })
+            .eq('id', connectionId);
+        if (error) throw error;
     }
 };

@@ -5,6 +5,7 @@ import { ProfileProvider } from './contexts/ProfileContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AnimatePresence } from 'motion/react';
+import { DiscipleshipListener } from './components/DiscipleshipListener';
 
 // Pages
 import Auth from './pages/Auth';
@@ -108,6 +109,7 @@ export default function App() {
       <ProfileProvider>
         <PreferencesProvider>
           <Router>
+            <DiscipleshipListener />
             <AnimatedRoutes />
           </Router>
         </PreferencesProvider>
