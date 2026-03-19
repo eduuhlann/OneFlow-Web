@@ -258,14 +258,20 @@ const Discipleship: React.FC = () => {
         }
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isGroupAvatar: boolean = false) => {
         const file = event.target.files?.[0];
         if (!file || !user) return;
 
         setIsUploading(true);
         try {
             const result = await discipleshipService.uploadFile(file);
-            await handleSendMessage(result);
+            if (isGroupAvatar && selectedConnection?.type === 'group') {
+                await discipleshipService.updateGroupAvatar(selectedConnection.id, result.url);
+                setSelectedConnection(prev => ({ ...prev, avatar_url: result.url }));
+                loadConnections();
+            } else {
+                await handleSendMessage(result);
+            }
         } catch (error) {
             console.error('Upload error:', error);
             alert('Erro ao subir arquivo.');
@@ -382,12 +388,23 @@ const Discipleship: React.FC = () => {
                                 return (
                                     <button key={`${conn.type}-${conn.id}`} onClick={() => !isPending && handleSelectConnection(conn)} disabled={isPending} className={cn("w-full p-4 rounded-[28px] flex items-center gap-4 transition-all group", selectedConnection?.id === conn.id ? "bg-white/10 border border-white/10 shadow-lg" : "hover:bg-white/5 border border-transparent", isPending && "cursor-default opacity-80")}>
                                         <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                                            {conn.type === 'group' ? <Users className="w-6 h-6 text-white/40" /> : conn.profile?.avatar_url ? <img src={conn.profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-white/20" />}
+                                            {conn.type === 'group' ? (
+                                                conn.avatar_url ? <img src={conn.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-6 h-6 text-white/40" />
+                                            ) : conn.profile?.avatar_url ? (
+                                                <img src={conn.profile.avatar_url} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="w-6 h-6 text-white/20" />
+                                            )}
                                         </div>
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="font-bold text-sm">{conn.type === 'group' ? conn.name : (conn.profile?.username || 'Usuário')}</span>
-                                                <span className={cn("text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full", conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : conn.type === 'group' ? "bg-amber-500/10 text-amber-500" : "bg-white/5 text-white/20")}>{conn.type === 'leader' ? 'Líder' : conn.type === 'group' ? 'Grupo' : 'Discípulo'}</span>
+                                                <span className={cn(
+                                                    "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                                                    conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : "bg-white/5 text-white/20"
+                                                )}>
+                                                    {conn.type === 'leader' ? 'Líder' : 'Discípulo'}
+                                                </span>
                                             </div>
                                             {isPending ? (
                                                 <div className="flex items-center gap-2 mt-2">
@@ -412,8 +429,30 @@ const Discipleship: React.FC = () => {
                                     <div className="flex items-center gap-4">
                                         <button onClick={() => setView('list')} className="md:hidden p-2.5 bg-white/5 rounded-xl"><ArrowLeft className="w-5 h-5" /></button>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
-                                                {selectedConnection.type === 'group' ? <Users className="w-5 h-5 md:w-6 md:h-6 text-white/40" /> : selectedConnection.profile?.avatar_url ? <img src={selectedConnection.profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5 md:w-6 md:h-6 text-white/20" />}
+                                            <div className="relative group/avatar">
+                                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
+                                                    {selectedConnection.type === 'group' ? (
+                                                        selectedConnection.avatar_url ? <img src={selectedConnection.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-5 h-5 md:w-6 md:h-6 text-white/40" />
+                                                    ) : selectedConnection.profile?.avatar_url ? (
+                                                        <img src={selectedConnection.profile.avatar_url} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-5 h-5 md:w-6 md:h-6 text-white/20" />
+                                                    )}
+                                                </div>
+                                                {selectedConnection.type === 'group' && selectedConnection.leader_id === user?.id && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            const input = document.createElement('input');
+                                                            input.type = 'file';
+                                                            input.accept = 'image/*';
+                                                            input.onchange = (e: any) => handleFileUpload(e, true);
+                                                            input.click();
+                                                        }}
+                                                        className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center rounded-full"
+                                                    >
+                                                        <ImageIcon className="w-4 h-4 text-white" />
+                                                    </button>
+                                                )}
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-sm md:text-xl tracking-tight leading-tight">{selectedConnection.name || selectedConnection.profile?.username}</h3>

@@ -295,6 +295,15 @@ export const discipleshipService = {
         return null;
     },
 
+    async updateGroupAvatar(groupId: string, avatarUrl: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_groups')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', groupId);
+        
+        if (error) throw error;
+    },
+
     async respondToGroupInvite(memberId: string, accept: boolean): Promise<void> {
         const { error } = await supabase
             .from('discipleship_group_members')
@@ -305,26 +314,20 @@ export const discipleshipService = {
     },
 
     async getGroups(userId: string): Promise<any[]> {
-        // Groups where I am the leader
-        const { data: leadGroups, error: leadError } = await supabase
-            .from('discipleship_groups')
-            .select('*')
-            .eq('leader_id', userId);
-        
-        // Groups where I am a member (any status)
-        const { data: memberGroups, error: memberError } = await supabase
+        // Fetch all group memberships with group details
+        const { data, error } = await supabase
             .from('discipleship_group_members')
             .select('*, group:group_id (*)')
             .eq('user_id', userId);
         
-        if (leadError || memberError) return [];
+        if (error) return [];
         
-        const allGroups = [
-            ...(leadGroups || []).map(g => ({ ...g, type: 'leader' })),
-            ...(memberGroups || []).map(m => ({ ...m.group, type: 'member', member_status: m.status, member_id: m.id }))
-        ];
-        
-        return allGroups;
+        return (data || []).map(m => ({
+            ...m.group,
+            type: m.group.leader_id === userId ? 'leader' : 'member',
+            member_status: m.status,
+            member_id: m.id
+        }));
     },
 
     async getGroupMembers(groupId: string): Promise<any[]> {
