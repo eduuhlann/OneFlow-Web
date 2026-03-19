@@ -26,10 +26,14 @@ export interface DiscipleshipTask {
 export interface DiscipleshipNote {
     id: string;
     leader_id: string;
-    disciple_id: string;
+    disciple_id: string | null;
     author_id: string;
     content: string;
     created_at: string;
+    group_id?: string | null;
+    file_url?: string | null;
+    file_name?: string | null;
+    file_type?: string | null;
 }
 
 export const discipleshipService = {
@@ -146,7 +150,7 @@ export const discipleshipService = {
     },
 
     // Notes Management
-    async addNote(leaderId: string, discipleId: string | null, authorId: string, content: string, groupId: string | null = null): Promise<void> {
+    async addNote(leaderId: string, discipleId: string | null, authorId: string, content: string, groupId: string | null = null, file: { url: string; name: string; type: string } | null = null): Promise<void> {
         const { error } = await supabase
             .from('discipleship_notes')
             .insert({ 
@@ -154,7 +158,10 @@ export const discipleshipService = {
                 disciple_id: discipleId, 
                 author_id: authorId, 
                 content,
-                group_id: groupId 
+                group_id: groupId,
+                file_url: file?.url,
+                file_name: file?.name,
+                file_type: file?.type
             });
         
         if (error) throw error;
@@ -230,6 +237,62 @@ export const discipleshipService = {
             .upsert({ group_id: groupId, user_id: userId, status: 'pending' }, { onConflict: 'group_id,user_id' });
         
         if (error) throw error;
+    },
+
+    async deleteGroup(groupId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_groups')
+            .delete()
+            .eq('id', groupId);
+        
+        if (error) throw error;
+    },
+
+    async uploadFile(file: File): Promise<{ url: string; name: string; type: string }> {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `notes/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('discipleship_files')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+            .from('discipleship_files')
+            .getPublicUrl(filePath);
+
+        return {
+            url: data.publicUrl,
+            name: file.name,
+            type: file.type
+        };
+    },
+
+    async getPrivateConnection(user1Id: string, user2Id: string): Promise<any | null> {
+        // Find existing connection in either direction
+        const { data, error } = await supabase
+            .from('discipleship_connections')
+            .select(`
+                *,
+                disciple_profile:disciple_id (username, avatar_url),
+                leader_profile:leader_id (username, avatar_url)
+            `)
+            .or(`and(leader_id.eq.${user1Id},disciple_id.eq.${user2Id}),and(leader_id.eq.${user2Id},disciple_id.eq.${user1Id})`)
+            .maybeSingle();
+        
+        if (error) return null;
+        if (data) {
+            // Normalize for UI
+            const isUser1Leader = data.leader_id === user1Id;
+            return {
+                ...data,
+                type: isUser1Leader ? 'disciple' : 'leader',
+                profile: isUser1Leader ? data.disciple_profile : data.leader_profile
+            };
+        }
+        return null;
     },
 
     async respondToGroupInvite(memberId: string, accept: boolean): Promise<void> {
