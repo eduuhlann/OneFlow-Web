@@ -34,6 +34,7 @@ export interface DiscipleshipNote {
     file_url?: string | null;
     file_name?: string | null;
     file_type?: string | null;
+    is_read?: boolean;
 }
 
 export const discipleshipService = {
@@ -474,5 +475,41 @@ export const discipleshipService = {
         
         const { error } = await query;
         if (error) console.error('Error marking notes as read:', error);
+    },
+
+    async getUnreadCounts(userId: string): Promise<Record<string, number>> {
+        // Fetch group memberships to filter unread group notes
+        const { data: groupMemberships } = await supabase
+            .from('discipleship_group_members')
+            .select('group_id')
+            .eq('user_id', userId)
+            .eq('status', 'active');
+        
+        const groupIds = groupMemberships?.map(m => m.group_id) || [];
+
+        let query = supabase
+            .from('discipleship_notes')
+            .select('leader_id, disciple_id, group_id')
+            .eq('is_read', false)
+            .neq('author_id', userId);
+        
+        // Filter notes relevant to the user (private or in their groups)
+        if (groupIds.length > 0) {
+            query = query.or(`leader_id.eq.${userId},disciple_id.eq.${userId},group_id.in.(${groupIds.join(',')})`);
+        } else {
+            query = query.or(`leader_id.eq.${userId},disciple_id.eq.${userId}`);
+        }
+
+        const { data: notes, error } = await query;
+        if (error || !notes) return {};
+
+        const counts: Record<string, number> = {};
+        notes.forEach(note => {
+            const key = note.group_id || (note.leader_id === userId ? note.disciple_id : note.leader_id);
+            if (key) {
+                counts[key] = (counts[key] || 0) + 1;
+            }
+        });
+        return counts;
     }
 };

@@ -66,7 +66,7 @@ const Discipleship: React.FC = () => {
     const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null } | null>(null);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void | Promise<void> }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void | Promise<void> }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const [alertBanner, setAlertBanner] = useState<{ isOpen: boolean, message: string, type: 'error' | 'success' }>({ isOpen: false, message: '', type: 'error' });
 
     // Data States
@@ -79,21 +79,29 @@ const Discipleship: React.FC = () => {
     const [noteInput, setNoteInput] = useState('');
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [editingContent, setEditingContent] = useState('');
+    const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const connectionsRef = useRef<any[]>([]);
+    const selectedConnectionRef = useRef<any | null>(null);
+
+    useEffect(() => { connectionsRef.current = connections; }, [connections]);
+    useEffect(() => { selectedConnectionRef.current = selectedConnection; }, [selectedConnection]);
 
     useEffect(() => {
         loadConnections();
+        const msgChannel = subscribeToMessages();
+        return () => {
+            supabase.removeChannel(msgChannel);
+        };
     }, [user]);
 
     useEffect(() => {
         if (selectedConnection) {
             loadChatData();
-            const msgChannel = subscribeToMessages();
             const taskChannel = subscribeToTasks();
             return () => {
-                supabase.removeChannel(msgChannel);
                 supabase.removeChannel(taskChannel);
             };
         }
@@ -118,7 +126,7 @@ const Discipleship: React.FC = () => {
                 discipleshipService.getLeaders(user.id),
                 discipleshipService.getGroups(user.id)
             ]);
-            
+
             // Normalize connections for the list
             let all = [
                 ...leaders.map(l => ({ ...l, type: 'leader', profile: l.profiles })),
@@ -149,8 +157,12 @@ const Discipleship: React.FC = () => {
                     filteredAll.push(conn);
                 }
             });
-            
+
             setConnections(filteredAll);
+
+            // Fetch unread counts
+            const counts = await discipleshipService.getUnreadCounts(user.id);
+            setUnreadCounts(counts);
         } catch (error) {
             console.error('Error loading connections:', error);
         } finally {
@@ -176,7 +188,7 @@ const Discipleship: React.FC = () => {
                     discipleshipService.getGroupMembers(groupId),
                     isLeader ? discipleshipService.getTasks(user.id, true) : discipleshipService.getTasks(user.id, false)
                 ]);
-                
+
                 // If leader, filter tasks that belong to this group (by parsing target_id)
                 if (isLeader) {
                     taskList = taskList.filter(t => {
@@ -194,7 +206,7 @@ const Discipleship: React.FC = () => {
                         } catch (e) { return false; }
                     });
                 }
-                
+
                 setGroupMembers(members);
             } else {
                 const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
@@ -239,9 +251,9 @@ const Discipleship: React.FC = () => {
                                     return [newTask, ...prev];
                                 });
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     } else if (newTask.disciple_id === user?.id || newTask.leader_id === user?.id) {
-                         setTasks(prev => {
+                        setTasks(prev => {
                             const exists = prev.find(t => t.id === newTask.id);
                             if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== (payload.old as any).id);
                             if (exists) return prev.map(t => t.id === newTask.id ? newTask : t);
@@ -255,12 +267,10 @@ const Discipleship: React.FC = () => {
     };
 
     const subscribeToMessages = () => {
-        const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : (selectedConnection.leader_id || user!.id);
-        const discipleId = selectedConnection.type === 'leader' ? user!.id : (selectedConnection.disciple_id || null);
-        const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
+        if (!user) return null;
 
         const channel = supabase
-            .channel(`discipleship-chat-${selectedConnection.id}`)
+            .channel(`discipleship-global-notes-${user.id}`)
             .on(
                 'postgres_changes',
                 {
@@ -270,22 +280,40 @@ const Discipleship: React.FC = () => {
                 },
                 async (payload) => {
                     const newNote = payload.new as DiscipleshipNote;
-                    console.log('New note received:', newNote);
-                    
-                    // If note has profiles already (from some server-side expansion), use it
-                    // Otherwise, we'll try to find it in groupMembers
-                    if (groupId) {
-                        if (newNote.group_id === groupId) {
-                            setNotes(prev => {
-                                if (prev.some(note => note.id === newNote.id)) return prev;
-                                return [...prev, newNote];
-                            });
-                        }
-                    } else if (newNote.leader_id === leaderId && newNote.disciple_id === discipleId) {
+                    if (newNote.author_id === user.id) return;
+
+                    // Verify if note belongs to user (private or group)
+                    const isPrivateForUser = newNote.leader_id === user.id || newNote.disciple_id === user.id;
+                    const belongsToUser = isPrivateForUser || (newNote.group_id && connectionsRef.current.some(c => c.type === 'group' && c.id === newNote.group_id));
+
+                    if (!belongsToUser) return;
+
+                    // Check if it's for the selected connection
+                    const currentSelected = selectedConnectionRef.current;
+                    const isForSelected = currentSelected && (
+                        (newNote.group_id && currentSelected.id === newNote.group_id) ||
+                        (!newNote.group_id && currentSelected.type !== 'group' && (
+                            (newNote.leader_id === currentSelected.leader_id && newNote.disciple_id === currentSelected.disciple_id) ||
+                            (newNote.leader_id === currentSelected.disciple_id && newNote.disciple_id === currentSelected.leader_id)
+                        ))
+                    );
+
+                    if (isForSelected) {
                         setNotes(prev => {
                             if (prev.some(note => note.id === newNote.id)) return prev;
                             return [...prev, newNote];
                         });
+                        // Automatically mark as read if it's the active chat
+                        discipleshipService.markNotesAsRead(newNote.leader_id, newNote.disciple_id, user.id, newNote.group_id);
+                    } else {
+                        // Increment unread count for background chat
+                        const key = newNote.group_id || (newNote.leader_id === user.id ? newNote.disciple_id : newNote.leader_id);
+                        if (key) {
+                            setUnreadCounts(prev => ({
+                                ...prev,
+                                [key]: (prev[key] || 0) + 1
+                            }));
+                        }
                     }
                 }
             )
@@ -399,9 +427,9 @@ const Discipleship: React.FC = () => {
     const handleCreateChallenge = async () => {
         if (!user || !selectedConnection) return;
         try {
-            const challengeMsg = `[CHALLENGE]:${JSON.stringify({ 
-                book: challengeData.book, 
-                start: challengeData.start, 
+            const challengeMsg = `[CHALLENGE]:${JSON.stringify({
+                book: challengeData.book,
+                start: challengeData.start,
                 end: challengeData.end,
                 leaderName: profile?.username || 'Líder'
             })}`;
@@ -415,14 +443,14 @@ const Discipleship: React.FC = () => {
                     .filter(m => m.user_id !== user.id && m.status === 'active')
                     .map(m => discipleshipService.createReadingChallenge(user.id, m.user_id, challengeData.book, challengeData.start, challengeData.end, selectedConnection.id));
                 await Promise.all(results);
-                
+
                 // Send automated message to group
                 await discipleshipService.addNote(user.id, null, user.id, challengeMsg, selectedConnection.id);
                 console.log('Group note sent');
             } else {
                 const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
                 await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
-                
+
                 // Send automated message to private chat
                 const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
                 const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
@@ -586,6 +614,12 @@ const Discipleship: React.FC = () => {
             const discipleId = conn.type === 'leader' ? user.id : (conn.disciple_id || null);
             const groupId = conn.type === 'group' ? conn.id : null;
             discipleshipService.markNotesAsRead(leaderId, discipleId, user.id, groupId);
+
+            // Clear unread count for this connection
+            const unreadKey = conn.type === 'group' ? conn.id : (conn.leader_id === user.id ? conn.disciple_id : conn.leader_id);
+            if (unreadKey) {
+                setUnreadCounts(prev => ({ ...prev, [unreadKey]: 0 }));
+            }
         }
     };
 
@@ -673,8 +707,8 @@ const Discipleship: React.FC = () => {
                                 <div className="p-6 space-y-6">
                                     <div className="space-y-4">
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Livro da Bíblia</label>
-                                        <select 
-                                            value={challengeData.book} 
+                                        <select
+                                            value={challengeData.book}
                                             onChange={(e) => setChallengeData(prev => ({ ...prev, book: e.target.value }))}
                                             className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium appearance-none"
                                         >
@@ -752,7 +786,21 @@ const Discipleship: React.FC = () => {
                                                     <button onClick={(e) => { e.stopPropagation(); handleRespondInvite(conn, false); }} className="px-3 py-1 bg-white/10 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all">Recusar</button>
                                                 </div>
                                             ) : (
-                                                <p className="text-[11px] text-white/40 line-clamp-1 italic">Toque para abrir a conversa...</p>
+                                                <div className="flex items-center justify-between gap-2 mt-1">
+                                                    <p className="text-[11px] text-white/40 line-clamp-1 italic">Toque para abrir a conversa...</p>
+                                                    {(() => {
+                                                        const unreadKey = conn.type === 'group' ? conn.id : (conn.leader_id === user?.id ? conn.disciple_id : conn.leader_id);
+                                                        const count = unreadCounts[unreadKey] || 0;
+                                                        if (count > 0) {
+                                                            return (
+                                                                <div className="min-w-[18px] h-[18px] bg-white text-black text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-lg shrink-0">
+                                                                    {count}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+                                                </div>
                                             )}
                                         </div>
                                     </button>
@@ -875,7 +923,7 @@ const Discipleship: React.FC = () => {
                                                             progress = Math.min(100, Math.round((completedInTarget / totalTarget) * 100));
                                                         }
                                                     }
-                                                } catch (e) {}
+                                                } catch (e) { }
 
                                                 return (
                                                     <div key={task.id} className="bg-black/40 border border-white/20 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
@@ -892,14 +940,14 @@ const Discipleship: React.FC = () => {
                                                             <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{progress}% concluído</span>
                                                         </div>
                                                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                            <motion.div 
-                                                                initial={{ width: 0 }} 
-                                                                animate={{ width: `${progress}%` }} 
-                                                                className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.2)]" 
+                                                            <motion.div
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${progress}%` }}
+                                                                className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.2)]"
                                                             />
                                                         </div>
                                                         {(progress === 100 || selectedConnection.leader_id === user!.id) && (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => discipleshipService.completeTask(task.id).then(() => loadChatData())}
                                                                 className="py-2.5 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/10"
                                                             >
@@ -1003,14 +1051,14 @@ const Discipleship: React.FC = () => {
                                                                                 "absolute top-0 opacity-0 group-hover:opacity-100 transition-all flex gap-1",
                                                                                 isMine ? "-left-1 translate-x-[-120%]" : "-right-1 translate-x-full"
                                                                             )}>
-                                                                                <button 
+                                                                                <button
                                                                                     onClick={() => { setEditingNoteId(n.id); setEditingContent(n.content); }}
                                                                                     className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white/40 hover:text-white transition-all shadow-sm backdrop-blur-md border border-white/5"
                                                                                     title="Editar"
                                                                                 >
                                                                                     <MessageSquarePlus className="w-3.5 h-3.5" />
                                                                                 </button>
-                                                                                <button 
+                                                                                <button
                                                                                     onClick={() => handleDeleteNote(n.id)}
                                                                                     className="p-1.5 bg-red-500/5 hover:bg-red-500/20 rounded-lg text-red-500/40 hover:text-red-500 transition-all shadow-sm backdrop-blur-md border border-red-500/10"
                                                                                     title="Excluir"
@@ -1042,7 +1090,7 @@ const Discipleship: React.FC = () => {
                                             </button>
                                         </div>
                                         <div className="flex-1 bg-white/[0.03] rounded-[32px] flex flex-col p-2 transition-all group/input">
-                                            <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem espiritual..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
+                                            <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
                                             <div className="flex justify-end p-2 opacity-60 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => handleSendMessage()} disabled={!noteInput.trim() && !isUploading} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
                                                     <Send className="w-5 h-5" />
@@ -1099,20 +1147,20 @@ const Discipleship: React.FC = () => {
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {m.user_id !== user?.id && (
-                                                        <button 
-                                                            onClick={() => handleStartPrivateChat(m.user_id)} 
+                                                        <button
+                                                            onClick={() => handleStartPrivateChat(m.user_id)}
                                                             className="px-4 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10"
                                                         >
                                                             Conversar
                                                         </button>
                                                     )}
                                                     {selectedConnection.leader_id === user?.id && m.user_id !== user?.id && (
-                                                        <button 
+                                                        <button
                                                             onClick={async () => {
                                                                 const s = await statsService.getUserStats(m.user_id);
                                                                 setSelectedMemberStats({ userId: m.user_id, stats: s });
-                                                            }} 
-                                                            title="Ver Progresso" 
+                                                            }}
+                                                            title="Ver Progresso"
                                                             className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
                                                         >
                                                             <Target className="w-4 h-4 text-white/40" />
@@ -1128,9 +1176,9 @@ const Discipleship: React.FC = () => {
                     )}
                 </AnimatePresence>
 
-                <MyChallengesModal 
-                    isOpen={isMyChallengesOpen} 
-                    onClose={() => setIsMyChallengesOpen(false)} 
+                <MyChallengesModal
+                    isOpen={isMyChallengesOpen}
+                    onClose={() => setIsMyChallengesOpen(false)}
                     tasks={tasks || []}
                     stats={stats}
                     onRefresh={loadChatData}
@@ -1208,7 +1256,7 @@ const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: str
             )}>
                 {/* Decorative element */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
-                
+
                 <div className="flex items-center gap-4 relative">
                     <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-white/20 transform group-hover:rotate-6 transition-transform">
                         <TrendingUp className="w-6 h-6 text-black" />
@@ -1227,7 +1275,7 @@ const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: str
                     </div>
                 </div>
 
-                <button 
+                <button
                     onClick={(e) => { e.stopPropagation(); onParticipate(); }}
                     className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/10 relative overflow-hidden"
                 >
@@ -1273,7 +1321,7 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh }: { isOpe
                                             progress = Math.min(100, Math.round((completedInTarget / totalTarget) * 100));
                                         }
                                     }
-                                } catch (e) {}
+                                } catch (e) { }
 
                                 return (
                                     <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
@@ -1285,7 +1333,7 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh }: { isOpe
                                             <div className="h-full bg-white transition-all duration-1000" style={{ width: `${progress}%` }} />
                                         </div>
                                         {progress === 100 && (
-                                            <button 
+                                            <button
                                                 onClick={() => discipleshipService.completeTask(task.id).then(() => { onRefresh(); onClose(); })}
                                                 className="w-full py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl"
                                             >
