@@ -11,7 +11,7 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
@@ -336,7 +336,9 @@ export default function Auth() {
 
                         <p className="mt-12 text-center text-[9px] font-black tracking-[0.4em] text-white/10 leading-relaxed uppercase">
                             AO CONTINUAR VOCÊ CONCORDA COM OS<br />
-                            <span className="text-white/20 underline decoration-white/10 underline-offset-8 text-[8px]">TERMOS E PRIVACIDADE</span>
+                            <span className="text-white/20 underline decoration-white/10 underline-offset-8 text-[8px]">
+                                <Link to="/terms" className="hover:text-white transition-colors">TERMOS</Link> E <Link to="/privacy" className="hover:text-white transition-colors">PRIVACIDADE</Link>
+                            </span>
                         </p>
                     </motion.div>
                 </div>
