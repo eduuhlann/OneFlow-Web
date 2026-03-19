@@ -104,13 +104,37 @@ const Discipleship: React.FC = () => {
             ]);
 
             // Normalize connections for the list
-            const all = [
+            let all = [
                 ...(leaderData ? [{ ...leaderData, type: 'leader', profile: leaderData.profiles }] : []),
                 ...disciples.map(d => ({ ...d, type: 'disciple', profile: d.profiles })),
                 ...groups.map(g => ({ ...g, type: 'group' }))
             ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
-            setConnections(all);
+            // Handle "Você" chat and remove duplicates
+            const filteredAll: any[] = [];
+            const seenIds = new Set<string>();
+
+            all.forEach(conn => {
+                const isSelf = conn.leader_id === user!.id && conn.disciple_id === user!.id;
+                const otherId = conn.type === 'leader' ? conn.leader_id : (conn.disciple_id || conn.id);
+                const uniqueKey = isSelf ? 'self' : `${conn.type}-${otherId}`;
+
+                if (seenIds.has(uniqueKey)) return;
+                seenIds.add(uniqueKey);
+
+                if (isSelf) {
+                    filteredAll.push({
+                        ...conn,
+                        name: 'Você (Mensagens salvas)',
+                        profile: { ...conn.profile, username: 'Você' },
+                        type: 'self'
+                    });
+                } else {
+                    filteredAll.push(conn);
+                }
+            });
+            
+            setConnections(filteredAll);
         } catch (error) {
             console.error('Error loading connections:', error);
         } finally {
@@ -212,17 +236,28 @@ const Discipleship: React.FC = () => {
         try {
             if (searchMode === 'group' && selectedConnection?.type === 'group') {
                 await discipleshipService.inviteToGroup(selectedConnection.id, targetUser.id);
+                setInviteSuccess(targetUser.username);
+                setTimeout(() => {
+                    setInviteSuccess(null);
+                    setIsSearchOpen(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    loadConnections();
+                }, 2000);
             } else {
-                await discipleshipService.sendDirectInvite(user.id, targetUser.id);
-            }
-            setInviteSuccess(targetUser.username);
-            setTimeout(() => {
-                setInviteSuccess(null);
+                // Direct Chat: Create active connection immediately
+                const conn = await discipleshipService.getOrCreateConnection(user.id, targetUser.id);
+                const formattedConn = {
+                    ...conn,
+                    type: conn.leader_id === user.id ? 'disciple' : 'leader',
+                    profile: conn.profiles
+                };
                 setIsSearchOpen(false);
                 setSearchQuery('');
                 setSearchResults([]);
                 loadConnections();
-            }, 2000);
+                handleSelectConnection(formattedConn);
+            }
         } catch (error) {
             alert('Erro ao enviar convite.');
         }
@@ -498,12 +533,14 @@ const Discipleship: React.FC = () => {
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="font-bold text-sm">{conn.type === 'group' ? conn.name : (conn.profile?.username || 'Usuário')}</span>
-                                                <span className={cn(
-                                                    "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
-                                                    conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : "bg-white/5 text-white/20"
-                                                )}>
-                                                    {conn.type === 'leader' ? 'Líder' : 'Discípulo'}
-                                                </span>
+                                                {conn.type !== 'self' && (
+                                                    <span className={cn(
+                                                        "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                                                        conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : "bg-white/5 text-white/20"
+                                                    )}>
+                                                        {conn.type === 'leader' ? 'Líder' : 'Discípulo'}
+                                                    </span>
+                                                )}
                                             </div>
                                             {isPending ? (
                                                 <div className="flex items-center gap-2 mt-2">
