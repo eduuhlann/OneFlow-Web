@@ -91,7 +91,7 @@ export const discipleshipService = {
                 )
             `)
             .eq('leader_id', leaderId)
-            .eq('status', 'active');
+            .neq('status', 'inactive');
         
         if (error) {
             console.error('Error fetching disciples:', error);
@@ -100,7 +100,7 @@ export const discipleshipService = {
         return data || [];
     },
 
-    async getLeader(discipleId: string): Promise<any | null> {
+    async getLeaders(discipleId: string): Promise<any[]> {
         const { data, error } = await supabase
             .from('discipleship_connections')
             .select(`
@@ -111,11 +111,10 @@ export const discipleshipService = {
                 )
             `)
             .eq('disciple_id', discipleId)
-            .eq('status', 'active')
-            .maybeSingle();
+            .neq('status', 'inactive');
         
-        if (error) return null;
-        return data || null;
+        if (error) return [];
+        return data || [];
     },
 
     // Task Management
@@ -331,10 +330,10 @@ export const discipleshipService = {
 
         if (existing) return existing;
 
-        // Create new pending connection (userId1 as leader by default if new)
+        // Create new active connection (userId1 as leader by default if new)
         const { data: created, error: createError } = await supabase
             .from('discipleship_connections')
-            .insert({ leader_id: userId1, disciple_id: userId2, status: 'pending' })
+            .insert({ leader_id: userId1, disciple_id: userId2, status: 'active' })
             .select(`
                 *,
                 profiles:disciple_id (username, avatar_url)
