@@ -7,8 +7,10 @@
 }
 
 @layer base {
-  body {
+  html, body {
     @apply bg-black text-white antialiased font-serif;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 }
 

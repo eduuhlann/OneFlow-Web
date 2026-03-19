@@ -143,25 +143,51 @@ export default function Auth() {
             </style>
             <ParticleBackground forceParticles={true} />
 
-            <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-6">
-                {/* Left Side: Logo */}
-                <div className="flex-1 flex items-center justify-center lg:justify-center order-2 lg:order-1">
+            <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-4 md:p-6 overflow-y-auto">
+                {/* Left Side: Logo - Hidden on mobile */}
+                <div className="hidden lg:flex flex-1 items-center justify-center lg:justify-center order-2 lg:order-1" style={{ perspective: 1200 }}>
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.8 }}
-                        className="w-full max-w-lg lg:ml-[-10%]"
+                        initial={{ opacity: 0, y: 80, scale: 0.85, rotateX: 40, rotateY: -15 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0, rotateY: 0 }}
+                        transition={{ 
+                            duration: 1.4, 
+                            type: "spring", 
+                            stiffness: 80,
+                            damping: 14,
+                            delay: 0.2
+                        }}
+                        className="w-full max-w-lg lg:ml-[-10%] relative"
                     >
-                        <img
-                            src={logo}
-                            alt="OneFlow Logo"
-                            className="w-full h-auto object-contain brightness-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                        {/* Glow Pulsante */}
+                        <motion.div
+                            animate={{ opacity: [0.15, 0.45, 0.15], scale: [0.95, 1.15, 0.95] }}
+                            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                            className="absolute -inset-10 bg-white/5 blur-[80px] rounded-[50%] z-0"
+                            style={{ pointerEvents: 'none' }}
                         />
+                        
+                        {/* Animação Flutuante */}
+                        <motion.div
+                            animate={{ y: [0, -15, 0] }}
+                            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                            <motion.img
+                                src={logo}
+                                alt="OneFlow Logo"
+                                className="w-full h-auto object-contain brightness-[1.15] relative z-10 transition-all cursor-pointer drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                                whileHover={{ 
+                                    scale: 1.08, 
+                                    rotateZ: [0, -1, 1, 0], 
+                                    filter: "brightness(1.4) drop-shadow(0 0 50px rgba(255,255,255,0.3))" 
+                                }}
+                                transition={{ type: "spring", bounce: 0.6 }}
+                            />
+                        </motion.div>
                     </motion.div>
                 </div>
 
                 {/* Right Side: Auth Form */}
-                <div className="flex-1 flex items-center justify-center lg:justify-start order-1 lg:order-2">
+                <div className="flex-1 flex items-center justify-center lg:justify-start order-1 lg:order-2 w-full">
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
