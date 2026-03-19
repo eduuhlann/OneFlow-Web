@@ -59,6 +59,7 @@ const Discipleship: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+    const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
     
     // Data States
     const [connections, setConnections] = useState<any[]>([]);
@@ -254,6 +255,44 @@ const Discipleship: React.FC = () => {
             loadConnections();
         } catch (error) {
             alert('Erro ao excluir grupo.');
+        }
+    };
+
+    const handleRemoveMember = async (targetUserId: string) => {
+        if (!selectedConnection || !window.confirm('Tem certeza que deseja remover este membro?')) return;
+        try {
+            await discipleshipService.removeGroupMember(selectedConnection.id, targetUserId);
+            const updated = await discipleshipService.getGroupMembers(selectedConnection.id);
+            setGroupMembers(updated);
+        } catch (error) {
+            alert('Erro ao remover membro.');
+        }
+    };
+
+    const handlePromoteMember = async (memberId: string) => {
+        try {
+            await discipleshipService.updateMemberRole(memberId, 'admin');
+            const updated = await discipleshipService.getGroupMembers(selectedConnection!.id);
+            setGroupMembers(updated);
+        } catch (error) {
+            alert('Erro ao promover membro.');
+        }
+    };
+
+    const handleStartPrivateChat = async (targetUserId: string) => {
+        if (!user || targetUserId === user.id) return;
+        try {
+            const conn = await discipleshipService.getOrCreateConnection(user.id, targetUserId);
+            // Create a pseudo-connection object compatible with handleSelectConnection
+            const formattedConn = {
+                ...conn,
+                type: conn.leader_id === user.id ? 'disciple' : 'leader',
+                profile: conn.profiles
+            };
+            setIsMembersModalOpen(false);
+            handleSelectConnection(formattedConn);
+        } catch (error) {
+            alert('Erro ao iniciar chat privado.');
         }
     };
 
@@ -546,6 +585,11 @@ const Discipleship: React.FC = () => {
                                             {isMenuOpen && (
                                                 <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
                                                     {selectedConnection.type === 'group' && (
+                                                        <button onClick={() => { setIsMembersModalOpen(true); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
+                                                            <Users className="w-4 h-4" /> Ver Membros
+                                                        </button>
+                                                    )}
+                                                    {selectedConnection.type === 'group' && (
                                                         selectedConnection.leader_id === user!.id ? (
                                                             <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
                                                                 <Trash2 className="w-4 h-4" /> Excluir Grupo
@@ -665,6 +709,54 @@ const Discipleship: React.FC = () => {
                         )}
                     </main>
                 </div>
+                <AnimatePresence>
+                    {isMembersModalOpen && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Users className="w-5 h-5 text-white/40" />
+                                        <h2 className="text-xl font-black italic tracking-tight">Membros do Grupo</h2>
+                                    </div>
+                                    <button onClick={() => setIsMembersModalOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-2">
+                                    {groupMembers.map(m => {
+                                        const mProfile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+                                        const isStaff = m.user_id === selectedConnection?.leader_id || m.role === 'admin';
+                                        return (
+                                            <div key={m.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group/member">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden flex items-center justify-center border border-white/10">
+                                                        {mProfile?.avatar_url ? <img src={mProfile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/20" />}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-bold">{mProfile?.username || 'Usuário'}</p>
+                                                            {isStaff && <span className="text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded-full">{m.user_id === selectedConnection?.leader_id ? 'Líder' : 'ADM'}</span>}
+                                                        </div>
+                                                        <p className="text-[10px] text-white/20 uppercase tracking-widest font-black leading-none mt-1">{m.status}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover/member:opacity-100 transition-opacity">
+                                                    {m.user_id !== user?.id && (
+                                                        <button onClick={() => handleStartPrivateChat(m.user_id)} title="Conversar no privado" className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><MessageSquare className="w-4 h-4" /></button>
+                                                    )}
+                                                    {selectedConnection?.leader_id === user?.id && m.user_id !== user?.id && (
+                                                        <>
+                                                            {m.role !== 'admin' && <button onClick={() => handlePromoteMember(m.id)} title="Promover a ADM" className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all"><TrendingUp className="w-4 h-4 text-indigo-400" /></button>}
+                                                            <button onClick={() => handleRemoveMember(m.user_id)} title="Expulsar do grupo" className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </PageTransition>
     );

@@ -296,6 +296,10 @@ export const discipleshipService = {
     },
 
     async leaveGroup(groupId: string, userId: string): Promise<void> {
+        await this.removeGroupMember(groupId, userId);
+    },
+
+    async removeGroupMember(groupId: string, userId: string): Promise<void> {
         const { error } = await supabase
             .from('discipleship_group_members')
             .delete()
@@ -303,6 +307,42 @@ export const discipleshipService = {
             .eq('user_id', userId);
         
         if (error) throw error;
+    },
+
+    async updateMemberRole(memberId: string, role: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_group_members')
+            .update({ role })
+            .eq('id', memberId);
+        
+        if (error) throw error;
+    },
+
+    async getOrCreateConnection(userId1: string, userId2: string): Promise<any> {
+        // Find existing connection in both directions
+        const { data: existing, error: searchError } = await supabase
+            .from('discipleship_connections')
+            .select(`
+                *,
+                profiles:disciple_id (username, avatar_url)
+            `)
+            .or(`and(leader_id.eq.${userId1},disciple_id.eq.${userId2}),and(leader_id.eq.${userId2},disciple_id.eq.${userId1})`)
+            .maybeSingle();
+
+        if (existing) return existing;
+
+        // Create new pending connection (userId1 as leader by default if new)
+        const { data: created, error: createError } = await supabase
+            .from('discipleship_connections')
+            .insert({ leader_id: userId1, disciple_id: userId2, status: 'pending' })
+            .select(`
+                *,
+                profiles:disciple_id (username, avatar_url)
+            `)
+            .single();
+        
+        if (createError) throw createError;
+        return created;
     },
 
     async updateGroupAvatar(groupId: string, avatarUrl: string): Promise<void> {
