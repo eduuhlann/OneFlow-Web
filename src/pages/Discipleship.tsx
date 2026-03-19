@@ -75,6 +75,8 @@ const Discipleship: React.FC = () => {
     const [stats, setStats] = useState<BibleStats | null>(null);
     const [groupMembers, setGroupMembers] = useState<any[]>([]);
     const [noteInput, setNoteInput] = useState('');
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+    const [editingContent, setEditingContent] = useState('');
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -358,8 +360,11 @@ const Discipleship: React.FC = () => {
                 leaderName: profile?.username || 'Líder'
             })}`;
 
+            console.log('Sending challenge message:', challengeMsg);
+
             if (selectedConnection.type === 'group') {
                 const members = await discipleshipService.getGroupMembers(selectedConnection.id);
+                console.log('Group members count:', members.length);
                 const results = members
                     .filter(m => m.user_id !== user.id && m.status === 'active')
                     .map(m => discipleshipService.createReadingChallenge(user.id, m.user_id, challengeData.book, challengeData.start, challengeData.end, selectedConnection.id));
@@ -367,6 +372,7 @@ const Discipleship: React.FC = () => {
                 
                 // Send automated message to group
                 await discipleshipService.addNote(user.id, null, user.id, challengeMsg, selectedConnection.id);
+                console.log('Group note sent');
             } else {
                 const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
                 await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
@@ -375,9 +381,13 @@ const Discipleship: React.FC = () => {
                 const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
                 const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
                 await discipleshipService.addNote(leaderId, discipleId, user.id, challengeMsg);
+                console.log('Private note sent');
             }
             setIsChallengeModalOpen(false);
-            loadChatData();
+            // Force refresh after a small delay
+            setTimeout(() => {
+                loadChatData();
+            }, 800);
         } catch (error) {
             console.error('Challenge error:', error);
             alert('Erro ao criar desafio.');
@@ -428,6 +438,30 @@ const Discipleship: React.FC = () => {
             setNoteInput('');
         } catch (error) {
             console.error('Error sending message:', error);
+        }
+    };
+
+    const handleEditNote = async (noteId: string) => {
+        if (!editingContent.trim()) return;
+        try {
+            await discipleshipService.updateNote(noteId, editingContent);
+            setEditingNoteId(null);
+            setEditingContent('');
+            loadChatData();
+        } catch (error) {
+            console.error('Error updating note:', error);
+            alert('Erro ao editar mensagem.');
+        }
+    };
+
+    const handleDeleteNote = async (noteId: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir esta mensagem?')) return;
+        try {
+            await discipleshipService.deleteNote(noteId);
+            loadChatData();
+        } catch (error) {
+            console.error('Error deleting note:', error);
+            alert('Erro ao excluir mensagem.');
         }
     };
 
@@ -569,9 +603,9 @@ const Discipleship: React.FC = () => {
                     {isChallengeModalOpen && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
                             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
-                                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-amber-500/10">
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/10">
                                     <div className="flex items-center gap-3">
-                                        <TrendingUp className="w-6 h-6 text-amber-500" />
+                                        <TrendingUp className="w-6 h-6 text-white/60" />
                                         <h3 className="text-xl font-bold tracking-tight">Novo Desafio de Leitura</h3>
                                     </div>
                                     <button onClick={() => setIsChallengeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
@@ -599,8 +633,8 @@ const Discipleship: React.FC = () => {
                                             <input type="number" min="1" value={challengeData.end} onChange={(e) => setChallengeData(prev => ({ ...prev, end: parseInt(e.target.value) || 1 }))} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
                                         </div>
                                     </div>
-                                    <button onClick={handleCreateChallenge} className="w-full py-4 bg-amber-500 text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20">
-                                        Lançar Desafio 🚀
+                                    <button onClick={handleCreateChallenge} className="w-full py-4 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/20">
+                                        Lançar Desafio
                                     </button>
                                 </div>
                             </motion.div>
@@ -724,8 +758,8 @@ const Discipleship: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-2 relative">
                                         {selectedConnection.type !== 'self' && (selectedConnection.leader_id === user?.id || selectedConnection.type === 'disciple' || groupMembers.find(m => m.user_id === user?.id)?.role === 'admin') && (
-                                            <button onClick={() => setIsChallengeModalOpen(true)} className="p-2.5 md:p-3 bg-amber-500/10 hover:bg-amber-500/20 rounded-2xl transition-all border border-amber-500/10" title="Criar Desafio de Leitura">
-                                                <TrendingUp className="w-5 h-5 text-amber-500" />
+                                            <button onClick={() => setIsChallengeModalOpen(true)} className="p-2.5 md:p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all border border-white/10" title="Criar Desafio de Leitura">
+                                                <TrendingUp className="w-5 h-5 text-white/60" />
                                             </button>
                                         )}
                                         {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
@@ -765,7 +799,7 @@ const Discipleship: React.FC = () => {
 
                                 {/* Active Challenges Section */}
                                 {(tasks || []).filter(t => t.type === 'reading' && !t.is_completed).length > 0 && (
-                                    <div className="px-4 md:px-8 py-4 bg-amber-500/5 border-b border-amber-500/10 space-y-3">
+                                    <div className="px-4 md:px-8 py-4 bg-white/5 border-b border-white/10 space-y-3">
                                         <div className="max-w-3xl mx-auto space-y-3">
                                             {(tasks || []).filter(t => t.type === 'reading' && !t.is_completed).map(task => {
                                                 let progress = 0;
@@ -784,18 +818,18 @@ const Discipleship: React.FC = () => {
                                                 } catch (e) {}
 
                                                 return (
-                                                    <div key={task.id} className="bg-black/40 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+                                                    <div key={task.id} className="bg-black/40 border border-white/20 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                                                    <TrendingUp className="w-4 h-4 text-amber-500" />
+                                                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                                                    <TrendingUp className="w-4 h-4 text-white/60" />
                                                                 </div>
                                                                 <div>
-                                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500">Desafio Ativo</h4>
+                                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/60">Desafio Ativo</h4>
                                                                     <p className="text-sm font-bold">{target.book} {target.start}-{target.end}</p>
                                                                 </div>
                                                             </div>
-                                                            <span className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest">{progress}% concluído</span>
+                                                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{progress}% concluído</span>
                                                         </div>
                                                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                                             <motion.div 
@@ -859,34 +893,73 @@ const Discipleship: React.FC = () => {
                                                                 {authorProfile?.username || 'Usuário'}
                                                             </span>
                                                             <div className={cn("px-5 py-3.5 rounded-[28px] max-w-[280px] md:max-w-md group relative transition-all shadow-xl", isMine ? "bg-white text-black font-semibold rounded-tr-none" : "bg-white/5 border border-white/10 text-white rounded-tl-none")}>
-                                                                {n.file_url ? (
-                                                                    <div className="space-y-3">
-                                                                        {n.file_type?.startsWith('image/') ? (
-                                                                            <img src={n.file_url} className="rounded-2xl max-h-64 object-cover border border-black/10" />
-                                                                        ) : (
-                                                                            <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
-                                                                                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-                                                                                <div className="flex-1 overflow-hidden">
-                                                                                    <p className="text-[11px] font-bold truncate">{n.file_name}</p>
-                                                                                    <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
-                                                                                </div>
-                                                                                <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
-                                                                            </div>
-                                                                        )}
-                                                                        {n.content && (
-                                                                            n.content.startsWith('[CHALLENGE]:') ? (
-                                                                                <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} />
-                                                                            ) : (
-                                                                                <p className="text-sm mt-2">{n.content}</p>
-                                                                            )
-                                                                        )}
+                                                                {editingNoteId === n.id ? (
+                                                                    <div className="space-y-3 min-w-[200px]">
+                                                                        <textarea
+                                                                            value={editingContent}
+                                                                            onChange={(e) => setEditingContent(e.target.value)}
+                                                                            className="w-full bg-black/10 border-black/10 rounded-xl p-2 text-sm text-black focus:ring-0 focus:border-black/20 font-medium resize-none"
+                                                                            autoFocus
+                                                                        />
+                                                                        <div className="flex justify-end gap-2">
+                                                                            <button onClick={() => setEditingNoteId(null)} className="px-3 py-1 bg-black/5 text-black/40 rounded-lg text-[9px] font-black uppercase tracking-widest">Cancelar</button>
+                                                                            <button onClick={() => handleEditNote(n.id)} className="px-3 py-1 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest">Salvar</button>
+                                                                        </div>
                                                                     </div>
                                                                 ) : (
-                                                                    n.content.startsWith('[CHALLENGE]:') ? (
-                                                                        <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} isMine={isMine} />
-                                                                    ) : (
-                                                                        <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
-                                                                    )
+                                                                    <>
+                                                                        {n.file_url ? (
+                                                                            <div className="space-y-3">
+                                                                                {n.file_type?.startsWith('image/') ? (
+                                                                                    <img src={n.file_url} className="rounded-2xl max-h-64 object-cover border border-black/10" />
+                                                                                ) : (
+                                                                                    <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                                                                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
+                                                                                        <div className="flex-1 overflow-hidden">
+                                                                                            <p className="text-[11px] font-bold truncate">{n.file_name}</p>
+                                                                                            <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
+                                                                                        </div>
+                                                                                        <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
+                                                                                    </div>
+                                                                                )}
+                                                                                {n.content && (
+                                                                                    n.content.startsWith('[CHALLENGE]:') ? (
+                                                                                        <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} isMine={isMine} />
+                                                                                    ) : (
+                                                                                        <p className="text-sm mt-2">{n.content}</p>
+                                                                                    )
+                                                                                )}
+                                                                            </div>
+                                                                        ) : (
+                                                                            n.content.startsWith('[CHALLENGE]:') ? (
+                                                                                <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} isMine={isMine} />
+                                                                            ) : (
+                                                                                <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
+                                                                            )
+                                                                        )}
+
+                                                                        {isMine && !n.content.startsWith('[CHALLENGE]:') && (
+                                                                            <div className={cn(
+                                                                                "absolute top-0 opacity-0 group-hover:opacity-100 transition-all flex gap-1",
+                                                                                isMine ? "-left-1 translate-x-[-120%]" : "-right-1 translate-x-full"
+                                                                            )}>
+                                                                                <button 
+                                                                                    onClick={() => { setEditingNoteId(n.id); setEditingContent(n.content); }}
+                                                                                    className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white/40 hover:text-white transition-all shadow-sm backdrop-blur-md border border-white/5"
+                                                                                    title="Editar"
+                                                                                >
+                                                                                    <MessageSquarePlus className="w-3.5 h-3.5" />
+                                                                                </button>
+                                                                                <button 
+                                                                                    onClick={() => handleDeleteNote(n.id)}
+                                                                                    className="p-1.5 bg-red-500/5 hover:bg-red-500/20 rounded-lg text-red-500/40 hover:text-red-500 transition-all shadow-sm backdrop-blur-md border border-red-500/10"
+                                                                                    title="Excluir"
+                                                                                >
+                                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                             <span className="text-[8px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -945,50 +1018,44 @@ const Discipleship: React.FC = () => {
                                         const mProfile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
                                         const isStaff = m.user_id === selectedConnection?.leader_id || m.role === 'admin';
                                         return (
-                                            <div key={m.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group/member">
+                                            <div key={m.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group/member">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden flex items-center justify-center border border-white/10">
-                                                        {mProfile?.avatar_url ? <img src={mProfile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/20" />}
+                                                    <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden flex items-center justify-center border border-white/5 shadow-inner">
+                                                        {mProfile?.avatar_url ? <img src={mProfile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-white/10" />}
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2">
-                                                            <p className="text-sm font-bold">{mProfile?.username || 'Usuário'}</p>
-                                                            {isStaff && <span className="text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded-full">{m.user_id === selectedConnection?.leader_id ? 'Líder' : 'ADM'}</span>}
+                                                            <p className="text-sm font-bold text-white/90">{mProfile?.username || 'Usuário'}</p>
+                                                            <span className={cn(
+                                                                "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full",
+                                                                isStaff ? "bg-white text-black" : "bg-white/5 text-white/40"
+                                                            )}>
+                                                                {m.user_id === selectedConnection?.leader_id ? 'Líder' : (m.role === 'admin' ? 'ADM' : 'Membro')}
+                                                            </span>
                                                         </div>
-                                                        <p className="text-[10px] text-white/20 uppercase tracking-widest font-black leading-none mt-1">{m.status}</p>
+                                                        <p className="text-[10px] text-white/20 uppercase tracking-widest font-black leading-none mt-1.5">{m.status === 'active' ? 'Ativo' : 'Pendente'}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {m.user_id !== user?.id && (
                                                         <button 
                                                             onClick={() => handleStartPrivateChat(m.user_id)} 
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all group/call"
+                                                            className="px-4 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10"
                                                         >
-                                                            <MessageSquare className="w-3.5 h-3.5 text-white/40 group-hover/call:text-white transition-colors" />
-                                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover/call:text-white">Chamar</span>
+                                                            Conversar
                                                         </button>
                                                     )}
-                                                    {selectedConnection?.leader_id === user?.id && m.user_id !== user?.id && (
-                                                        <div className="flex items-center gap-1">
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    const s = await statsService.getUserStats(m.user_id);
-                                                                    setSelectedMemberStats({ userId: m.user_id, stats: s });
-                                                                }} 
-                                                                title="Ver Progresso" 
-                                                                className="p-2 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition-all border border-amber-500/10"
-                                                            >
-                                                                <Target className="w-3.5 h-3.5 text-amber-500" />
-                                                            </button>
-                                                            {m.role !== 'admin' && (
-                                                                <button onClick={() => handlePromoteMember(m.id)} title="Promover a ADM" className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/10">
-                                                                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
-                                                                </button>
-                                                            )}
-                                                            <button onClick={() => handleRemoveMember(m.user_id)} title="Expulsar do grupo" className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all border border-red-500/10">
-                                                                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                                                            </button>
-                                                        </div>
+                                                    {selectedConnection.leader_id === user?.id && m.user_id !== user?.id && (
+                                                        <button 
+                                                            onClick={async () => {
+                                                                const s = await statsService.getUserStats(m.user_id);
+                                                                setSelectedMemberStats({ userId: m.user_id, stats: s });
+                                                            }} 
+                                                            title="Ver Progresso" 
+                                                            className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
+                                                        >
+                                                            <Target className="w-4 h-4 text-white/40" />
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
@@ -1016,14 +1083,14 @@ const Discipleship: React.FC = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <div className="flex items-center gap-3">
-                                            <TrendingUp className="w-5 h-5 text-amber-500" />
+                                            <TrendingUp className="w-5 h-5 text-white/60" />
                                             <span className="text-xs font-bold uppercase tracking-widest text-white/60">Total Lido</span>
                                         </div>
-                                        <span className="text-xl font-black text-amber-500">{selectedMemberStats.stats?.totalChapters || 0} caps</span>
+                                        <span className="text-xl font-black text-white/60">{(selectedMemberStats.stats as any)?.totalChaptersRead || 0} caps</span>
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Última Leitura</p>
-                                        <p className="text-sm font-bold">{selectedMemberStats.stats?.lastReadBook || 'Nenhum registro'} {selectedMemberStats.stats?.lastReadChapter || ''}</p>
+                                        <p className="text-sm font-bold">{(selectedMemberStats.stats as any)?.lastReadBook || 'Nenhum registro'} {(selectedMemberStats.stats as any)?.lastReadChapter || ''}</p>
                                     </div>
                                 </div>
                                 <button onClick={() => setSelectedMemberStats(null)} className="w-full py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl">Fechar</button>
@@ -1041,27 +1108,35 @@ const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: str
         const data = JSON.parse(content.replace('[CHALLENGE]:', ''));
         return (
             <div className={cn(
-                "bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 md:p-6 space-y-4 max-w-sm shadow-xl",
-                isMine ? "border-amber-500/40" : ""
+                "bg-black border border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 max-w-sm shadow-2xl relative overflow-hidden group",
+                isMine ? "border-white/30" : ""
             )}>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                        <TrendingUp className="w-5 h-5 text-black" />
+                {/* Decorative element */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                
+                <div className="flex items-center gap-4 relative">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-white/20 transform group-hover:rotate-6 transition-transform">
+                        <TrendingUp className="w-6 h-6 text-black" />
                     </div>
                     <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500/60 leading-none">Novo Desafio</h4>
-                        <p className="text-sm font-bold mt-1 text-white">Lançado por {data.leaderName}</p>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 leading-none">Desafio de Leitura</h4>
+                        <p className="text-base font-bold mt-1.5 text-white">Lançado por {data.leaderName}</p>
                     </div>
                 </div>
-                <div className="py-3 px-4 bg-black/40 rounded-xl border border-white/5">
-                    <p className="text-xs text-white/40 uppercase tracking-widest font-black">Meta de Leitura</p>
-                    <p className="text-lg font-black italic tracking-tighter text-amber-500">{data.book} {data.start}-{data.end}</p>
+
+                <div className="space-y-2 relative">
+                    <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">Meta Proposta</p>
+                    <div className="py-4 px-6 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm">
+                        <p className="text-2xl font-black italic tracking-tighter text-white">{data.book}</p>
+                        <p className="text-sm font-medium text-white/60 mt-1 italic">Capítulos {data.start} até {data.end}</p>
+                    </div>
                 </div>
+
                 <button 
                     onClick={(e) => { e.stopPropagation(); onParticipate(); }}
-                    className="w-full py-3 bg-amber-500 text-black text-xs font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-amber-500/20"
+                    className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/10 relative overflow-hidden"
                 >
-                    Participar do Desafio 🚀
+                    Participar do Desafio
                 </button>
             </div>
         );
@@ -1075,9 +1150,9 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh }: { isOpe
         {isOpen && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-amber-500/5">
+                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                         <div className="flex items-center gap-3">
-                            <TrendingUp className="w-5 h-5 text-amber-500" />
+                            <TrendingUp className="w-5 h-5 text-white/60" />
                             <h2 className="text-xl font-black italic tracking-tight">Meus Desafios</h2>
                         </div>
                         <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
@@ -1108,11 +1183,11 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh }: { isOpe
                                 return (
                                     <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-lg font-black italic text-amber-500">{target.book} {target.start}-{target.end}</p>
-                                            <span className="text-[10px] font-black bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">{progress}%</span>
+                                            <p className="text-lg font-black italic text-white/80">{target.book} {target.start}-{target.end}</p>
+                                            <span className="text-[10px] font-black bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{progress}%</span>
                                         </div>
                                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                            <div className="h-full bg-white transition-all duration-1000" style={{ width: `${progress}%` }} />
                                         </div>
                                         {progress === 100 && (
                                             <button 
