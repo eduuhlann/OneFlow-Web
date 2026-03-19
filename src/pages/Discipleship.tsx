@@ -202,8 +202,9 @@ const Discipleship: React.FC = () => {
             // Automatically select the new group
             const newGroup = { id: groupId, name: newGroupName, leader_id: user.id, type: 'group' };
             handleSelectConnection(newGroup);
-        } catch (error) {
-            alert('Erro ao criar grupo.');
+        } catch (error: any) {
+            console.error('Error creating group:', error);
+            alert(`Erro ao criar grupo: ${error.message || 'Verifique se você rodou o SQL das tabelas no Supabase.'}`);
         }
     };
 

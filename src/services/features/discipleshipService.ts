@@ -215,6 +215,12 @@ export const discipleshipService = {
             .single();
         
         if (error) throw error;
+
+        // Auto-add leader as an active member
+        await supabase
+            .from('discipleship_group_members')
+            .insert({ group_id: data.id, user_id: leaderId, status: 'active' });
+        
         return data.id;
     },
 
