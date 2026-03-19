@@ -146,21 +146,30 @@ export const discipleshipService = {
     },
 
     // Notes Management
-    async addNote(leaderId: string, discipleId: string, authorId: string, content: string): Promise<void> {
+    async addNote(leaderId: string, discipleId: string | null, authorId: string, content: string, groupId: string | null = null): Promise<void> {
         const { error } = await supabase
             .from('discipleship_notes')
-            .insert({ leader_id: leaderId, disciple_id: discipleId, author_id: authorId, content });
+            .insert({ 
+                leader_id: leaderId, 
+                disciple_id: discipleId, 
+                author_id: authorId, 
+                content,
+                group_id: groupId 
+            });
         
         if (error) throw error;
     },
 
-    async getNotes(leaderId: string, discipleId: string): Promise<DiscipleshipNote[]> {
-        const { data, error } = await supabase
-            .from('discipleship_notes')
-            .select('*')
-            .eq('leader_id', leaderId)
-            .eq('disciple_id', discipleId)
-            .order('created_at', { ascending: true });
+    async getNotes(leaderId: string, discipleId: string | null, groupId: string | null = null): Promise<DiscipleshipNote[]> {
+        let query = supabase.from('discipleship_notes').select('*');
+        
+        if (groupId) {
+            query = query.eq('group_id', groupId);
+        } else {
+            query = query.eq('leader_id', leaderId).eq('disciple_id', discipleId).is('group_id', null);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: true });
         
         if (error) return [];
         return data || [];
@@ -197,6 +206,68 @@ export const discipleshipService = {
         if (error) throw error;
     },
 
+    // Group Management
+    async createGroup(leaderId: string, name: string): Promise<string> {
+        const { data, error } = await supabase
+            .from('discipleship_groups')
+            .insert({ leader_id: leaderId, name })
+            .select()
+            .single();
+        
+        if (error) throw error;
+        return data.id;
+    },
+
+    async inviteToGroup(groupId: string, userId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_group_members')
+            .upsert({ group_id: groupId, user_id: userId, status: 'pending' }, { onConflict: 'group_id,user_id' });
+        
+        if (error) throw error;
+    },
+
+    async respondToGroupInvite(memberId: string, accept: boolean): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_group_members')
+            .update({ status: accept ? 'active' : 'inactive' })
+            .eq('id', memberId);
+        
+        if (error) throw error;
+    },
+
+    async getGroups(userId: string): Promise<any[]> {
+        // Groups where I am the leader
+        const { data: leadGroups, error: leadError } = await supabase
+            .from('discipleship_groups')
+            .select('*')
+            .eq('leader_id', userId);
+        
+        // Groups where I am a member (any status)
+        const { data: memberGroups, error: memberError } = await supabase
+            .from('discipleship_group_members')
+            .select('*, group:group_id (*)')
+            .eq('user_id', userId);
+        
+        if (leadError || memberError) return [];
+        
+        const allGroups = [
+            ...(leadGroups || []).map(g => ({ ...g, type: 'leader' })),
+            ...(memberGroups || []).map(m => ({ ...m.group, type: 'member', member_status: m.status, member_id: m.id }))
+        ];
+        
+        return allGroups;
+    },
+
+    async getGroupMembers(groupId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('discipleship_group_members')
+            .select('*, profiles:user_id (*)')
+            .eq('group_id', groupId);
+        
+        if (error) return [];
+        return data || [];
+    },
+
     async getNotificationCount(userId: string): Promise<number> {
         // Unread notes where the user is NOT the author
         const { count: notesCount, error: notesError } = await supabase
@@ -212,20 +283,32 @@ export const discipleshipService = {
             .select('*', { count: 'exact', head: true })
             .eq('disciple_id', userId)
             .eq('status', 'pending');
+
+        // Pending group invitations
+        const { count: groupInvitesCount, error: groupInvitesError } = await supabase
+            .from('discipleship_group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('status', 'pending');
         
-        if (notesError || invitesError) return 0;
-        return (notesCount || 0) + (invitesCount || 0);
+        if (notesError || invitesError || groupInvitesError) return 0;
+        return (notesCount || 0) + (invitesCount || 0) + (groupInvitesCount || 0);
     },
 
-    async markNotesAsRead(leaderId: string, discipleId: string, readerId: string): Promise<void> {
-        const { error } = await supabase
+    async markNotesAsRead(leaderId: string, discipleId: string | null, readerId: string, groupId: string | null = null): Promise<void> {
+        let query = supabase
             .from('discipleship_notes')
             .update({ is_read: true })
-            .eq('leader_id', leaderId)
-            .eq('disciple_id', discipleId)
             .neq('author_id', readerId)
             .eq('is_read', false);
         
+        if (groupId) {
+            query = query.eq('group_id', groupId);
+        } else {
+            query = query.eq('leader_id', leaderId).eq('disciple_id', discipleId).is('group_id', null);
+        }
+        
+        const { error } = await query;
         if (error) console.error('Error marking notes as read:', error);
     }
 };
