@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-    ArrowLeft, 
-    User, 
-    Users, 
-    Plus, 
+import {
+    ArrowLeft,
+    User,
+    Users,
+    Plus,
     Search,
-    Send, 
-    BookOpen, 
-    Clock, 
-    CheckCircle2, 
+    Send,
+    BookOpen,
+    Clock,
+    CheckCircle2,
     MessageSquare,
     ChevronRight,
     TrendingUp,
@@ -25,7 +25,9 @@ import {
     Image as ImageIcon,
     Download,
     Trash2,
-    Loader2
+    Loader2,
+    LogOut,
+    MessageSquarePlus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,7 +49,7 @@ const Discipleship: React.FC = () => {
     const { profile } = useProfile();
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<'list' | 'chat'>('list');
-    
+
     // UI States
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -60,7 +62,7 @@ const Discipleship: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-    
+
     // Data States
     const [connections, setConnections] = useState<any[]>([]);
     const [selectedConnection, setSelectedConnection] = useState<any | null>(null);
@@ -69,7 +71,7 @@ const Discipleship: React.FC = () => {
     const [stats, setStats] = useState<BibleStats | null>(null);
     const [groupMembers, setGroupMembers] = useState<any[]>([]);
     const [noteInput, setNoteInput] = useState('');
-    
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,14 +102,14 @@ const Discipleship: React.FC = () => {
                 discipleshipService.getLeader(user.id),
                 discipleshipService.getGroups(user.id)
             ]);
-            
+
             // Normalize connections for the list
             const all = [
                 ...(leaderData ? [{ ...leaderData, type: 'leader', profile: leaderData.profiles }] : []),
                 ...disciples.map(d => ({ ...d, type: 'disciple', profile: d.profiles })),
                 ...groups.map(g => ({ ...g, type: 'group' }))
             ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-            
+
             setConnections(all);
         } catch (error) {
             console.error('Error loading connections:', error);
@@ -135,14 +137,14 @@ const Discipleship: React.FC = () => {
             } else {
                 const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
                 const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
-                
+
                 [noteList, taskList, bibleStats] = await Promise.all([
                     discipleshipService.getNotes(leaderId, discipleId),
                     discipleshipService.getTasks(discipleId, false),
                     statsService.getUserStats(discipleId)
                 ]);
             }
-            
+
             setNotes(noteList);
             setTasks(taskList);
             setStats(bibleStats);
@@ -187,7 +189,7 @@ const Discipleship: React.FC = () => {
                     }
                 }
             );
-        
+
         channel.subscribe((status) => {
             console.log('Subscription status:', status);
         });
@@ -234,7 +236,7 @@ const Discipleship: React.FC = () => {
             setNewGroupName('');
             setIsGroupModalOpen(false);
             loadConnections();
-            
+
             // Automatically select the new group
             const newGroup = { id: groupId, name: newGroupName, leader_id: user.id, type: 'group' };
             handleSelectConnection(newGroup);
@@ -327,7 +329,7 @@ const Discipleship: React.FC = () => {
     };
 
     const handleLeaveGroup = async () => {
-        if (!user || !selectedConnection || selectedConnection.type !== 'member' || !window.confirm('Tem certeza que deseja sair deste grupo?')) return;
+        if (!user || !selectedConnection || selectedConnection.type !== 'group' || !window.confirm('Tem certeza que deseja sair deste grupo?')) return;
         try {
             await discipleshipService.leaveGroup(selectedConnection.id, user.id);
             setSelectedConnection(null);
@@ -362,7 +364,7 @@ const Discipleship: React.FC = () => {
 
     const handleMemberAction = async (member: any) => {
         if (!user || member.user_id === user.id) return;
-        
+
         try {
             const conn = await discipleshipService.getPrivateConnection(user.id, member.user_id);
             if (conn) {
@@ -468,10 +470,10 @@ const Discipleship: React.FC = () => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"><ArrowLeft className="w-5 h-5" /></button>
-                                    <h1 className="text-2xl font-black italic -rotate-1 tracking-tighter">Mensagens</h1>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={() => setIsGroupModalOpen(true)} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl"><Users className="w-5 h-5" /></button>
+                                    <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Chat Privado"><MessageSquarePlus className="w-5 h-5 text-white/60" /></button>
+                                    <button onClick={() => setIsGroupModalOpen(true)} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Grupo"><Users className="w-5 h-5 text-white/60" /></button>
                                     <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
                                 </div>
                             </div>
@@ -535,7 +537,7 @@ const Discipleship: React.FC = () => {
                                                     )}
                                                 </div>
                                                 {selectedConnection.type === 'group' && selectedConnection.leader_id === user?.id && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => {
                                                             const input = document.createElement('input');
                                                             input.type = 'file';
@@ -580,7 +582,7 @@ const Discipleship: React.FC = () => {
                                         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2.5 md:p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors border border-white/5">
                                             <MoreVertical className="w-5 h-5" />
                                         </button>
-                                        
+
                                         <AnimatePresence>
                                             {isMenuOpen && (
                                                 <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
@@ -596,13 +598,11 @@ const Discipleship: React.FC = () => {
                                                             </button>
                                                         ) : (
                                                             <button onClick={handleLeaveGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
-                                                                <XCircle className="w-4 h-4" /> Sair do Grupo
+                                                                <LogOut className="w-4 h-4" /> Sair do Grupo
                                                             </button>
                                                         )
                                                     )}
-                                                    <button className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest">
-                                                        <Clock className="w-4 h-4" /> Ver Histórico
-                                                    </button>
+
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
@@ -621,7 +621,7 @@ const Discipleship: React.FC = () => {
                                             notes.map((n) => {
                                                 const isMine = n.author_id === user!.id;
                                                 const getProfile = (p: any) => Array.isArray(p) ? p[0] : p;
-                                                
+
                                                 let authorProfile = null;
                                                 if (isMine) {
                                                     authorProfile = profile;
@@ -630,51 +630,51 @@ const Discipleship: React.FC = () => {
                                                 } else {
                                                     authorProfile = getProfile(selectedConnection.profile);
                                                 }
-                                                
-                                                return (
-                                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={n.id} className={cn("flex gap-3", isMine ? "flex-row-reverse ml-auto items-end" : "flex-row items-start")}>
-                                                    {/* Avatar */}
-                                                    <div className="shrink-0 mb-1">
-                                                        <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
-                                                            {authorProfile?.avatar_url ? (
-                                                                <img src={authorProfile.avatar_url} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <User className="w-4 h-4 text-white/20" />
-                                                            )}
-                                                        </div>
-                                                    </div>
 
-                                                    <div className={cn("flex flex-col gap-1", isMine ? "items-end" : "items-start")}>
-                                                        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest px-1">
-                                                            {authorProfile?.username || 'Usuário'}
-                                                        </span>
-                                                        <div className={cn("px-5 py-3.5 rounded-[28px] max-w-[280px] md:max-w-md group relative transition-all shadow-xl", isMine ? "bg-white text-black font-semibold rounded-tr-none" : "bg-white/5 border border-white/10 text-white rounded-tl-none")}>
-                                                            {n.file_url ? (
-                                                                <div className="space-y-3">
-                                                                    {n.file_type?.startsWith('image/') ? (
-                                                                        <img src={n.file_url} className="rounded-2xl max-h-64 object-cover border border-black/10" />
-                                                                    ) : (
-                                                                        <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
-                                                                            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-                                                                            <div className="flex-1 overflow-hidden">
-                                                                                <p className="text-[11px] font-bold truncate">{n.file_name}</p>
-                                                                                <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
-                                                                            </div>
-                                                                            <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
-                                                                        </div>
-                                                                    )}
-                                                                    {n.content && <p className="text-sm mt-2">{n.content}</p>}
-                                                                </div>
-                                                            ) : (
-                                                                <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
-                                                            )}
+                                                return (
+                                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={n.id} className={cn("flex gap-3", isMine ? "flex-row-reverse ml-auto items-end" : "flex-row items-start")}>
+                                                        {/* Avatar */}
+                                                        <div className="shrink-0 mb-1">
+                                                            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
+                                                                {authorProfile?.avatar_url ? (
+                                                                    <img src={authorProfile.avatar_url} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <User className="w-4 h-4 text-white/20" />
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <span className="text-[8px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })
-                                    )}
+
+                                                        <div className={cn("flex flex-col gap-1", isMine ? "items-end" : "items-start")}>
+                                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest px-1">
+                                                                {authorProfile?.username || 'Usuário'}
+                                                            </span>
+                                                            <div className={cn("px-5 py-3.5 rounded-[28px] max-w-[280px] md:max-w-md group relative transition-all shadow-xl", isMine ? "bg-white text-black font-semibold rounded-tr-none" : "bg-white/5 border border-white/10 text-white rounded-tl-none")}>
+                                                                {n.file_url ? (
+                                                                    <div className="space-y-3">
+                                                                        {n.file_type?.startsWith('image/') ? (
+                                                                            <img src={n.file_url} className="rounded-2xl max-h-64 object-cover border border-black/10" />
+                                                                        ) : (
+                                                                            <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                                                                                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
+                                                                                <div className="flex-1 overflow-hidden">
+                                                                                    <p className="text-[11px] font-bold truncate">{n.file_name}</p>
+                                                                                    <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
+                                                                                </div>
+                                                                                <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
+                                                                            </div>
+                                                                        )}
+                                                                        {n.content && <p className="text-sm mt-2">{n.content}</p>}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[8px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })
+                                        )}
                                         <div ref={messagesEndRef} />
                                     </div>
                                 </div>
