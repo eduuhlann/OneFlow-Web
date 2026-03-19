@@ -180,6 +180,11 @@ const Discipleship: React.FC = () => {
     const handleSelectConnection = (conn: any) => {
         setSelectedConnection(conn);
         setView('chat');
+        if (user) {
+            const leaderId = conn.type === 'leader' ? conn.leader_id : user.id;
+            const discipleId = conn.type === 'leader' ? user.id : conn.disciple_id;
+            discipleshipService.markNotesAsRead(leaderId, discipleId, user.id);
+        }
     };
 
     return (

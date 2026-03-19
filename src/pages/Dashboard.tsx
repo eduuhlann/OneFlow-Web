@@ -49,6 +49,7 @@ import {
     IconPalette
 } from "@tabler/icons-react";
 import CustomizationModal from '../components/CustomizationModal';
+import { NotificationBell } from '../components/NotificationBell';
 import { useNavigate, Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
@@ -463,6 +464,9 @@ export default function Dashboard() {
                         </div>
 
                         <div className="flex items-center gap-2 md:gap-4">
+                            {/* Notification Bell */}
+                            <NotificationBell />
+
                             {/* Profile Avatar */}
                             <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center">
                                 {profile?.avatar_url ? (
