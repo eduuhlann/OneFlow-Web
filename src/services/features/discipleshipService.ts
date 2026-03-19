@@ -178,6 +178,23 @@ export const discipleshipService = {
                 file_type: file?.type
             });
         
+    },
+
+    async updateNote(noteId: string, content: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_notes')
+            .update({ content })
+            .eq('id', noteId);
+        
+        if (error) throw error;
+    },
+
+    async deleteNote(noteId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_notes')
+            .delete()
+            .eq('id', noteId);
+        
         if (error) throw error;
     },
 
