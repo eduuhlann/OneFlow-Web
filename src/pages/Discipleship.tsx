@@ -95,6 +95,12 @@ const Discipleship: React.FC = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [notes]);
 
+    useEffect(() => {
+        if (isMembersModalOpen && selectedConnection?.type === 'group') {
+            discipleshipService.getGroupMembers(selectedConnection.id).then(setGroupMembers);
+        }
+    }, [isMembersModalOpen, selectedConnection]);
+
     const loadConnections = async () => {
         if (!user) return;
         setLoading(true);
@@ -925,15 +931,27 @@ const Discipleship: React.FC = () => {
                                                         <p className="text-[10px] text-white/20 uppercase tracking-widest font-black leading-none mt-1">{m.status}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover/member:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-2">
                                                     {m.user_id !== user?.id && (
-                                                        <button onClick={() => handleStartPrivateChat(m.user_id)} title="Conversar no privado" className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><MessageSquare className="w-4 h-4" /></button>
+                                                        <button 
+                                                            onClick={() => handleStartPrivateChat(m.user_id)} 
+                                                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all group/call"
+                                                        >
+                                                            <MessageSquare className="w-3.5 h-3.5 text-white/40 group-hover/call:text-white transition-colors" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover/call:text-white">Chamar</span>
+                                                        </button>
                                                     )}
                                                     {selectedConnection?.leader_id === user?.id && m.user_id !== user?.id && (
-                                                        <>
-                                                            {m.role !== 'admin' && <button onClick={() => handlePromoteMember(m.id)} title="Promover a ADM" className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all"><TrendingUp className="w-4 h-4 text-indigo-400" /></button>}
-                                                            <button onClick={() => handleRemoveMember(m.user_id)} title="Expulsar do grupo" className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all"><Trash2 className="w-4 h-4 text-red-400" /></button>
-                                                        </>
+                                                        <div className="flex items-center gap-1">
+                                                            {m.role !== 'admin' && (
+                                                                <button onClick={() => handlePromoteMember(m.id)} title="Promover a ADM" className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/10">
+                                                                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => handleRemoveMember(m.user_id)} title="Expulsar do grupo" className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all border border-red-500/10">
+                                                                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
