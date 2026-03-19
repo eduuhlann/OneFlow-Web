@@ -513,9 +513,9 @@ const Bible: React.FC = () => {
                 )}>
                     <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-1.5 flex items-center gap-1.5 shadow-2xl">
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 if (bookAbbrev && chapterNum) {
-                                    statsService.toggleChapterRead(bookAbbrev, chapterNum);
+                                    await statsService.toggleChapterRead(bookAbbrev, chapterNum);
                                     const nextCh = chapterNum + 1;
                                     if (nextCh <= (selectedBook?.chapters || 1)) {
                                         navigate(`/bible/${bookAbbrev}/${nextCh}`);

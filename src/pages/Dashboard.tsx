@@ -293,6 +293,7 @@ export default function Dashboard() {
     const menuItems = useMemo(() => {
         const items = [
             { id: 'bible', icon: BookOpen, label: 'Bíblia', description: 'Continue sua leitura', path: '/bible' },
+            { id: 'discipleship', icon: User, label: 'Discipulado', description: 'Cresça acompanhado', path: '/discipleship' },
             { id: 'journey', icon: MapIcon, label: 'Jornada', description: 'Explore o caminho da fé', path: '/journey' },
             { id: 'olyviah', icon: BrainCircuit, label: 'Olyviah', description: 'IA Assistente Espiritual', path: '/olyviah' },
             { id: 'plans', icon: Calendar, label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
