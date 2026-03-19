@@ -295,6 +295,16 @@ export const discipleshipService = {
         return null;
     },
 
+    async leaveGroup(groupId: string, userId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_group_members')
+            .delete()
+            .eq('group_id', groupId)
+            .eq('user_id', userId);
+        
+        if (error) throw error;
+    },
+
     async updateGroupAvatar(groupId: string, avatarUrl: string): Promise<void> {
         const { error } = await supabase
             .from('discipleship_groups')
