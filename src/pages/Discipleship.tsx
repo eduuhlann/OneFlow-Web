@@ -58,6 +58,7 @@ const Discipleship: React.FC = () => {
     const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     
     // Data States
     const [connections, setConnections] = useState<any[]>([]);
@@ -225,17 +226,22 @@ const Discipleship: React.FC = () => {
     };
 
     const handleCreateGroup = async () => {
-        if (!user || !newGroupName.trim()) return;
+        if (!user || !newGroupName.trim() || isCreatingGroup) return;
+        setIsCreatingGroup(true);
         try {
             const groupId = await discipleshipService.createGroup(user.id, newGroupName);
             setNewGroupName('');
             setIsGroupModalOpen(false);
             loadConnections();
+            
+            // Automatically select the new group
             const newGroup = { id: groupId, name: newGroupName, leader_id: user.id, type: 'group' };
             handleSelectConnection(newGroup);
         } catch (error: any) {
             console.error('Error creating group:', error);
             alert(`Erro ao criar grupo: ${error.message || 'Verifique se você rodou o SQL das tabelas no Supabase.'}`);
+        } finally {
+            setIsCreatingGroup(false);
         }
     };
 
@@ -403,7 +409,13 @@ const Discipleship: React.FC = () => {
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Nome do Grupo</label>
                                         <input type="text" autoFocus placeholder="Ex: Discipulado Jovens" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
                                     </div>
-                                    <button onClick={handleCreateGroup} disabled={!newGroupName.trim()} className="w-full py-4 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">Criar Grupo</button>
+                                    <button onClick={handleCreateGroup} disabled={!newGroupName.trim() || isCreatingGroup} className="w-full py-4 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                        {isCreatingGroup ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" /> CRIANDO...
+                                            </>
+                                        ) : 'Criar Grupo'}
+                                    </button>
                                 </div>
                             </motion.div>
                         </motion.div>
