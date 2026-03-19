@@ -44,6 +44,35 @@ export const DiscipleshipListener: React.FC = () => {
                     }
                 }
             )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'discipleship_group_members',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('New group invitation received:', payload);
+                    if (location.pathname !== '/discipleship') {
+                        navigate('/discipleship');
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'discipleship_group_members',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    if (payload.new.status === 'active' && location.pathname !== '/discipleship') {
+                        navigate('/discipleship');
+                    }
+                }
+            )
             .subscribe();
 
         return () => {
