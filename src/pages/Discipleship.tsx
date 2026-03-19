@@ -402,7 +402,7 @@ const Discipleship: React.FC = () => {
                             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between">
                                     <h3 className="text-xl font-bold tracking-tight">
-                                        {searchMode === 'group' ? `Convidar para ${selectedConnection?.name}` : 'Novo Discipulado'}
+                                        {searchMode === 'group' ? `Convidar para ${selectedConnection?.name}` : 'Chamar no Privado'}
                                     </h3>
                                     <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
                                 </div>
@@ -426,7 +426,9 @@ const Discipleship: React.FC = () => {
                                                         <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">{r.avatar_url && <img src={r.avatar_url} className="w-full h-full object-cover" />}</div>
                                                         <span className="font-bold text-sm">{r.username}</span>
                                                     </div>
-                                                    <button onClick={() => handleInvite(r)} className="px-4 py-2 bg-white text-black rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Convidar</button>
+                                                    <button onClick={() => handleInvite(r)} className="px-4 py-2 bg-white text-black rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
+                                                        {searchMode === 'group' ? 'Convidar' : 'Chamar'}
+                                                    </button>
                                                 </div>
                                             ))
                                         )}
