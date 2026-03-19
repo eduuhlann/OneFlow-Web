@@ -16,6 +16,7 @@ import AiPlanGenerator from './pages/AiPlanGenerator';
 import PlanDetails from './pages/PlanDetails';
 import Prayer from './pages/Prayer';
 import Settings from './pages/Settings';
+import Discipleship from './pages/Discipleship';
 import Profile from './pages/Profile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
@@ -49,6 +50,11 @@ function AnimatedRoutes() {
         <Route path="/bible/:book/:chapter" element={
           <ProtectedRoute>
             <Bible />
+          </ProtectedRoute>
+        } />
+        <Route path="/discipleship" element={
+          <ProtectedRoute>
+            <Discipleship />
           </ProtectedRoute>
         } />
         <Route path="/olyviah" element={

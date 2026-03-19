@@ -1,4 +1,5 @@
 import { STATIC_BOOKS } from '../bible/staticBibleData';
+import { supabase } from '../supabase';
 
 const READ_CHAPTERS_KEY = 'oneflow_read_chapters';
 
@@ -16,7 +17,7 @@ export const statsService = {
         return data ? JSON.parse(data) : [];
     },
 
-    toggleChapterRead(bookAbbrev: string, chapter: number): boolean {
+    async toggleChapterRead(bookAbbrev: string, chapter: number): Promise<boolean> {
         const chapters = this.getReadChapters();
         const key = `${bookAbbrev}:${chapter}`;
         const index = chapters.indexOf(key);
@@ -25,9 +26,26 @@ export const statsService = {
         if (index > -1) {
             chapters.splice(index, 1);
             isRead = false;
+            
+            // Sync to Supabase if logged in
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                    .from('reading_progress')
+                    .delete()
+                    .match({ user_id: user.id, book_abbrev: bookAbbrev, chapter_number: chapter });
+            }
         } else {
             chapters.push(key);
             isRead = true;
+
+            // Sync to Supabase if logged in
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                    .from('reading_progress')
+                    .upsert({ user_id: user.id, book_abbrev: bookAbbrev, chapter_number: chapter });
+            }
         }
 
         localStorage.setItem(READ_CHAPTERS_KEY, JSON.stringify(chapters));
@@ -39,9 +57,24 @@ export const statsService = {
         return chapters.includes(`${bookAbbrev}:${chapter}`);
     },
 
-    getStats(): BibleStats {
-        const readChapters = this.getReadChapters();
+    async getUserStats(userId?: string): Promise<BibleStats> {
+        let readChapters: string[] = [];
         const totalChapters = 1189;
+
+        if (userId) {
+            // Fetch from Supabase for specific user (for discipleship)
+            const { data, error } = await supabase
+                .from('reading_progress')
+                .select('book_abbrev, chapter_number')
+                .eq('user_id', userId);
+            
+            if (!error && data) {
+                readChapters = data.map(rp => `${rp.book_abbrev}:${rp.chapter_number}`);
+            }
+        } else {
+            // Default to local chapters
+            readChapters = this.getReadChapters();
+        }
 
         const booksMap = new Map<string, number[]>();
         readChapters.forEach(entry => {
@@ -51,6 +84,25 @@ export const statsService = {
 
         const estimatedMinutes = readChapters.length * 4; // Avg 4 mins per chapter
 
+        return {
+            totalChaptersRead: readChapters.length,
+            completionPercentage: (readChapters.length / totalChapters) * 100,
+            booksTouched: booksMap.size,
+            estimatedMinutes,
+            hoursRead: Math.floor(estimatedMinutes / 60)
+        };
+    },
+
+    // Kept for backward compatibility if needed, but uses getUserStats internally
+    getStats(): BibleStats {
+        const readChapters = this.getReadChapters();
+        const totalChapters = 1189;
+        const booksMap = new Map<string, number[]>();
+        readChapters.forEach(entry => {
+            const [book] = entry.split(':');
+            if (!booksMap.has(book)) booksMap.set(book, []);
+        });
+        const estimatedMinutes = readChapters.length * 4;
         return {
             totalChaptersRead: readChapters.length,
             completionPercentage: (readChapters.length / totalChapters) * 100,
