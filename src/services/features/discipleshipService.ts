@@ -140,18 +140,26 @@ export const discipleshipService = {
     },
 
     async createReadingChallenge(leaderId: string, discipleId: string, book: string, start: number, end: number, groupId?: string): Promise<void> {
-        const { error } = await supabase
-            .from('discipleship_tasks')
-            .insert({
-                leader_id: leaderId,
-                disciple_id: discipleId,
-                title: `Desafio: ${book} ${start}-${end}`,
-                type: 'reading',
-                target_id: JSON.stringify({ book, start, end, groupId }),
-                is_completed: false
-            });
-        
-        if (error) throw error;
+        try {
+            const { error } = await supabase
+                .from('discipleship_tasks')
+                .insert({
+                    leader_id: leaderId,
+                    disciple_id: discipleId,
+                    title: `Desafio: ${book} ${start}-${end}`,
+                    type: 'reading',
+                    target_id: JSON.stringify({ book, start, end, groupId }),
+                    is_completed: false
+                });
+            
+            if (error) {
+                console.error('Error in createReadingChallenge:', error);
+                throw error;
+            }
+        } catch (e) {
+            console.error('Caught error in createReadingChallenge:', e);
+            throw e;
+        }
     },
 
     async completeTask(taskId: string): Promise<void> {
@@ -199,7 +207,7 @@ export const discipleshipService = {
     },
 
     async getNotes(leaderId: string, discipleId: string | null, groupId: string | null = null): Promise<DiscipleshipNote[]> {
-        let query = supabase.from('discipleship_notes').select('*');
+        let query = supabase.from('discipleship_notes').select('*, profiles:author_id(*)');
         
         if (groupId) {
             query = query.eq('group_id', groupId);
@@ -209,7 +217,10 @@ export const discipleshipService = {
         
         const { data, error } = await query.order('created_at', { ascending: true });
         
-        if (error) return [];
+        if (error) {
+            console.error('Error fetching notes:', error);
+            return [];
+        }
         return data || [];
     },
 

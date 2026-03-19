@@ -66,6 +66,8 @@ const Discipleship: React.FC = () => {
     const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null } | null>(null);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void | Promise<void> }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    const [alertBanner, setAlertBanner] = useState<{ isOpen: boolean, message: string, type: 'error' | 'success' }>({ isOpen: false, message: '', type: 'error' });
 
     // Data States
     const [connections, setConnections] = useState<any[]>([]);
@@ -88,9 +90,11 @@ const Discipleship: React.FC = () => {
     useEffect(() => {
         if (selectedConnection) {
             loadChatData();
-            const channel = subscribeToMessages();
+            const msgChannel = subscribeToMessages();
+            const taskChannel = subscribeToTasks();
             return () => {
-                supabase.removeChannel(channel);
+                supabase.removeChannel(msgChannel);
+                supabase.removeChannel(taskChannel);
             };
         }
     }, [selectedConnection]);
@@ -211,6 +215,45 @@ const Discipleship: React.FC = () => {
         }
     };
 
+    const subscribeToTasks = () => {
+        const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
+        const channel = supabase
+            .channel(`discipleship-tasks-${selectedConnection.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to INSERT and UPDATE
+                    schema: 'public',
+                    table: 'discipleship_tasks'
+                },
+                async (payload) => {
+                    const newTask = payload.new as DiscipleshipTask;
+                    if (groupId) {
+                        try {
+                            const target = JSON.parse(newTask.target_id || '{}');
+                            if (target.groupId === groupId && (newTask.disciple_id === user?.id || selectedConnection.leader_id === user?.id)) {
+                                setTasks(prev => {
+                                    const exists = prev.find(t => t.id === newTask.id);
+                                    if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== (payload.old as any).id);
+                                    if (exists) return prev.map(t => t.id === newTask.id ? newTask : t);
+                                    return [newTask, ...prev];
+                                });
+                            }
+                        } catch (e) {}
+                    } else if (newTask.disciple_id === user?.id || newTask.leader_id === user?.id) {
+                         setTasks(prev => {
+                            const exists = prev.find(t => t.id === newTask.id);
+                            if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== (payload.old as any).id);
+                            if (exists) return prev.map(t => t.id === newTask.id ? newTask : t);
+                            return [newTask, ...prev];
+                        });
+                    }
+                }
+            )
+            .subscribe();
+        return channel;
+    };
+
     const subscribeToMessages = () => {
         const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : (selectedConnection.leader_id || user!.id);
         const discipleId = selectedConnection.type === 'leader' ? user!.id : (selectedConnection.disciple_id || null);
@@ -228,12 +271,11 @@ const Discipleship: React.FC = () => {
                 async (payload) => {
                     const newNote = payload.new as DiscipleshipNote;
                     console.log('New note received:', newNote);
+                    
+                    // If note has profiles already (from some server-side expansion), use it
+                    // Otherwise, we'll try to find it in groupMembers
                     if (groupId) {
                         if (newNote.group_id === groupId) {
-                            if (!groupMembers.some(m => m.user_id === newNote.author_id)) {
-                                const latestMembers = await discipleshipService.getGroupMembers(groupId);
-                                setGroupMembers(latestMembers);
-                            }
                             setNotes(prev => {
                                 if (prev.some(note => note.id === newNote.id)) return prev;
                                 return [...prev, newNote];
@@ -246,12 +288,8 @@ const Discipleship: React.FC = () => {
                         });
                     }
                 }
-            );
-
-        channel.subscribe((status) => {
-            console.log('Subscription status:', status);
-        });
-
+            )
+            .subscribe();
         return channel;
     };
 
@@ -311,22 +349,30 @@ const Discipleship: React.FC = () => {
             handleSelectConnection(newGroup);
         } catch (error: any) {
             console.error('Error creating group:', error);
-            alert(`Erro ao criar grupo: ${error.message || 'Verifique se você rodou o SQL das tabelas no Supabase.'}`);
+            setAlertBanner({ isOpen: true, message: `Erro ao criar grupo: ${error.message || 'Verifique sua conexão.'}`, type: 'error' });
         } finally {
             setIsCreatingGroup(false);
         }
     };
 
     const handleDeleteGroup = async () => {
-        if (!selectedConnection || selectedConnection.type !== 'group' || !window.confirm('Tem certeza que deseja excluir este grupo?')) return;
-        try {
-            await discipleshipService.deleteGroup(selectedConnection.id);
-            setSelectedConnection(null);
-            setView('list');
-            loadConnections();
-        } catch (error) {
-            alert('Erro ao excluir grupo.');
-        }
+        if (!selectedConnection || selectedConnection.type !== 'group') return;
+        setConfirmModal({
+            isOpen: true,
+            title: 'Excluir Grupo',
+            message: 'Tem certeza que deseja excluir permanentemente este grupo? Esta ação não pode ser desfeita.',
+            onConfirm: async () => {
+                try {
+                    await discipleshipService.deleteGroup(selectedConnection.id);
+                    setSelectedConnection(null);
+                    setView('list');
+                    loadConnections();
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                } catch (error) {
+                    setAlertBanner({ isOpen: true, message: 'Erro ao excluir grupo.', type: 'error' });
+                }
+            }
+        });
     };
 
     const handleRemoveMember = async (targetUserId: string) => {
@@ -336,7 +382,7 @@ const Discipleship: React.FC = () => {
             const updated = await discipleshipService.getGroupMembers(selectedConnection.id);
             setGroupMembers(updated);
         } catch (error) {
-            alert('Erro ao remover membro.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao remover membro.', type: 'error' });
         }
     };
 
@@ -346,7 +392,7 @@ const Discipleship: React.FC = () => {
             const updated = await discipleshipService.getGroupMembers(selectedConnection!.id);
             setGroupMembers(updated);
         } catch (error) {
-            alert('Erro ao promover membro.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao promover membro.', type: 'error' });
         }
     };
 
@@ -390,7 +436,7 @@ const Discipleship: React.FC = () => {
             }, 800);
         } catch (error) {
             console.error('Challenge error:', error);
-            alert('Erro ao criar desafio.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao criar desafio.', type: 'error' });
         }
     };
 
@@ -407,7 +453,7 @@ const Discipleship: React.FC = () => {
             setIsMembersModalOpen(false);
             handleSelectConnection(formattedConn);
         } catch (error) {
-            alert('Erro ao iniciar chat privado.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao iniciar chat privado.', type: 'error' });
         }
     };
 
@@ -423,7 +469,7 @@ const Discipleship: React.FC = () => {
                 handleSelectConnection({ ...conn, status: 'active', member_status: 'active' });
             }
         } catch (error) {
-            alert('Erro ao responder convite.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao responder convite.', type: 'error' });
         }
     };
 
@@ -454,27 +500,41 @@ const Discipleship: React.FC = () => {
         }
     };
 
-    const handleDeleteNote = async (noteId: string) => {
-        if (!window.confirm('Tem certeza que deseja excluir esta mensagem?')) return;
-        try {
-            await discipleshipService.deleteNote(noteId);
-            loadChatData();
-        } catch (error) {
-            console.error('Error deleting note:', error);
-            alert('Erro ao excluir mensagem.');
-        }
+    const handleDeleteNote = (noteId: string) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Excluir Mensagem',
+            message: 'Tem certeza que deseja excluir esta mensagem?',
+            onConfirm: async () => {
+                try {
+                    await discipleshipService.deleteNote(noteId);
+                    setNotes(prev => prev.filter(n => n.id !== noteId));
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                } catch (error) {
+                    setAlertBanner({ isOpen: true, message: 'Erro ao excluir mensagem.', type: 'error' });
+                }
+            }
+        });
     };
 
     const handleLeaveGroup = async () => {
-        if (!user || !selectedConnection || selectedConnection.type !== 'group' || !window.confirm('Tem certeza que deseja sair deste grupo?')) return;
-        try {
-            await discipleshipService.leaveGroup(selectedConnection.id, user.id);
-            setSelectedConnection(null);
-            setView('list');
-            loadConnections();
-        } catch (error) {
-            alert('Erro ao sair do grupo.');
-        }
+        if (!user || !selectedConnection || selectedConnection.type !== 'group') return;
+        setConfirmModal({
+            isOpen: true,
+            title: 'Sair do Grupo',
+            message: 'Tem certeza que deseja sair deste grupo de discipulado?',
+            onConfirm: async () => {
+                try {
+                    await discipleshipService.leaveGroup(selectedConnection.id, user.id);
+                    setSelectedConnection(null);
+                    setView('list');
+                    loadConnections();
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                } catch (error) {
+                    setAlertBanner({ isOpen: true, message: 'Erro ao sair do grupo.', type: 'error' });
+                }
+            }
+        });
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isGroupAvatar: boolean = false) => {
@@ -493,7 +553,7 @@ const Discipleship: React.FC = () => {
             }
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Erro ao subir arquivo.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao subir arquivo.', type: 'error' });
         } finally {
             setIsUploading(false);
         }
@@ -835,7 +895,7 @@ const Discipleship: React.FC = () => {
                                                             <motion.div 
                                                                 initial={{ width: 0 }} 
                                                                 animate={{ width: `${progress}%` }} 
-                                                                className="h-full bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]" 
+                                                                className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.2)]" 
                                                             />
                                                         </div>
                                                         {(progress === 100 || selectedConnection.leader_id === user!.id) && (
@@ -870,9 +930,9 @@ const Discipleship: React.FC = () => {
                                                 if (isMine) {
                                                     authorProfile = profile;
                                                 } else if (selectedConnection.type === 'group') {
-                                                    authorProfile = getProfile(groupMembers.find(m => m.user_id === n.author_id)?.profiles);
+                                                    authorProfile = getProfile(groupMembers.find(m => m.user_id === n.author_id)?.profiles) || getProfile((n as any).profiles);
                                                 } else {
-                                                    authorProfile = getProfile(selectedConnection.profile);
+                                                    authorProfile = getProfile(selectedConnection.profile) || getProfile((n as any).profiles);
                                                 }
 
                                                 return (
@@ -1002,6 +1062,7 @@ const Discipleship: React.FC = () => {
                         )}
                     </main>
                 </div>
+
                 <AnimatePresence>
                     {isMembersModalOpen && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -1065,14 +1126,17 @@ const Discipleship: React.FC = () => {
                             </motion.div>
                         </motion.div>
                     )}
-                    <MyChallengesModal 
-                        isOpen={isMyChallengesOpen} 
-                        onClose={() => setIsMyChallengesOpen(false)} 
-                        tasks={tasks || []}
-                        stats={stats}
-                        onRefresh={loadChatData}
-                    />
+                </AnimatePresence>
 
+                <MyChallengesModal 
+                    isOpen={isMyChallengesOpen} 
+                    onClose={() => setIsMyChallengesOpen(false)} 
+                    tasks={tasks || []}
+                    stats={stats}
+                    onRefresh={loadChatData}
+                />
+
+                <AnimatePresence>
                     {selectedMemberStats && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-6">
@@ -1095,6 +1159,37 @@ const Discipleship: React.FC = () => {
                                 </div>
                                 <button onClick={() => setSelectedMemberStats(null)} className="w-full py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl">Fechar</button>
                             </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                    {confirmModal.isOpen && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#1a1a1a] border border-white/10 p-8 rounded-[32px] w-full max-w-sm shadow-2xl space-y-6">
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-bold italic tracking-tight">{confirmModal.title}</h3>
+                                    <p className="text-sm text-white/60 leading-relaxed">{confirmModal.message}</p>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <button onClick={() => confirmModal.onConfirm()} className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-95 transition-all">Confirmar</button>
+                                    <button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="w-full py-4 bg-white/5 text-white/60 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all">Cancelar</button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                    {alertBanner.isOpen && (
+                        <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -100, opacity: 0 }} className="fixed top-0 left-1/2 -translate-x-1/2 z-[210] w-full max-w-sm px-4">
+                            <div className={cn("flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl shadow-2xl", alertBanner.type === 'error' ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-green-500/10 border-green-500/20 text-green-400")}>
+                                <div className="flex items-center gap-3">
+                                    {alertBanner.type === 'error' ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                    <span className="text-[11px] font-black uppercase tracking-widest">{alertBanner.message}</span>
+                                </div>
+                                <button onClick={() => setAlertBanner(prev => ({ ...prev, isOpen: false }))} className="p-1 hover:bg-white/5 rounded-lg transition-colors"><X className="w-3 h-3" /></button>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
