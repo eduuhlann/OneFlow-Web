@@ -163,10 +163,15 @@ const Discipleship: React.FC = () => {
                     schema: 'public',
                     table: 'discipleship_notes'
                 },
-                (payload) => {
+                async (payload) => {
                     const newNote = payload.new as DiscipleshipNote;
                     if (groupId) {
                         if (newNote.group_id === groupId) {
+                            // If we don't have the member in the list, reload members
+                            if (!groupMembers.some(m => m.user_id === newNote.author_id)) {
+                                const latestMembers = await discipleshipService.getGroupMembers(groupId);
+                                setGroupMembers(latestMembers);
+                            }
                             setNotes(prev => [...prev, newNote]);
                         }
                     } else if (newNote.leader_id === leaderId && newNote.disciple_id === discipleId) {
@@ -542,11 +547,16 @@ const Discipleship: React.FC = () => {
                                     <div className="max-w-3xl mx-auto space-y-6">
                                         {notes.map((n) => {
                                             const isMine = n.author_id === user!.id;
-                                            const authorProfile = isMine ? profile : (
-                                                selectedConnection.type === 'group' 
-                                                    ? groupMembers.find(m => m.user_id === n.author_id)?.profiles 
-                                                    : selectedConnection.profile
-                                            );
+                                            // Handle both cases: leader/disciple profiles and group member profiles
+                                            let authorProfile = null;
+                                            
+                                            if (isMine) {
+                                                authorProfile = profile;
+                                            } else if (selectedConnection.type === 'group') {
+                                                authorProfile = groupMembers.find(m => m.user_id === n.author_id)?.profiles;
+                                            } else {
+                                                authorProfile = selectedConnection.profile;
+                                            }
                                             
                                             return (
                                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={n.id} className={cn("flex gap-3", isMine ? "flex-row-reverse ml-auto items-end" : "flex-row items-start")}>
