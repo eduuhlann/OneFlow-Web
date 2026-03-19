@@ -154,7 +154,7 @@ const Discipleship: React.FC = () => {
         const discipleId = selectedConnection.type === 'leader' ? user!.id : (selectedConnection.disciple_id || null);
         const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
 
-        return supabase
+        const channel = supabase
             .channel(`discipleship-chat-${selectedConnection.id}`)
             .on(
                 'postgres_changes',
@@ -165,21 +165,32 @@ const Discipleship: React.FC = () => {
                 },
                 async (payload) => {
                     const newNote = payload.new as DiscipleshipNote;
+                    console.log('New note received:', newNote);
                     if (groupId) {
                         if (newNote.group_id === groupId) {
-                            // If we don't have the member in the list, reload members
                             if (!groupMembers.some(m => m.user_id === newNote.author_id)) {
                                 const latestMembers = await discipleshipService.getGroupMembers(groupId);
                                 setGroupMembers(latestMembers);
                             }
-                            setNotes(prev => [...prev, newNote]);
+                            setNotes(prev => {
+                                if (prev.some(note => note.id === newNote.id)) return prev;
+                                return [...prev, newNote];
+                            });
                         }
                     } else if (newNote.leader_id === leaderId && newNote.disciple_id === discipleId) {
-                        setNotes(prev => [...prev, newNote]);
+                        setNotes(prev => {
+                            if (prev.some(note => note.id === newNote.id)) return prev;
+                            return [...prev, newNote];
+                        });
                     }
                 }
-            )
-            .subscribe();
+            );
+        
+        channel.subscribe((status) => {
+            console.log('Subscription status:', status);
+        });
+
+        return channel;
     };
 
     const handleSearch = async (q: string) => {
@@ -545,20 +556,26 @@ const Discipleship: React.FC = () => {
                                 {/* Chat Feed */}
                                 <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
                                     <div className="max-w-3xl mx-auto space-y-6">
-                                        {notes.map((n) => {
-                                            const isMine = n.author_id === user!.id;
-                                            // Handle both cases: leader/disciple profiles and group member profiles
-                                            let authorProfile = null;
-                                            
-                                            if (isMine) {
-                                                authorProfile = profile;
-                                            } else if (selectedConnection.type === 'group') {
-                                                authorProfile = groupMembers.find(m => m.user_id === n.author_id)?.profiles;
-                                            } else {
-                                                authorProfile = selectedConnection.profile;
-                                            }
-                                            
-                                            return (
+                                        {notes.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                                                <MessageSquare className="w-12 h-12 mb-4" />
+                                                <p className="text-sm font-bold uppercase tracking-[0.2em]">Nenhuma mensagem ainda</p>
+                                            </div>
+                                        ) : (
+                                            notes.map((n) => {
+                                                const isMine = n.author_id === user!.id;
+                                                const getProfile = (p: any) => Array.isArray(p) ? p[0] : p;
+                                                
+                                                let authorProfile = null;
+                                                if (isMine) {
+                                                    authorProfile = profile;
+                                                } else if (selectedConnection.type === 'group') {
+                                                    authorProfile = getProfile(groupMembers.find(m => m.user_id === n.author_id)?.profiles);
+                                                } else {
+                                                    authorProfile = getProfile(selectedConnection.profile);
+                                                }
+                                                
+                                                return (
                                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={n.id} className={cn("flex gap-3", isMine ? "flex-row-reverse ml-auto items-end" : "flex-row items-start")}>
                                                     {/* Avatar */}
                                                     <div className="shrink-0 mb-1">
@@ -600,7 +617,8 @@ const Discipleship: React.FC = () => {
                                                     </div>
                                                 </motion.div>
                                             );
-                                        })}
+                                        })
+                                    )}
                                         <div ref={messagesEndRef} />
                                     </div>
                                 </div>
