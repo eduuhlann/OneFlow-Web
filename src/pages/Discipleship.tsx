@@ -62,6 +62,7 @@ const Discipleship: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+    const [isMyChallengesOpen, setIsMyChallengesOpen] = useState(false);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
@@ -349,16 +350,30 @@ const Discipleship: React.FC = () => {
     const handleCreateChallenge = async () => {
         if (!user || !selectedConnection) return;
         try {
+            const challengeMsg = `[CHALLENGE]:${JSON.stringify({ 
+                book: challengeData.book, 
+                start: challengeData.start, 
+                end: challengeData.end,
+                leaderName: profile?.username || 'Líder'
+            })}`;
+
             if (selectedConnection.type === 'group') {
-                // Create challenge for all group members except the leader
                 const members = await discipleshipService.getGroupMembers(selectedConnection.id);
                 const results = members
                     .filter(m => m.user_id !== user.id && m.status === 'active')
                     .map(m => discipleshipService.createReadingChallenge(user.id, m.user_id, challengeData.book, challengeData.start, challengeData.end, selectedConnection.id));
                 await Promise.all(results);
+                
+                // Send automated message to group
+                await discipleshipService.addNote(user.id, null, user.id, challengeMsg, selectedConnection.id);
             } else {
                 const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
                 await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
+                
+                // Send automated message to private chat
+                const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
+                const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
+                await discipleshipService.addNote(leaderId, discipleId, user.id, challengeMsg);
             }
             setIsChallengeModalOpen(false);
             loadChatData();
@@ -748,16 +763,17 @@ const Discipleship: React.FC = () => {
                                 </header>
 
                                 {/* Active Challenges Section */}
-                                {tasks.filter(t => t.type === 'reading' && !t.is_completed).length > 0 && (
+                                {(tasks || []).filter(t => t.type === 'reading' && !t.is_completed).length > 0 && (
                                     <div className="px-4 md:px-8 py-4 bg-amber-500/5 border-b border-amber-500/10 space-y-3">
                                         <div className="max-w-3xl mx-auto space-y-3">
-                                            {tasks.filter(t => t.type === 'reading' && !t.is_completed).map(task => {
+                                            {(tasks || []).filter(t => t.type === 'reading' && !t.is_completed).map(task => {
                                                 let progress = 0;
                                                 let target = { book: '', start: 0, end: 0 };
                                                 try {
                                                     target = JSON.parse(task.target_id);
-                                                    if (stats?.readingHistory) {
-                                                        const bookStats = stats.readingHistory.find((s: any) => s.book === target.book);
+                                                    const readingHistory = (stats as any)?.readingHistory;
+                                                    if (readingHistory) {
+                                                        const bookStats = readingHistory.find((s: any) => s.book === target.book);
                                                         if (bookStats) {
                                                             const completedInTarget = bookStats.chapters.filter((c: number) => c >= target.start && c <= target.end).length;
                                                             const totalTarget = target.end - target.start + 1;
@@ -856,10 +872,20 @@ const Discipleship: React.FC = () => {
                                                                                 <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
                                                                             </div>
                                                                         )}
-                                                                        {n.content && <p className="text-sm mt-2">{n.content}</p>}
+                                                                        {n.content && (
+                                                                            n.content.startsWith('[CHALLENGE]:') ? (
+                                                                                <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} />
+                                                                            ) : (
+                                                                                <p className="text-sm mt-2">{n.content}</p>
+                                                                            )
+                                                                        )}
                                                                     </div>
                                                                 ) : (
-                                                                    <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
+                                                                    n.content.startsWith('[CHALLENGE]:') ? (
+                                                                        <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} isMine={isMine} />
+                                                                    ) : (
+                                                                        <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
+                                                                    )
                                                                 )}
                                                             </div>
                                                             <span className="text-[8px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -961,10 +987,114 @@ const Discipleship: React.FC = () => {
                             </motion.div>
                         </motion.div>
                     )}
+                    <MyChallengesModal 
+                        isOpen={isMyChallengesOpen} 
+                        onClose={() => setIsMyChallengesOpen(false)} 
+                        tasks={tasks || []}
+                        stats={stats}
+                        onRefresh={loadChatData}
+                    />
                 </AnimatePresence>
             </div>
         </PageTransition>
     );
 };
+
+const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: string, onParticipate: () => void, isMine?: boolean }) => {
+    try {
+        const data = JSON.parse(content.replace('[CHALLENGE]:', ''));
+        return (
+            <div className={cn(
+                "bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 md:p-6 space-y-4 max-w-sm shadow-xl",
+                isMine ? "border-amber-500/40" : ""
+            )}>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                        <TrendingUp className="w-5 h-5 text-black" />
+                    </div>
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500/60 leading-none">Novo Desafio</h4>
+                        <p className="text-sm font-bold mt-1 text-white">Lançado por {data.leaderName}</p>
+                    </div>
+                </div>
+                <div className="py-3 px-4 bg-black/40 rounded-xl border border-white/5">
+                    <p className="text-xs text-white/40 uppercase tracking-widest font-black">Meta de Leitura</p>
+                    <p className="text-lg font-black italic tracking-tighter text-amber-500">{data.book} {data.start}-{data.end}</p>
+                </div>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onParticipate(); }}
+                    className="w-full py-3 bg-amber-500 text-black text-xs font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-amber-500/20"
+                >
+                    Participar do Desafio 🚀
+                </button>
+            </div>
+        );
+    } catch (e) {
+        return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
+    }
+};
+
+const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh }: { isOpen: boolean, onClose: () => void, tasks: DiscipleshipTask[], stats: BibleStats | null, onRefresh: () => void }) => (
+    <AnimatePresence>
+        {isOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-amber-500/5">
+                        <div className="flex items-center gap-3">
+                            <TrendingUp className="w-5 h-5 text-amber-500" />
+                            <h2 className="text-xl font-black italic tracking-tight">Meus Desafios</h2>
+                        </div>
+                        <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                    </div>
+                    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        {tasks.filter(t => t.type === 'reading' && !t.is_completed).length === 0 ? (
+                            <div className="text-center py-12 opacity-20">
+                                <TrendingUp className="w-12 h-12 mx-auto mb-4" />
+                                <p className="text-sm font-black uppercase tracking-widest">Nenhum desafio ativo</p>
+                            </div>
+                        ) : (
+                            tasks.filter(t => t.type === 'reading' && !t.is_completed).map(task => {
+                                let progress = 0;
+                                let target = { book: '', start: 0, end: 0 };
+                                try {
+                                    target = JSON.parse(task.target_id || '{}');
+                                    const readingHistory = (stats as any)?.readingHistory;
+                                    if (readingHistory) {
+                                        const bookStats = readingHistory.find((s: any) => s.book === target.book);
+                                        if (bookStats) {
+                                            const completedInTarget = bookStats.chapters.filter((c: number) => c >= target.start && c <= target.end).length;
+                                            const totalTarget = target.end - target.start + 1;
+                                            progress = Math.min(100, Math.round((completedInTarget / totalTarget) * 100));
+                                        }
+                                    }
+                                } catch (e) {}
+
+                                return (
+                                    <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-lg font-black italic text-amber-500">{target.book} {target.start}-{target.end}</p>
+                                            <span className="text-[10px] font-black bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">{progress}%</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                        </div>
+                                        {progress === 100 && (
+                                            <button 
+                                                onClick={() => discipleshipService.completeTask(task.id).then(() => { onRefresh(); onClose(); })}
+                                                className="w-full py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl"
+                                            >
+                                                Marcar como Concluído ✅
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+);
 
 export default Discipleship;
