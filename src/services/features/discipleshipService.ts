@@ -38,7 +38,7 @@ export const discipleshipService = {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const { error } = await supabase
             .from('discipleship_invites')
-            .upsert({ leader_id: leaderId, code });
+            .upsert({ leader_id: leaderId, code }, { onConflict: 'leader_id' });
         
         if (error) throw error;
         return code;
@@ -68,7 +68,10 @@ export const discipleshipService = {
         // 2. Create connection
         const { error: connectError } = await supabase
             .from('discipleship_connections')
-            .upsert({ leader_id: invite.leader_id, disciple_id: discipleId, status: 'active' });
+            .upsert(
+                { leader_id: invite.leader_id, disciple_id: discipleId, status: 'active' },
+                { onConflict: 'leader_id,disciple_id' }
+            );
         
         if (connectError) throw connectError;
     },
