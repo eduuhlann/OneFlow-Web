@@ -542,37 +542,52 @@ const Discipleship: React.FC = () => {
                                     <div className="max-w-3xl mx-auto space-y-6">
                                         {notes.map((n) => {
                                             const isMine = n.author_id === user!.id;
-                                            const member = groupMembers.find(m => m.user_id === n.author_id);
+                                            const authorProfile = isMine ? profile : (
+                                                selectedConnection.type === 'group' 
+                                                    ? groupMembers.find(m => m.user_id === n.author_id)?.profiles 
+                                                    : selectedConnection.profile
+                                            );
                                             
                                             return (
-                                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={n.id} className={cn("flex flex-col gap-1.5", isMine ? "ml-auto items-end" : "items-start")}>
-                                                    {!isMine && selectedConnection.type === 'group' && (
-                                                        <button onClick={() => handleMemberAction(member)} className="text-[10px] font-black text-white/30 uppercase tracking-widest px-1 hover:text-white transition-colors">
-                                                            {member?.profiles?.username || 'Membro'}
-                                                        </button>
-                                                    )}
-                                                    <div className={cn("px-5 py-3.5 rounded-[28px] max-w-[85%] md:max-w-[70%] group relative transition-all shadow-xl", isMine ? "bg-white text-black font-semibold rounded-tr-none" : "bg-white/5 border border-white/10 text-white rounded-tl-none")}>
-                                                        {n.file_url ? (
-                                                            <div className="space-y-3">
-                                                                {n.file_type?.startsWith('image/') ? (
-                                                                    <img src={n.file_url} className="rounded-2xl max-h-64 object-cover border border-black/10" />
-                                                                ) : (
-                                                                    <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
-                                                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-                                                                        <div className="flex-1 overflow-hidden">
-                                                                            <p className="text-[11px] font-bold truncate">{n.file_name}</p>
-                                                                            <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
-                                                                        </div>
-                                                                        <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
-                                                                    </div>
-                                                                )}
-                                                                {n.content && <p className="text-sm mt-2">{n.content}</p>}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
-                                                        )}
+                                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={n.id} className={cn("flex gap-3", isMine ? "flex-row-reverse ml-auto items-end" : "flex-row items-start")}>
+                                                    {/* Avatar */}
+                                                    <div className="shrink-0 mb-1">
+                                                        <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
+                                                            {authorProfile?.avatar_url ? (
+                                                                <img src={authorProfile.avatar_url} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <User className="w-4 h-4 text-white/20" />
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <span className="text-[9px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+
+                                                    <div className={cn("flex flex-col gap-1", isMine ? "items-end" : "items-start")}>
+                                                        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest px-1">
+                                                            {authorProfile?.username || 'Usuário'}
+                                                        </span>
+                                                        <div className={cn("px-5 py-3.5 rounded-[28px] max-w-[280px] md:max-w-md group relative transition-all shadow-xl", isMine ? "bg-white text-black font-semibold rounded-tr-none" : "bg-white/5 border border-white/10 text-white rounded-tl-none")}>
+                                                            {n.file_url ? (
+                                                                <div className="space-y-3">
+                                                                    {n.file_type?.startsWith('image/') ? (
+                                                                        <img src={n.file_url} className="rounded-2xl max-h-64 object-cover border border-black/10" />
+                                                                    ) : (
+                                                                        <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                                                                            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
+                                                                            <div className="flex-1 overflow-hidden">
+                                                                                <p className="text-[11px] font-bold truncate">{n.file_name}</p>
+                                                                                <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
+                                                                            </div>
+                                                                            <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
+                                                                        </div>
+                                                                    )}
+                                                                    {n.content && <p className="text-sm mt-2">{n.content}</p>}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[8px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
                                                 </motion.div>
                                             );
                                         })}
