@@ -161,12 +161,16 @@ const Discipleship: React.FC = () => {
                 {
                     event: 'INSERT',
                     schema: 'public',
-                    table: 'discipleship_notes',
-                    filter: groupId ? `group_id=eq.${groupId}` : `disciple_id=eq.${discipleId}`
+                    table: 'discipleship_notes'
                 },
                 (payload) => {
-                    if (groupId || payload.new.leader_id === leaderId) {
-                        setNotes(prev => [...prev, payload.new as DiscipleshipNote]);
+                    const newNote = payload.new as DiscipleshipNote;
+                    if (groupId) {
+                        if (newNote.group_id === groupId) {
+                            setNotes(prev => [...prev, newNote]);
+                        }
+                    } else if (newNote.leader_id === leaderId && newNote.disciple_id === discipleId) {
+                        setNotes(prev => [...prev, newNote]);
                     }
                 }
             )
@@ -258,6 +262,18 @@ const Discipleship: React.FC = () => {
             setNoteInput('');
         } catch (error) {
             console.error('Error sending message:', error);
+        }
+    };
+
+    const handleLeaveGroup = async () => {
+        if (!user || !selectedConnection || selectedConnection.type !== 'member' || !window.confirm('Tem certeza que deseja sair deste grupo?')) return;
+        try {
+            await discipleshipService.leaveGroup(selectedConnection.id, user.id);
+            setSelectedConnection(null);
+            setView('list');
+            loadConnections();
+        } catch (error) {
+            alert('Erro ao sair do grupo.');
         }
     };
 
@@ -456,7 +472,7 @@ const Discipleship: React.FC = () => {
                                                         onClick={() => {
                                                             const input = document.createElement('input');
                                                             input.type = 'file';
-                                                            input.accept = 'image/*';
+                                                            input.accept = 'image/*,image/gif';
                                                             input.onchange = (e: any) => handleFileUpload(e, true);
                                                             input.click();
                                                         }}
@@ -501,10 +517,16 @@ const Discipleship: React.FC = () => {
                                         <AnimatePresence>
                                             {isMenuOpen && (
                                                 <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
-                                                    {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
-                                                        <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
-                                                            <Trash2 className="w-4 h-4" /> Excluir Grupo
-                                                        </button>
+                                                    {selectedConnection.type === 'group' && (
+                                                        selectedConnection.leader_id === user!.id ? (
+                                                            <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                                                                <Trash2 className="w-4 h-4" /> Excluir Grupo
+                                                            </button>
+                                                        ) : (
+                                                            <button onClick={handleLeaveGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                                                                <XCircle className="w-4 h-4" /> Sair do Grupo
+                                                            </button>
+                                                        )
                                                     )}
                                                     <button className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest">
                                                         <Clock className="w-4 h-4" /> Ver Histórico
@@ -559,7 +581,7 @@ const Discipleship: React.FC = () => {
                                 </div>
 
                                 {/* Input Area */}
-                                <footer className="p-6 bg-black/40 backdrop-blur-md border-t border-white/5">
+                                <footer className="p-6 bg-[#080808] border-t border-white/5">
                                     <div className="max-w-4xl mx-auto flex gap-3 items-end">
                                         <div className="relative">
                                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" />
@@ -567,9 +589,9 @@ const Discipleship: React.FC = () => {
                                                 {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Paperclip className="w-5 h-5" />}
                                             </button>
                                         </div>
-                                        <div className="flex-1 bg-white/5 rounded-[32px] flex flex-col p-2 border border-white/5 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-                                            <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem espiritual..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32" />
-                                            <div className="flex justify-end p-2">
+                                        <div className="flex-1 bg-white/[0.02] rounded-[32px] flex flex-col p-2 border border-white/5 focus-within:border-white/10 transition-all group/input">
+                                            <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem espiritual..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
+                                            <div className="flex justify-end p-2 opacity-60 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => handleSendMessage()} disabled={!noteInput.trim() && !isUploading} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
                                                     <Send className="w-5 h-5" />
                                                 </button>
