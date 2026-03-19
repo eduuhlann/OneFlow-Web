@@ -17,7 +17,7 @@ export interface DiscipleshipTask {
     leader_id: string;
     disciple_id: string;
     title: string;
-    type: 'chapter' | 'plan' | 'other';
+    type: 'chapter' | 'plan' | 'reading' | 'other';
     target_id: string | null;
     is_completed: boolean;
     created_at: string;
