@@ -443,25 +443,25 @@ export default function Dashboard() {
 
     return (
         <PageTransition>
-            <div className="min-h-screen bg-black text-white p-6 md:p-12 overflow-x-hidden selection:bg-white selection:text-black relative">
+            <div className="min-h-screen bg-black text-white p-4 md:p-12 overflow-x-hidden selection:bg-white selection:text-black relative">
                 <ParticleBackground />
                 <div className="max-w-full relative z-10">
 
                     {/* Header */}
-                    <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
-                        <div className="flex items-center gap-6">
+                    <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 md:mb-16">
+                        <div className="flex items-center gap-3 md:gap-6">
                             <Link to="/dashboard" className="hover:opacity-80 transition-opacity">
                                 <img src={logo} alt="OneFlow" className="w-24 md:w-28 h-auto object-contain" />
                             </Link>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Bem-vindo</span>
-                                <h1 className="text-4xl md:text-5xl font-bold tracking-tighter">
+                                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter">
                                     {displayName}
                                 </h1>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 md:gap-4">
                             {/* Profile Avatar */}
                             <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center">
                                 {profile?.avatar_url ? (
@@ -473,14 +473,14 @@ export default function Dashboard() {
                             <button
                                 onClick={() => navigate('/settings')}
                                 title="Configurações e Perfil"
-                                className="p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
+                                className="p-3 md:p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
                             >
                                 <Settings size={24} />
                             </button>
                             <button
                                 onClick={handleSignOut}
                                 title="Sair"
-                                className="p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 text-red-500/80 hover:text-red-400 shadow-lg shadow-black/20"
+                                className="p-3 md:p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 text-red-500/80 hover:text-red-400 shadow-lg shadow-black/20"
                             >
                                 <LogOut size={24} />
                             </button>

@@ -64,13 +64,13 @@ const Plans: React.FC = () => {
         <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
             <div className="max-w-4xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
-                    <div className="flex items-center gap-12">
-                        <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all md:-ml-16">
+                    <div className="flex items-center gap-4 md:gap-12">
+                        <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all">
                             <ArrowLeft size={24} />
                         </button>
                         <div>
                             <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Jornadas Espirituais</span>
-                            <h1 className="text-4xl font-black italic -rotate-1 tracking-tighter">Meus Planos</h1>
+                            <h1 className="text-2xl sm:text-4xl font-black italic -rotate-1 tracking-tighter">Meus Planos</h1>
                         </div>
                     </div>
                 </header>

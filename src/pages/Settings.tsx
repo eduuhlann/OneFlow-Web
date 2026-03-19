@@ -148,13 +148,13 @@ const Settings: React.FC = () => {
         <div className="min-h-screen bg-black text-white p-6 md:p-12 overflow-x-hidden">
             <div className="max-w-3xl mx-auto">
                 <header className="flex items-center justify-between mb-16">
-                    <div className="flex items-center gap-12">
-                        <button onClick={handleBack} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all md:-ml-16">
+                    <div className="flex items-center gap-4 md:gap-12">
+                        <button onClick={handleBack} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all">
                             <ArrowLeft size={24} />
                         </button>
                         <div>
                             <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Ajustes OneFlow</span>
-                            <h1 className="text-4xl font-black italic -rotate-1 tracking-tighter">
+                            <h1 className="text-2xl sm:text-4xl font-black italic -rotate-1 tracking-tighter">
                                 {activeTab === 'main' ? 'Configurações' : 'Ajustes'}
                             </h1>
                         </div>

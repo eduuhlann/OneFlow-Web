@@ -11,7 +11,8 @@ import {
     Lightbulb,
     Search,
     BookOpen,
-    ChevronLeft
+    ChevronLeft,
+    ChevronDown
 } from 'lucide-react';
 import { bibleApi } from '../services/api/bibleApi';
 import { chapterInsights } from '../services/bible/chapterInsights';
@@ -43,6 +44,11 @@ const Bible: React.FC = () => {
     const [showInsights, setShowInsights] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     
+    // Novas variáveis de versão
+    const [versions, setVersions] = useState<any[]>([]);
+    const [currentVersion, setCurrentVersion] = useState<string>(() => localStorage.getItem('bible_version') || 'nvi');
+    const [showVersions, setShowVersions] = useState(false);
+
     // Novas Variáveis de Exegesis
     const [selectedVerseForStudy, setSelectedVerseForStudy] = useState<{ number: number; text: string } | null>(null);
     const [isExegesisOpen, setIsExegesisOpen] = useState(false);
@@ -54,6 +60,20 @@ const Bible: React.FC = () => {
     useEffect(() => {
         const savedAvatar = localStorage.getItem('olyviah_avatar');
         if (savedAvatar) setAiAvatar(savedAvatar);
+
+        // Load versions and auto-reset if saved version no longer exists
+        bibleApi.getVersions().then(v => {
+            if (v && v.length > 0) {
+                setVersions(v);
+                const savedVersion = localStorage.getItem('bible_version');
+                const isValid = v.some((x: any) => x.version === savedVersion);
+                if (!isValid) {
+                    // Clear stale version
+                    localStorage.setItem('bible_version', 'nvi');
+                    setCurrentVersion('nvi');
+                }
+            }
+        });
     }, []);
 
     useEffect(() => {
@@ -69,18 +89,24 @@ const Bible: React.FC = () => {
 
     useEffect(() => {
         if (bookAbbrev && chapterNum) {
-            loadChapter(bookAbbrev, chapterNum);
+            loadChapter(bookAbbrev, chapterNum, currentVersion);
         } else {
             setChapterData(null);
         }
-    }, [bookAbbrev, chapterNum]);
+    }, [bookAbbrev, chapterNum, currentVersion]);
 
-    const loadChapter = async (b: string, c: number) => {
+    const handleVersionChange = (version: string) => {
+        setCurrentVersion(version);
+        localStorage.setItem('bible_version', version);
+        setShowVersions(false);
+    };
+
+    const loadChapter = async (b: string, c: number, v: string) => {
         setLoading(true);
         setError(null);
         setChapterData(null);
         try {
-            const data = await bibleApi.getChapter(b, c, 'nvi');
+            const data = await bibleApi.getChapter(b, c, v);
             if (data && data.verses && data.verses.length > 0) {
                 setChapterData(data);
             } else {
@@ -114,6 +140,48 @@ const Bible: React.FC = () => {
         window.scrollTo(0, 0);
     };
 
+    const VersionSelector = () => (
+        <div className="relative z-50">
+            <button 
+                onClick={() => setShowVersions(!showVersions)}
+                className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+                <span className="text-xs font-bold uppercase tracking-wider">{currentVersion}</span>
+                <ChevronDown className="w-3 h-3 text-white/50" />
+            </button>
+            
+            <AnimatePresence>
+                {showVersions && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute right-0 top-full mt-2 w-48 bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 max-h-64 overflow-y-auto"
+                        >
+                            {versions.length > 0 ? versions.map(v => (
+                                <button
+                                    key={v.version}
+                                    onClick={() => handleVersionChange(v.version)}
+                                    className={cn(
+                                        "w-full text-left px-4 py-3 text-sm transition-colors border-b border-white/5 last:border-0",
+                                        currentVersion === v.version ? "bg-white/10 font-bold" : "hover:bg-white/5 font-medium text-white/70"
+                                    )}
+                                >
+                                    <div className="uppercase text-xs font-bold tracking-widest text-white">{v.version}</div>
+                                    <div className="text-[10px] text-white/40 truncate mt-0.5">{v.name || 'Nova Versão'}</div>
+                                </button>
+                            )) : (
+                                <div className="px-4 py-3 text-xs text-white/50 text-center">Carregando versões...</div>
+                            )}
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+
     const Header = ({ children }: { children?: React.ReactNode }) => (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-b border-white/5 px-6 py-4">
             <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -133,15 +201,18 @@ const Bible: React.FC = () => {
                         </Link>
                         <h1 className="text-xl font-bold tracking-tight">Bíblia Sagrada</h1>
                     </div>
-                    <div className="relative w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                        <input
-                            type="text"
-                            placeholder="Pesquisar livro..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-white/30 transition-all text-sm"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-48 hidden md:block">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                            <input
+                                type="text"
+                                placeholder="Pesquisar livro..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 focus:outline-none focus:border-white/30 transition-all text-xs"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <VersionSelector />
                     </div>
                 </Header>
 
@@ -190,9 +261,12 @@ const Bible: React.FC = () => {
                             <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">{selectedBook?.chapters} Capítulos</p>
                         </div>
                     </div>
-                    <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                        <HomeIcon className="w-5 h-5" />
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <VersionSelector />
+                        <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition-colors hidden sm:block">
+                            <HomeIcon className="w-5 h-5" />
+                        </Link>
+                    </div>
                 </Header>
 
                 <div className="max-w-2xl mx-auto px-6 pt-28 pb-24">
@@ -232,15 +306,19 @@ const Bible: React.FC = () => {
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
-                        <h2 className="text-base font-bold">{selectedBook?.name} {chapterNum}</h2>
+                        <h2 className="text-base font-bold flex items-center gap-2">
+                            {selectedBook?.name} {chapterNum}
+                            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/60 uppercase">{currentVersion}</span>
+                        </h2>
                         {chapterTitle && <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{chapterTitle}</p>}
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button onClick={() => navigateToChapter('prev')} disabled={chapterNum === 1} className="p-2 hover:bg-white/5 rounded-full transition-colors disabled:opacity-20">
+                    <VersionSelector />
+                    <button onClick={() => navigateToChapter('prev')} disabled={chapterNum === 1} className="p-2 hover:bg-white/5 rounded-full transition-colors disabled:opacity-20 hidden sm:block">
                         <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <button onClick={() => navigateToChapter('next')} disabled={chapterNum === selectedBook?.chapters} className="p-2 hover:bg-white/5 rounded-full transition-colors disabled:opacity-20">
+                    <button onClick={() => navigateToChapter('next')} disabled={chapterNum === selectedBook?.chapters} className="p-2 hover:bg-white/5 rounded-full transition-colors disabled:opacity-20 hidden sm:block">
                         <ChevronRight className="w-5 h-5" />
                     </button>
                     <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-white/5 rounded-full transition-colors ml-1">
@@ -312,7 +390,7 @@ const Bible: React.FC = () => {
                     <div className="bg-white/5 border border-white/10 p-10 rounded-3xl text-center">
                         <p className="text-white/60 font-bold text-lg mb-6">{error}</p>
                         <button
-                            onClick={() => loadChapter(bookAbbrev!, chapterNum!)}
+                            onClick={() => loadChapter(bookAbbrev!, chapterNum!, currentVersion)}
                             className="bg-white text-black px-8 py-3 rounded-2xl font-bold text-sm"
                         >
                             Tentar novamente

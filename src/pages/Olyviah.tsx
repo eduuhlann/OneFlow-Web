@@ -37,7 +37,7 @@ const Olyviah: React.FC = () => {
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [aiAvatar, setAiAvatar] = useState<string | null>(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +50,10 @@ const Olyviah: React.FC = () => {
     useEffect(() => {
         if (activeThreadId) {
             loadMessages(activeThreadId);
+            // Close sidebar on mobile when selecting a thread
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                setIsSidebarOpen(false);
+            }
         } else {
             setMessages([]);
         }
@@ -229,7 +233,7 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
 
     return (
         <PageTransition>
-            <div className="flex h-screen bg-[#0d0d0d] text-white overflow-hidden font-sans">
+            <div className="flex h-screen bg-[#0d0d0d] text-white overflow-hidden font-sans relative">
                 {/* Sidebar - ChatGPT Style */}
                 <AnimatePresence initial={false}>
                     {isSidebarOpen && (
@@ -237,7 +241,7 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
                             initial={{ width: 0, opacity: 0 }}
                             animate={{ width: 280, opacity: 1 }}
                             exit={{ width: 0, opacity: 0 }}
-                            className="h-full bg-black border-r border-white/5 flex flex-col flex-shrink-0 overflow-hidden"
+                            className="h-full bg-black border-r border-white/5 flex flex-col flex-shrink-0 overflow-hidden md:relative fixed inset-y-0 left-0 z-50"
                         >
                             <div className="p-4 flex-1 flex flex-col gap-2 overflow-y-auto">
                                 <button
@@ -295,6 +299,14 @@ IMPORTANTE: Você foi treinada com uma base de dados massiva de 10.000 linhas de
                         </motion.aside>
                     )}
                 </AnimatePresence>
+
+                {/* Mobile overlay backdrop - closes sidebar when tapped */}
+                {isSidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    />
+                )}
 
                 <div className="flex-1 flex flex-col relative bg-[#171717]">
                     <input

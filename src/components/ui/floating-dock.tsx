@@ -66,8 +66,8 @@ const FloatingDockMobile = ({
               >
                 <div
                   onClick={() => {
-                      if (item.onClick) item.onClick();
-                      else window.location.href = item.href;
+                    if (item.onClick) item.onClick();
+                    else window.location.href = item.href;
                   }}
                   key={item.title}
                   className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center cursor-pointer"
@@ -165,12 +165,12 @@ function IconContainer({
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div 
-        onClick={() => {
-            if (onClick) onClick();
-            else window.location.href = href;
-        }}
-        className="cursor-pointer"
+    <div
+      onClick={() => {
+        if (onClick) onClick();
+        else window.location.href = href;
+      }}
+      className="cursor-pointer"
     >
       <motion.div
         ref={ref}
