@@ -61,6 +61,8 @@ const Discipleship: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+    const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+    const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
     // Data States
@@ -316,6 +318,18 @@ const Discipleship: React.FC = () => {
         }
     };
 
+    const handleCreateChallenge = async () => {
+        if (!user || !selectedConnection) return;
+        const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
+        try {
+            await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
+            setIsChallengeModalOpen(false);
+            loadChatData();
+        } catch (error) {
+            alert('Erro ao criar desafio.');
+        }
+    };
+
     const handleStartPrivateChat = async (targetUserId: string) => {
         if (!user || targetUserId === user.id) return;
         try {
@@ -498,9 +512,51 @@ const Discipleship: React.FC = () => {
                             </motion.div>
                         </motion.div>
                     )}
+                    {isChallengeModalOpen && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-amber-500/10">
+                                    <div className="flex items-center gap-3">
+                                        <TrendingUp className="w-6 h-6 text-amber-500" />
+                                        <h3 className="text-xl font-bold tracking-tight">Novo Desafio de Leitura</h3>
+                                    </div>
+                                    <button onClick={() => setIsChallengeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="p-6 space-y-6">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Livro da Bíblia</label>
+                                        <select 
+                                            value={challengeData.book} 
+                                            onChange={(e) => setChallengeData(prev => ({ ...prev, book: e.target.value }))}
+                                            className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium appearance-none"
+                                        >
+                                            {['Gênesis', 'Êxodo', 'Levítico', 'Números', 'Deuteronômio', 'Josué', 'Juízes', 'Rute', '1 Samuel', '2 Samuel', '1 Reis', '2 Reis', '1 Crônicas', '2 Crônicas', 'Esdras', 'Neemias', 'Ester', 'Jó', 'Salmos', 'Provérbios', 'Eclesiastes', 'Cantares', 'Isaías', 'Jeremias', 'Lamentações', 'Ezequiel', 'Daniel', 'Oseias', 'Joel', 'Amós', 'Obadias', 'Jonas', 'Miqueias', 'Naum', 'Habacuque', 'Sofonias', 'Ageu', 'Zacarias', 'Malaquias', 'Mateus', 'Marcos', 'Lucas', 'João', 'Atos', 'Romanos', '1 Coríntios', '2 Coríntios', 'Gálatas', 'Efésios', 'Filipenses', 'Colossenses', '1 Tessalonicenses', '2 Tessalonicenses', '1 Timóteo', '2 Timóteo', 'Tito', 'Filemom', 'Hebreus', 'Tiago', '1 Pedro', '2 Pedro', '1 João', '2 João', '3 João', 'Judas', 'Apocalipse'].map(b => (
+                                                <option key={b} value={b} className="bg-[#1a1a1a]">{b}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Capítulo Inicial</label>
+                                            <input type="number" min="1" value={challengeData.start} onChange={(e) => setChallengeData(prev => ({ ...prev, start: parseInt(e.target.value) || 1 }))} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Capítulo Final</label>
+                                            <input type="number" min="1" value={challengeData.end} onChange={(e) => setChallengeData(prev => ({ ...prev, end: parseInt(e.target.value) || 1 }))} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
+                                        </div>
+                                    </div>
+                                    <button onClick={handleCreateChallenge} className="w-full py-4 bg-amber-500 text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-amber-500/20">
+                                        Lançar Desafio 🚀
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
 
                 <div className="flex flex-1 overflow-hidden">
+
+
                     {/* Sidebar */}
                     <aside className={cn("w-full md:w-[380px] border-r border-white/5 flex flex-col transition-all", view === 'chat' ? 'hidden md:flex' : 'flex')}>
                         <header className="p-6 space-y-6">
@@ -613,6 +669,11 @@ const Discipleship: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 relative">
+                                        {selectedConnection.type !== 'self' && (selectedConnection.leader_id === user!.id || selectedConnection.type === 'disciple') && (
+                                            <button onClick={() => setIsChallengeModalOpen(true)} className="p-2.5 md:p-3 bg-amber-500/10 hover:bg-amber-500/20 rounded-2xl transition-all border border-amber-500/10" title="Criar Desafio de Leitura">
+                                                <TrendingUp className="w-5 h-5 text-amber-500" />
+                                            </button>
+                                        )}
                                         {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
                                             <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); }} className="p-2.5 md:p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-2xl transition-all border border-indigo-500/10">
                                                 <UserPlus className="w-5 h-5 text-indigo-400" />
@@ -647,6 +708,61 @@ const Discipleship: React.FC = () => {
                                         </AnimatePresence>
                                     </div>
                                 </header>
+
+                                {/* Active Challenges Section */}
+                                {tasks.filter(t => t.type === 'reading' && !t.is_completed).length > 0 && (
+                                    <div className="px-4 md:px-8 py-4 bg-amber-500/5 border-b border-amber-500/10 space-y-3">
+                                        <div className="max-w-3xl mx-auto space-y-3">
+                                            {tasks.filter(t => t.type === 'reading' && !t.is_completed).map(task => {
+                                                let progress = 0;
+                                                let target = { book: '', start: 0, end: 0 };
+                                                try {
+                                                    target = JSON.parse(task.target_id);
+                                                    if (stats?.readingHistory) {
+                                                        const bookStats = stats.readingHistory.find((s: any) => s.book === target.book);
+                                                        if (bookStats) {
+                                                            const completedInTarget = bookStats.chapters.filter((c: number) => c >= target.start && c <= target.end).length;
+                                                            const totalTarget = target.end - target.start + 1;
+                                                            progress = Math.min(100, Math.round((completedInTarget / totalTarget) * 100));
+                                                        }
+                                                    }
+                                                } catch (e) {}
+
+                                                return (
+                                                    <div key={task.id} className="bg-black/40 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                                    <TrendingUp className="w-4 h-4 text-amber-500" />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500">Desafio Ativo</h4>
+                                                                    <p className="text-sm font-bold">{target.book} {target.start}-{target.end}</p>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest">{progress}% concluído</span>
+                                                        </div>
+                                                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                            <motion.div 
+                                                                initial={{ width: 0 }} 
+                                                                animate={{ width: `${progress}%` }} 
+                                                                className="h-full bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]" 
+                                                            />
+                                                        </div>
+                                                        {(progress === 100 || selectedConnection.leader_id === user!.id) && (
+                                                            <button 
+                                                                onClick={() => discipleshipService.completeTask(task.id).then(() => loadChatData())}
+                                                                className="py-2.5 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/10"
+                                                            >
+                                                                {progress === 100 ? "Concluir Desafio ✅" : "Marcar como Concluído"}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Chat Feed */}
                                 <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
