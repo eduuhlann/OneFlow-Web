@@ -63,6 +63,7 @@ const Discipleship: React.FC = () => {
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
     const [isMyChallengesOpen, setIsMyChallengesOpen] = useState(false);
+    const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null } | null>(null);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
@@ -969,6 +970,16 @@ const Discipleship: React.FC = () => {
                                                     )}
                                                     {selectedConnection?.leader_id === user?.id && m.user_id !== user?.id && (
                                                         <div className="flex items-center gap-1">
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    const s = await statsService.getUserStats(m.user_id);
+                                                                    setSelectedMemberStats({ userId: m.user_id, stats: s });
+                                                                }} 
+                                                                title="Ver Progresso" 
+                                                                className="p-2 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition-all border border-amber-500/10"
+                                                            >
+                                                                <Target className="w-3.5 h-3.5 text-amber-500" />
+                                                            </button>
                                                             {m.role !== 'admin' && (
                                                                 <button onClick={() => handlePromoteMember(m.id)} title="Promover a ADM" className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/10">
                                                                     <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
@@ -994,6 +1005,31 @@ const Discipleship: React.FC = () => {
                         stats={stats}
                         onRefresh={loadChatData}
                     />
+
+                    {selectedMemberStats && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl font-black italic tracking-tight">Progresso do Discípulo</h3>
+                                    <button onClick={() => setSelectedMemberStats(null)} className="p-2 bg-white/5 rounded-xl"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <TrendingUp className="w-5 h-5 text-amber-500" />
+                                            <span className="text-xs font-bold uppercase tracking-widest text-white/60">Total Lido</span>
+                                        </div>
+                                        <span className="text-xl font-black text-amber-500">{selectedMemberStats.stats?.totalChapters || 0} caps</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Última Leitura</p>
+                                        <p className="text-sm font-bold">{selectedMemberStats.stats?.lastReadBook || 'Nenhum registro'} {selectedMemberStats.stats?.lastReadChapter || ''}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedMemberStats(null)} className="w-full py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl">Fechar</button>
+                            </motion.div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
             </div>
         </PageTransition>
