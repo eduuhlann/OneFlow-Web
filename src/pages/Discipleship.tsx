@@ -70,12 +70,16 @@ const Discipleship: React.FC = () => {
                     discipleshipService.getLeader(user.id),
                     discipleshipService.getTasks(user.id, false)
                 ]);
+                console.log('Disciple data loaded:', { lData, taskList });
                 setLeader(lData);
                 setTasks(taskList);
                 
                 if (lData) {
+                    console.log('Leader found, fetching notes...');
                     const noteList = await discipleshipService.getNotes(lData.leader_id, user.id);
                     setNotes(noteList);
+                } else {
+                    console.log('No leader found for user:', user.id);
                 }
             }
         } catch (error) {
@@ -460,7 +464,7 @@ const Discipleship: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <h3 className="text-xl font-bold tracking-tight">{leader.profiles.username}</h3>
+                                                            <h3 className="text-xl font-bold tracking-tight">{leader?.profiles?.username || 'Seu Líder'}</h3>
                                                             <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Seu Discipulador</p>
                                                         </div>
                                                     </div>
