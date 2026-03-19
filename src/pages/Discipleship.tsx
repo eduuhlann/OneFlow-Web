@@ -518,9 +518,9 @@ const Discipleship: React.FC = () => {
 
                         <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar pb-24">
                             {connections.map(conn => {
-                                const isPending = (conn.status === 'pending') || (conn.type === 'member' && conn.member_status === 'pending');
+                                const isPending = (conn.status === 'pending') || (conn.member_status === 'pending');
                                 return (
-                                    <button key={`${conn.type}-${conn.id}`} onClick={() => !isPending && handleSelectConnection(conn)} disabled={isPending} className={cn("w-full p-4 rounded-[28px] flex items-center gap-4 transition-all group", selectedConnection?.id === conn.id ? "bg-white/10 border border-white/10 shadow-lg" : "hover:bg-white/5 border border-transparent", isPending && "cursor-default opacity-80")}>
+                                    <button key={`${conn.type}-${conn.id}`} onClick={() => !isPending && handleSelectConnection(conn)} className={cn("w-full p-4 rounded-[28px] flex items-center gap-4 transition-all group", selectedConnection?.id === conn.id ? "bg-white/10 border border-white/10 shadow-lg" : "hover:bg-white/5 border border-transparent", isPending && "cursor-default opacity-80")}>
                                         <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
                                             {conn.type === 'group' ? (
                                                 conn.avatar_url ? <img src={conn.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-6 h-6 text-white/40" />
