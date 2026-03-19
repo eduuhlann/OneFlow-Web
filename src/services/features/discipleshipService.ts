@@ -139,6 +139,21 @@ export const discipleshipService = {
         return data || [];
     },
 
+    async createReadingChallenge(leaderId: string, discipleId: string, book: string, start: number, end: number): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_tasks')
+            .insert({
+                leader_id: leaderId,
+                disciple_id: discipleId,
+                title: `Desafio: ${book} ${start}-${end}`,
+                type: 'reading',
+                target_id: JSON.stringify({ book, start, end }),
+                is_completed: false
+            });
+        
+        if (error) throw error;
+    },
+
     async completeTask(taskId: string): Promise<void> {
         const { error } = await supabase
             .from('discipleship_tasks')
