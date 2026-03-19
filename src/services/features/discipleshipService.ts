@@ -195,5 +195,37 @@ export const discipleshipService = {
             .update({ status: accept ? 'active' : 'inactive' })
             .eq('id', connectionId);
         if (error) throw error;
+    },
+
+    async getNotificationCount(userId: string): Promise<number> {
+        // Unread notes where the user is NOT the author
+        const { count: notesCount, error: notesError } = await supabase
+            .from('discipleship_notes')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_read', false)
+            .neq('author_id', userId)
+            .or(`leader_id.eq.${userId},disciple_id.eq.${userId}`);
+        
+        // Pending invitations for the user as a disciple
+        const { count: invitesCount, error: invitesError } = await supabase
+            .from('discipleship_connections')
+            .select('*', { count: 'exact', head: true })
+            .eq('disciple_id', userId)
+            .eq('status', 'pending');
+        
+        if (notesError || invitesError) return 0;
+        return (notesCount || 0) + (invitesCount || 0);
+    },
+
+    async markNotesAsRead(leaderId: string, discipleId: string, readerId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_notes')
+            .update({ is_read: true })
+            .eq('leader_id', leaderId)
+            .eq('disciple_id', discipleId)
+            .neq('author_id', readerId)
+            .eq('is_read', false);
+        
+        if (error) console.error('Error marking notes as read:', error);
     }
 };
