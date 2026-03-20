@@ -442,7 +442,7 @@ const Discipleship: React.FC = () => {
                 const members = await discipleshipService.getGroupMembers(selectedConnection.id);
                 console.log('Group members count:', members.length);
                 const results = members
-                    .filter(m => m.user_id !== user.id && m.status === 'active')
+                    .filter(m => m.status === 'active')
                     .map(m => discipleshipService.createReadingChallenge(user.id, m.user_id, challengeData.book, challengeData.start, challengeData.end, selectedConnection.id));
                 await Promise.all(results);
 
@@ -1147,6 +1147,7 @@ const Discipleship: React.FC = () => {
                     onClose={() => setIsMyChallengesOpen(false)}
                     tasks={tasks || []}
                     stats={stats}
+                    currentUserId={user?.id}
                     onRefresh={loadChatData}
                 />
 
@@ -1329,20 +1330,24 @@ const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: str
     }
 };
 
-const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh }: { isOpen: boolean, onClose: () => void, tasks: DiscipleshipTask[], stats: BibleStats | null, onRefresh: () => void }) => (
-    <AnimatePresence>
-        {isOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
-                        <div className="flex items-center gap-3">
-                            <TrendingUp className="w-5 h-5 text-white/60" />
-                            <h2 className="text-xl font-black italic tracking-tight">Meus Desafios</h2>
+const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh, currentUserId }: { isOpen: boolean, onClose: () => void, tasks: DiscipleshipTask[], stats: BibleStats | null, onRefresh: () => void, currentUserId?: string }) => {
+    // Only show tasks assigned to the current user
+    const myActiveTasks = tasks.filter(t => t.type === 'reading' && !t.is_completed && t.disciple_id === currentUserId);
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+                            <div className="flex items-center gap-3">
+                                <TrendingUp className="w-5 h-5 text-white/60" />
+                                <h2 className="text-xl font-black italic tracking-tight">Meus Desafios</h2>
+                            </div>
+                            <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
                         </div>
-                        <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
-                    </div>
-                    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                        {tasks.filter(t => t.type === 'reading' && !t.is_completed).length === 0 ? (
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            {myActiveTasks.length === 0 ? (
                             <div className="text-center py-12 opacity-20">
                                 <TrendingUp className="w-12 h-12 mx-auto mb-4" />
                                 <p className="text-sm font-black uppercase tracking-widest">Nenhum desafio ativo</p>
