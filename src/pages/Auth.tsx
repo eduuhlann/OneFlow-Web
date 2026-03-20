@@ -106,7 +106,7 @@ export default function Auth() {
                     });
 
                     if (!data.session) {
-                        setMessage('Verifique seu e-mail para confirmar seu cadastro.');
+                        setMessage('Cadastro realizado com sucesso! Faça login para continuar.');
                         setAuthMode('LOGIN');
                     }
                 }
