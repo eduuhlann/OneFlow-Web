@@ -7,17 +7,13 @@ export interface UserProfile {
     username: string | null;
     avatar_url: string | null;
     banner_url: string | null;
-    discord_decoration_url: string | null;
-    discord_profile_effect_id: string | null;
     bio: string | null;
-    total_xp: number;
-    completed_lessons: number;
 }
 
 interface ProfileContextType {
     profile: UserProfile | null;
     loading: boolean;
-    updateProfile: (updates: Partial<Omit<UserProfile, 'id' | 'total_xp' | 'completed_lessons'>>) => Promise<void>;
+    updateProfile: (updates: Partial<Omit<UserProfile, 'id'>>) => Promise<void>;
     refreshProfile: () => void;
 }
 
@@ -57,7 +53,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchProfile();
     }, [fetchProfile]);
 
-    const updateProfile = async (updates: Partial<Omit<UserProfile, 'id' | 'total_xp' | 'completed_lessons'>>) => {
+    const updateProfile = async (updates: Partial<Omit<UserProfile, 'id'>>) => {
         if (!user) return;
         const { error } = await supabase
             .from('profiles')

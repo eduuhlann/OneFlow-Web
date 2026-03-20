@@ -71,7 +71,7 @@ export default function AiPlanGenerator() {
         setIsThinking(true);
 
         try {
-            const systemPrompt = `Você é Olyviah, assistente do aplicativo cristão OneFlow. 
+            const systemPrompt = `Você é o assistente do aplicativo cristão OneFlow. 
             Crie um plano de leitura bíblica de exatos ${config.duration} DIAS.
             Tema: ${config.theme}
             Testamento: ${config.testament}
@@ -176,7 +176,7 @@ export default function AiPlanGenerator() {
             subtitle: "Em qual parte do dia você prefere realizar suas leituras e reflexões?"
         },
         generating: {
-            title: "Olyviah está orando por você...",
+            title: "Preparando sua jornada...",
             subtitle: "Preparando sua jornada espiritual personalizada."
         },
         success: {
@@ -406,7 +406,7 @@ export default function AiPlanGenerator() {
                 
                 <div className="flex items-center gap-3 opacity-30">
                     <img src={logo} alt="OneFlow" className="w-8 h-8 object-contain" />
-                    <span className="text-[10px] font-bold tracking-[0.3em] uppercase">Olyviah</span>
+                    <span className="text-[10px] font-bold tracking-[0.3em] uppercase">OneFlow</span>
                 </div>
             </header>
 

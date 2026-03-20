@@ -127,12 +127,18 @@ export const discipleshipService = {
         if (error) throw error;
     },
 
-    async getTasks(userId: string, isLeader: boolean): Promise<DiscipleshipTask[]> {
+    async getTasks(userId: string | null, isLeader: boolean, groupId: string | null = null): Promise<DiscipleshipTask[]> {
         let query = supabase.from('discipleship_tasks').select('*');
-        if (isLeader) {
-            query = query.eq('leader_id', userId);
-        } else {
-            query = query.eq('disciple_id', userId);
+        
+        if (groupId) {
+            // Filter by groupId inside the target_id JSON string
+            query = query.filter('target_id', 'ilike', `%${groupId}%`);
+        } else if (userId) {
+            if (isLeader) {
+                query = query.eq('leader_id', userId);
+            } else {
+                query = query.eq('disciple_id', userId);
+            }
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -173,8 +179,8 @@ export const discipleshipService = {
     },
 
     // Notes Management
-    async addNote(leaderId: string, discipleId: string | null, authorId: string, content: string, groupId: string | null = null, file: { url: string; name: string; type: string } | null = null): Promise<void> {
-        const { error } = await supabase
+    async addNote(leaderId: string | null, discipleId: string | null, authorId: string, content: string, groupId: string | null = null, file: { url: string; name: string; type: string } | null = null): Promise<DiscipleshipNote> {
+        const { data, error } = await supabase
             .from('discipleship_notes')
             .insert({ 
                 leader_id: leaderId, 
@@ -185,8 +191,12 @@ export const discipleshipService = {
                 file_url: file?.url,
                 file_name: file?.name,
                 file_type: file?.type
-            });
+            })
+            .select('*, profiles:author_id(*)')
+            .single();
         
+        if (error) throw error;
+        return data as DiscipleshipNote;
     },
 
     async updateNote(noteId: string, content: string): Promise<void> {
@@ -207,13 +217,17 @@ export const discipleshipService = {
         if (error) throw error;
     },
 
-    async getNotes(leaderId: string, discipleId: string | null, groupId: string | null = null): Promise<DiscipleshipNote[]> {
+    async getNotes(leaderId: string | null, discipleId: string | null, groupId: string | null = null): Promise<DiscipleshipNote[]> {
         let query = supabase.from('discipleship_notes').select('*, profiles:author_id(*)');
         
         if (groupId) {
             query = query.eq('group_id', groupId);
         } else {
-            query = query.eq('leader_id', leaderId).eq('disciple_id', discipleId).is('group_id', null);
+            // For private chats, filter by both participants and group_id is null
+            query = query
+                .eq('leader_id', leaderId)
+                .eq('disciple_id', discipleId)
+                .is('group_id', null);
         }
         
         const { data, error } = await query.order('created_at', { ascending: true });

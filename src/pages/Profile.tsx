@@ -38,8 +38,6 @@ const Profile: React.FC = () => {
     const [previewUrl, setPreviewUrl] = useState(profile?.avatar_url || '');
     const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
     const [bannerPreviewUrl, setBannerPreviewUrl] = useState(profile?.banner_url || '');
-    const [discordDecorationUrl, setDiscordDecorationUrl] = useState(profile?.discord_decoration_url || '');
-    const [discordProfileEffectId, setDiscordProfileEffectId] = useState(profile?.discord_profile_effect_id || '');
     
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -60,8 +58,6 @@ const Profile: React.FC = () => {
             setPreviewUrl(profile.avatar_url || '');
             setBannerUrl(profile.banner_url || '');
             setBannerPreviewUrl(profile.banner_url || '');
-            setDiscordDecorationUrl(profile.discord_decoration_url || '');
-            setDiscordProfileEffectId(profile.discord_profile_effect_id || '');
         }
     }, [profile]);
 
@@ -177,20 +173,8 @@ const Profile: React.FC = () => {
                 }
             }
 
-            // 4. Decoração do Avatar
-            if (discordData.avatar_decoration_data) {
-                setDiscordDecorationUrl(discordService.getDecorationUrl(discordData.avatar_decoration_data.asset));
-            } else {
-                setDiscordDecorationUrl('');
-            }
-
-            // 5. Efeito de Perfil
-            if (discordData.profile_effect_data) {
-                setDiscordProfileEffectId(discordData.profile_effect_data.id);
-            } else {
-                setDiscordProfileEffectId('');
-            }
-
+            // 4. Decoração do Avatar e Efeitos removidos para limpeza 
+            
             setShowSaveWarning(true);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
@@ -210,9 +194,7 @@ const Profile: React.FC = () => {
                 username: name, 
                 bio, 
                 avatar_url: avatarUrl || null,
-                banner_url: bannerUrl || null,
-                discord_decoration_url: discordDecorationUrl || null,
-                discord_profile_effect_id: discordProfileEffectId || null
+                banner_url: bannerUrl || null
             });
             setShowSaveWarning(false);
             setSuccess(true);
@@ -237,17 +219,7 @@ const Profile: React.FC = () => {
 
                 <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
                     
-                    {/* Discord Profile Effect Overlay */}
-                    {discordProfileEffectId && (
-                        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-                            <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 0.6 }}
-                                className="absolute inset-0 bg-gradient-to-br from-[#5865f2]/20 via-transparent to-[#eb459e]/20"
-                            />
-                            <div className="absolute -inset-[100%] animate-[spin_10s_linear_infinite] opacity-30 bg-[conic-gradient(from_0deg,transparent,rgba(88,101,242,0.2),transparent)]" />
-                        </div>
-                    )}
+                    {/* Efeitos de Perfil Desativados para Limpeza */}
 
                     {/* Banner Section */}
                     <div className="relative group/banner z-10">
@@ -285,19 +257,10 @@ const Profile: React.FC = () => {
                                 onChange={(e) => handleFileChange(e, 'avatar')}
                             />
                             <div className="relative">
-                                {discordProfileEffectId && (
-                                    <div className="absolute inset-0 rounded-full blur-2xl bg-[#5865f2]/40 animate-pulse z-0" />
-                                )}
-                                
                                 <div 
                                     className="w-32 h-32 rounded-full bg-[#1e1f22] p-[6px] cursor-pointer group/avatar relative z-10"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
-                                    {discordDecorationUrl && (
-                                        <div className="absolute inset-[-15%] pointer-events-none z-30">
-                                            <img src={discordDecorationUrl} alt="Decoration" className="w-full h-full object-contain" />
-                                        </div>
-                                    )}
 
                                     <div className="w-full h-full rounded-full bg-[#2b2d31] overflow-hidden relative border border-white/5">
                                         {previewUrl ? (
@@ -327,9 +290,6 @@ const Profile: React.FC = () => {
                                     <h2 className="text-2xl font-bold">
                                         {name || user?.user_metadata?.username || user?.email?.split('@')[0]}
                                     </h2>
-                                    {discordProfileEffectId && (
-                                        <Sparkles size={18} className="text-[#5865f2] animate-pulse" />
-                                    )}
                                 </div>
                                 <p className="text-white/30 text-xs mt-1 font-medium italic">
                                     {user?.app_metadata?.provider === 'discord' ? 'Perfil Discord Sincronizado' : 'Perfil OneFlow'}
@@ -391,9 +351,7 @@ const Profile: React.FC = () => {
                                     className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm text-white"
                                     placeholder="Seu nome"
                                 />
-                            </div>
-
-                            <div className="space-y-2">
+                                                  <div className="space-y-2">
                                 <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Sobre Mim</label>
                                 <textarea
                                     value={bio}
@@ -403,32 +361,9 @@ const Profile: React.FC = () => {
                                     rows={4}
                                 />
                             </div>
-
-                            {(discordDecorationUrl || discordProfileEffectId) && (
-                                <div className="flex gap-4 pt-4">
-                                    {discordDecorationUrl && (
-                                        <button 
-                                            onClick={() => setDiscordDecorationUrl('')}
-                                            className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
-                                        >
-                                            Remover Moldura
-                                        </button>
-                                    )}
-                                    {discordProfileEffectId && (
-                                        <button 
-                                            onClick={() => {
-                                                setDiscordProfileEffectId('');
-                                                setShowSaveWarning(true);
-                                            }}
-                                            className="text-[10px] text-red-400/60 hover:text-red-400 font-bold uppercase tracking-widest"
-                                        >
-                                            Remover Efeito
-                                        </button>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
+        </div>
                 </div>
 
                 {user?.app_metadata?.provider !== 'discord' && (
