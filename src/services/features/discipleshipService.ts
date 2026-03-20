@@ -278,16 +278,28 @@ export const discipleshipService = {
     },
 
     async getNotes(leaderId: string | null, discipleId: string | null, groupId: string | null = null): Promise<DiscipleshipNote[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+
         let query = supabase.from('discipleship_notes').select('*, profiles:author_id(*)');
+        let clearQuery = supabase.from('chat_clear_history').select('cleared_at').eq('user_id', user?.id || '').order('cleared_at', { ascending: false }).limit(1);
         
         if (groupId) {
             query = query.eq('group_id', groupId);
+            clearQuery = clearQuery.eq('group_id', groupId);
         } else {
             // For private chats, filter by both participants and group_id is null
             query = query
                 .eq('leader_id', leaderId)
                 .eq('disciple_id', discipleId)
                 .is('group_id', null);
+                
+            const partnerId = leaderId === user?.id ? discipleId : leaderId;
+            clearQuery = clearQuery.eq('partner_id', partnerId).is('group_id', null);
+        }
+
+        const { data: clearData } = await clearQuery.maybeSingle();
+        if (clearData?.cleared_at) {
+            query = query.gt('created_at', clearData.cleared_at);
         }
         
         const { data, error } = await query.order('created_at', { ascending: true });
@@ -297,6 +309,31 @@ export const discipleshipService = {
             return [];
         }
         return data || [];
+    },
+
+    async clearConversation(leaderId: string | null, discipleId: string | null, groupId: string | null = null): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        let partnerId = null;
+        if (!groupId) {
+            partnerId = leaderId === user.id ? discipleId : leaderId;
+        }
+
+        // Remove old entries to keep the table clean
+        let deleteQuery = supabase.from('chat_clear_history').delete().eq('user_id', user.id);
+        if (groupId) deleteQuery = deleteQuery.eq('group_id', groupId);
+        else deleteQuery = deleteQuery.eq('partner_id', partnerId).is('group_id', null);
+        await deleteQuery;
+
+        const { error } = await supabase.from('chat_clear_history').insert({
+            user_id: user.id,
+            group_id: groupId,
+            partner_id: partnerId,
+            cleared_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
     },
 
     // User Search & Direct Invites
@@ -433,6 +470,34 @@ export const discipleshipService = {
             .eq('id', memberId);
         
         if (error) throw error;
+    },
+
+    async transferGroupLeadership(groupId: string, newLeaderId: string): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // 1. Update the group's leader_id
+        const { error: groupError } = await supabase
+            .from('discipleship_groups')
+            .update({ leader_id: newLeaderId })
+            .eq('id', groupId);
+        
+        if (groupError) throw groupError;
+
+        // 2. Make sure the new leader has the admin role
+        await supabase
+            .from('discipleship_group_members')
+            .update({ role: 'admin' })
+            .eq('group_id', groupId)
+            .eq('user_id', newLeaderId);
+
+        // 3. Ensure the old leader (current user) becomes a co-leader
+        if (user && user.id !== newLeaderId) {
+            await supabase
+                .from('discipleship_group_members')
+                .update({ role: 'admin' })
+                .eq('group_id', groupId)
+                .eq('user_id', user.id);
+        }
     },
 
     async getOrCreateConnection(userId1: string, userId2: string): Promise<any> {
