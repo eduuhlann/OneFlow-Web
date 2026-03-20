@@ -103,9 +103,6 @@ export default function Auth() {
                     await supabase.from('profiles').upsert({
                         id: data.user.id,
                         username: username,
-                        avatar_id: 'lion',
-                        total_xp: 0,
-                        completed_lessons: 0,
                     });
 
                     if (!data.session) {
@@ -121,6 +118,7 @@ export default function Auth() {
                 setMessage('E-mail de recuperação enviado!');
             }
         } catch (err: any) {
+            console.error('Auth oversight error:', err);
             setError(translateAuthError(err.message));
         } finally {
             setLoading(false);
