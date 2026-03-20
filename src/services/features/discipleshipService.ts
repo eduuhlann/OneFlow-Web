@@ -178,6 +178,66 @@ export const discipleshipService = {
         if (error) throw error;
     },
 
+    async checkAndSyncReadingTasks(userId: string): Promise<void> {
+        // Fetch user's reading history directly from Supabase to avoid depending on local storage
+        const { data: progress } = await supabase
+            .from('reading_progress')
+            .select('book_abbrev, chapter_number')
+            .eq('user_id', userId);
+        
+        if (!progress) return;
+
+        // Fetch user's active reading tasks
+        const { data: activeTasks } = await supabase
+            .from('discipleship_tasks')
+            .select('*')
+            .eq('disciple_id', userId)
+            .eq('type', 'reading')
+            .eq('is_completed', false);
+
+        if (!activeTasks || activeTasks.length === 0) return;
+
+        // Verify each active task
+        for (const task of activeTasks) {
+            try {
+                const target = JSON.parse(task.target_id || '{}');
+                if (!target.book || !target.start || !target.end) continue;
+
+                // Check if all chapters in the range have been read
+                let allRead = true;
+                for (let chap = target.start; chap <= target.end; chap++) {
+                    const hasRead = progress.some(p => p.book_abbrev === target.book && p.chapter_number === chap);
+                    if (!hasRead) {
+                        allRead = false;
+                        break;
+                    }
+                }
+
+                if (allRead) {
+                    // Mark task as completed
+                    await this.completeTask(task.id);
+                }
+            } catch (e) {
+                console.error('Error syncing reading task:', e);
+            }
+        }
+    },
+
+    async getMemberActivity(userId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('reading_progress')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+        
+        if (error) {
+            console.error('Error fetching member activity:', error);
+            return [];
+        }
+        return data || [];
+    },
+
     // Notes Management
     async addNote(leaderId: string | null, discipleId: string | null, authorId: string, content: string, groupId: string | null = null, file: { url: string; name: string; type: string } | null = null): Promise<DiscipleshipNote> {
         const { data, error } = await supabase

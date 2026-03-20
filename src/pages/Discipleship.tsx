@@ -63,7 +63,8 @@ const Discipleship: React.FC = () => {
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
     const [isMyChallengesOpen, setIsMyChallengesOpen] = useState(false);
-    const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null } | null>(null);
+    const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
+    const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null, activity: any[] } | null>(null);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void | Promise<void> }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const [alertBanner, setAlertBanner] = useState<{ isOpen: boolean, message: string, type: 'error' | 'success' }>({ isOpen: false, message: '', type: 'error' });
@@ -600,6 +601,20 @@ const Discipleship: React.FC = () => {
         }
     };
 
+    const handleViewMemberStats = async (memberUserId: string) => {
+        setIsGroupMembersModalOpen(false);
+        try {
+            const [memberStats, activity] = await Promise.all([
+                statsService.getUserStats(memberUserId),
+                discipleshipService.getMemberActivity(memberUserId)
+            ]);
+            setSelectedMemberStats({ userId: memberUserId, stats: memberStats, activity });
+        } catch (error) {
+            console.error('Error fetching member stats:', error);
+            setAlertBanner({ isOpen: true, message: 'Erro ao carregar atividades do membro.', type: 'error' });
+        }
+    };
+
     const handleMemberAction = async (member: any) => {
         if (!user || member.user_id === user.id) return;
 
@@ -858,8 +873,11 @@ const Discipleship: React.FC = () => {
                                                 <h3 className="font-bold text-sm md:text-xl tracking-tight leading-tight">{selectedConnection.name || selectedConnection.profile?.username}</h3>
                                                 <div className="flex items-center gap-2">
                                                     {selectedConnection.type === 'group' ? (
-                                                        <div className="flex items-center gap-1.5 overflow-hidden">
-                                                            <span className="text-[10px] md:text-[11px] font-medium text-white/40 truncate flex-1">
+                                                        <div 
+                                                            className="flex items-center gap-1.5 overflow-hidden cursor-pointer group/members"
+                                                            onClick={() => setIsGroupMembersModalOpen(true)}
+                                                        >
+                                                            <span className="text-[10px] md:text-[11px] font-medium text-white/40 group-hover/members:text-white/80 transition-colors truncate flex-1">
                                                                 {groupMembers.length > 0 ? groupMembers.map(m => getProfile(m.profiles)?.username).filter(Boolean).join(', ') : 'Carregando participantes...'}
                                                             </span>
                                                         </div>
@@ -1133,14 +1151,71 @@ const Discipleship: React.FC = () => {
                 />
 
                 <AnimatePresence>
+                    {isGroupMembersModalOpen && selectedConnection?.type === 'group' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <Users className="w-5 h-5 text-white/60" />
+                                        <h2 className="text-xl font-black italic tracking-tight">Membros do Grupo</h2>
+                                    </div>
+                                    <button onClick={() => setIsGroupMembersModalOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="p-4 space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                    {groupMembers.length === 0 ? (
+                                        <div className="text-center py-12 opacity-20">
+                                            <Users className="w-12 h-12 mx-auto mb-4" />
+                                            <p className="text-sm font-black uppercase tracking-widest">Nenhum membro encontrado</p>
+                                        </div>
+                                    ) : (
+                                        groupMembers.map(member => {
+                                            const memberProfile = getProfile(member.profiles);
+                                            const isMe = member.user_id === user?.id;
+                                            return (
+                                                <div key={member.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                                                            {memberProfile?.avatar_url ? (
+                                                                <img src={memberProfile.avatar_url} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <User className="w-5 h-5 text-white/20" />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold flex items-center gap-2">
+                                                                {memberProfile?.username || 'Usuário'}
+                                                                {isMe && <span className="text-[10px] bg-white/10 px-1.5 rounded-full text-white/60">Você</span>}
+                                                            </p>
+                                                            <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">{member.role === 'admin' ? 'Co-Líder' : 'Membro'}</p>
+                                                        </div>
+                                                    </div>
+                                                    {selectedConnection.leader_id === user?.id && !isMe && (
+                                                        <button 
+                                                            onClick={() => handleViewMemberStats(member.user_id)}
+                                                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                                                        >
+                                                            <BookOpen className="w-3 h-3" /> Atividades
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <AnimatePresence>
                     {selectedMemberStats && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-xl font-black italic tracking-tight">Progresso do Discípulo</h3>
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                    <h3 className="text-xl font-black italic tracking-tight">Atividades de Leitura</h3>
                                     <button onClick={() => setSelectedMemberStats(null)} className="p-2 bg-white/5 rounded-xl"><X className="w-5 h-5" /></button>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="p-6 space-y-6">
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <div className="flex items-center gap-3">
                                             <TrendingUp className="w-5 h-5 text-white/60" />
@@ -1148,12 +1223,30 @@ const Discipleship: React.FC = () => {
                                         </div>
                                         <span className="text-xl font-black text-white/60">{(selectedMemberStats.stats as any)?.totalChaptersRead || 0} caps</span>
                                     </div>
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Última Leitura</p>
-                                        <p className="text-sm font-bold">{(selectedMemberStats.stats as any)?.lastReadBook || 'Nenhum registro'} {(selectedMemberStats.stats as any)?.lastReadChapter || ''}</p>
+
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Últimos Lidos</p>
+                                        <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
+                                            {selectedMemberStats.activity && selectedMemberStats.activity.length > 0 ? (
+                                                selectedMemberStats.activity.map(act => (
+                                                    <div key={act.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <BookOpen className="w-4 h-4 text-white/40" />
+                                                            <span className="text-sm font-bold">{act.book_abbrev} {act.chapter_number}</span>
+                                                        </div>
+                                                        <span className="text-[10px] text-white/40 uppercase tracking-widest font-black">
+                                                            {new Date(act.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-white/40 italic py-4 text-center">Nenhum capítulo lido recentemente.</p>
+                                            )}
+                                        </div>
                                     </div>
+                                    
+                                    <button onClick={() => setSelectedMemberStats(null)} className="w-full py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all">Fechar</button>
                                 </div>
-                                <button onClick={() => setSelectedMemberStats(null)} className="w-full py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl">Fechar</button>
                             </motion.div>
                         </motion.div>
                     )}
