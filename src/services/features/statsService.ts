@@ -45,6 +45,9 @@ export const statsService = {
                 await supabase
                     .from('reading_progress')
                     .upsert({ user_id: user.id, book_abbrev: bookAbbrev, chapter_number: chapter });
+                
+                // Trigger auto-completion of pending reading tasks globally (so we don't end up with circular dependencies here, we can dispatch an event or handle it in the component. Actually, a direct import might cause circular deps. Let's try dynamic import to be safe).
+                import('./discipleshipService').then(m => m.discipleshipService.checkAndSyncReadingTasks(user.id)).catch(console.error);
             }
         }
 

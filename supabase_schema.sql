@@ -80,6 +80,16 @@ CREATE TABLE IF NOT EXISTS public.discipleship_invites (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 8. PROGRESSO DE LEITURA
+CREATE TABLE IF NOT EXISTS public.reading_progress (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  book_abbrev TEXT NOT NULL,
+  chapter_number INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, book_abbrev, chapter_number)
+);
+
 -- ATIVAR RLS EM TODAS AS TABELAS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.discipleship_groups ENABLE ROW LEVEL SECURITY;
@@ -88,6 +98,7 @@ ALTER TABLE public.discipleship_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.discipleship_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.discipleship_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.discipleship_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reading_progress ENABLE ROW LEVEL SECURITY;
 
 -- POLÍTICAS RLS (Corrigidas para evitar recursão e garantir permissões)
 -- Profiles
@@ -143,6 +154,15 @@ DROP POLICY IF EXISTS "Manage invites" ON public.discipleship_invites;
 CREATE POLICY "Manage invites" ON public.discipleship_invites FOR ALL USING (leader_id = auth.uid());
 DROP POLICY IF EXISTS "View invites" ON public.discipleship_invites;
 CREATE POLICY "View invites" ON public.discipleship_invites FOR SELECT USING (true);
+
+-- Reading Progress
+DROP POLICY IF EXISTS "Users can manage own reading progress" ON public.reading_progress;
+CREATE POLICY "Users can manage own reading progress" ON public.reading_progress FOR ALL USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Leaders can view disciple progress" ON public.reading_progress;
+CREATE POLICY "Leaders can view disciple progress" ON public.reading_progress FOR SELECT USING (
+  user_id IN (SELECT disciple_id FROM public.discipleship_connections WHERE leader_id = auth.uid()) OR
+  user_id IN (SELECT user_id FROM public.discipleship_group_members WHERE group_id IN (SELECT id FROM public.discipleship_groups WHERE leader_id = auth.uid()))
+);
 
 -- FUNÇÃO E GATILHO PARA NOVOS USUÁRIOS (Corrigido/Garantido)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
