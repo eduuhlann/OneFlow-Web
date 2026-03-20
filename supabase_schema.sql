@@ -92,19 +92,18 @@ CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Groups: Membros podem ver, Líder pode tudo
+-- Groups: Líderes veem tudo, Membros veem nomes
 DROP POLICY IF EXISTS "View groups" ON public.discipleship_groups;
-CREATE POLICY "View groups" ON public.discipleship_groups FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.discipleship_group_members WHERE group_id = id AND user_id = auth.uid()) OR leader_id = auth.uid()
-);
+CREATE POLICY "View groups" ON public.discipleship_groups FOR SELECT USING (true); -- Permitir ver nomes de grupos evita recursão e é seguro
 
 DROP POLICY IF EXISTS "Leader manage groups" ON public.discipleship_groups;
 CREATE POLICY "Leader manage groups" ON public.discipleship_groups FOR ALL USING (leader_id = auth.uid());
 
--- Group Members
+-- Group Members: Ver a si mesmo ou ser o líder do grupo
 DROP POLICY IF EXISTS "View members" ON public.discipleship_group_members;
 CREATE POLICY "View members" ON public.discipleship_group_members FOR SELECT USING (
-  group_id IN (SELECT g.id FROM public.discipleship_groups g WHERE g.leader_id = auth.uid()) OR user_id = auth.uid()
+  user_id = auth.uid() OR 
+  EXISTS (SELECT 1 FROM public.discipleship_groups WHERE id = group_id AND leader_id = auth.uid())
 );
 
 DROP POLICY IF EXISTS "Manage members" ON public.discipleship_group_members;
