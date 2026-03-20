@@ -81,11 +81,14 @@ const Discipleship: React.FC = () => {
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [editingContent, setEditingContent] = useState('');
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+    const [typingUsers, setTypingUsers] = useState<{ id: string, name: string }[]>([]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const connectionsRef = useRef<any[]>([]);
     const selectedConnectionRef = useRef<any | null>(null);
+    const presenceChannelRef = useRef<any>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => { connectionsRef.current = connections; }, [connections]);
     useEffect(() => { selectedConnectionRef.current = selectedConnection; }, [selectedConnection]);
@@ -272,6 +275,63 @@ const Discipleship: React.FC = () => {
         return channel;
     };
 
+    // Presence Channel for Typing Indicator
+    useEffect(() => {
+        if (!user || !selectedConnection) {
+            setTypingUsers([]);
+            return;
+        }
+        
+        const channelId = `presence-${selectedConnection.id}`;
+        const channel = supabase.channel(channelId, {
+            config: { presence: { key: user.id } }
+        });
+
+        channel
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState();
+                const activeTypers: { id: string, name: string }[] = [];
+                for (const userId in state) {
+                    if (userId === user.id) continue;
+                    const presences = state[userId] as any[];
+                    if (presences.some(p => p.isTyping)) {
+                        activeTypers.push({
+                            id: userId,
+                            name: presences[0].name || 'Alguém'
+                        });
+                    }
+                }
+                setTypingUsers(activeTypers);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({ isTyping: false, name: profile?.username || 'Usuário' });
+                }
+            });
+
+        presenceChannelRef.current = channel;
+
+        return () => {
+            channel.unsubscribe();
+            presenceChannelRef.current = null;
+        };
+    }, [selectedConnection?.id, user, profile?.username]);
+
+    const handleTyping = (text: string) => {
+        setNoteInput(text);
+        
+        if (presenceChannelRef.current) {
+            presenceChannelRef.current.track({ isTyping: text.trim().length > 0, name: profile?.username || 'Usuário' });
+            
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = setTimeout(() => {
+                if (presenceChannelRef.current) {
+                    presenceChannelRef.current.track({ isTyping: false, name: profile?.username || 'Usuário' });
+                }
+            }, 3000);
+        }
+    };
+
     const subscribeToMessages = () => {
         if (!user) return null;
 
@@ -416,13 +476,27 @@ const Discipleship: React.FC = () => {
         }
     };
 
-    const handlePromoteMember = async (memberId: string) => {
+    const handlePromoteMember = async (memberId: string, role: 'admin' | 'member') => {
         try {
-            await discipleshipService.updateMemberRole(memberId, 'admin');
+            await discipleshipService.updateMemberRole(memberId, role);
             const updated = await discipleshipService.getGroupMembers(selectedConnection!.id);
             setGroupMembers(updated);
         } catch (error) {
-            setAlertBanner({ isOpen: true, message: 'Erro ao promover membro.', type: 'error' });
+            setAlertBanner({ isOpen: true, message: 'Erro ao alterar papel do membro.', type: 'error' });
+        }
+    };
+
+    const handleTransferLeadership = async (targetUserId: string) => {
+        if (!selectedConnection || !window.confirm('Tem certeza que deseja transferir a liderança deste grupo? Você se tornará um co-líder.')) return;
+        try {
+            await discipleshipService.transferGroupLeadership(selectedConnection.id, targetUserId);
+            setAlertBanner({ isOpen: true, message: 'Liderança transferida.', type: 'success' });
+            setIsGroupMembersModalOpen(false);
+            
+            // Soft local state updates
+            setSelectedConnection(prev => prev ? { ...prev, leader_id: targetUserId } : null);
+        } catch (error) {
+            setAlertBanner({ isOpen: true, message: 'Erro ao transferir liderança.', type: 'error' });
         }
     };
 
@@ -433,40 +507,50 @@ const Discipleship: React.FC = () => {
                 book: challengeData.book,
                 start: challengeData.start,
                 end: challengeData.end,
-                leaderName: profile?.username || 'Líder'
+                leaderName: profile?.username || 'Líder',
+                participants: []
             })}`;
 
             console.log('Sending challenge message:', challengeMsg);
+            const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : (selectedConnection.leader_id || user.id);
+            const discipleId = selectedConnection.type === 'leader' ? user.id : (selectedConnection.disciple_id || null);
+            const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
 
-            if (selectedConnection.type === 'group') {
-                const members = await discipleshipService.getGroupMembers(selectedConnection.id);
-                console.log('Group members count:', members.length);
-                const results = members
-                    .filter(m => m.status === 'active')
-                    .map(m => discipleshipService.createReadingChallenge(user.id, m.user_id, challengeData.book, challengeData.start, challengeData.end, selectedConnection.id));
-                await Promise.all(results);
+            await discipleshipService.addNote(leaderId, discipleId, user.id, challengeMsg, groupId);
 
-                // Send automated message to group
-                await discipleshipService.addNote(user.id, null, user.id, challengeMsg, selectedConnection.id);
-                console.log('Group note sent');
-            } else {
-                const targetId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
-                await discipleshipService.createReadingChallenge(user.id, targetId, challengeData.book, challengeData.start, challengeData.end);
-
-                // Send automated message to private chat
-                const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : user.id;
-                const discipleId = selectedConnection.type === 'leader' ? user.id : selectedConnection.disciple_id;
-                await discipleshipService.addNote(leaderId, discipleId, user.id, challengeMsg);
-                console.log('Private note sent');
-            }
             setIsChallengeModalOpen(false);
-            // Force refresh after a small delay
+            // Reload to show the new note
             setTimeout(() => {
                 loadChatData();
-            }, 800);
+            }, 300);
         } catch (error) {
             console.error('Challenge error:', error);
-            setAlertBanner({ isOpen: true, message: 'Erro ao criar desafio.', type: 'error' });
+            setAlertBanner({ isOpen: true, message: 'Erro ao lançar desafio.', type: 'error' });
+        }
+    };
+
+    const handleParticipateChallenge = async (note: any, data: any) => {
+        if (!user || !profile || !selectedConnection) return;
+        try {
+            const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
+            await discipleshipService.createReadingChallenge(note.author_id, user.id, data.book, data.start, data.end, groupId);
+
+            const participants = data.participants || [];
+            participants.push({ id: user.id, name: profile.username || 'Usuário' });
+            data.participants = participants;
+
+            const newContent = `[CHALLENGE]:${JSON.stringify(data)}`;
+            await discipleshipService.updateNote(note.id, newContent);
+
+            setNotes(prev => prev.map(n => n.id === note.id ? { ...n, content: newContent } : n));
+            
+            setAlertBanner({ isOpen: true, message: 'Você entrou no desafio!', type: 'success' });
+            setTimeout(() => {
+                loadChatData();
+            }, 500);
+        } catch (error) {
+            console.error('Error participating in challenge:', error);
+            setAlertBanner({ isOpen: true, message: 'Erro ao entrar no desafio.', type: 'error' });
         }
     };
 
@@ -502,6 +586,28 @@ const Discipleship: React.FC = () => {
         }
     };
 
+    const handleClearConversation = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Limpar Conversa',
+            message: 'Tem certeza que deseja apagar as mensagens desta conversa para você? Outros participantes ainda poderão vê-las.',
+            onConfirm: async () => {
+                try {
+                    const leaderId = selectedConnection?.type === 'leader' ? selectedConnection.leader_id : (selectedConnection?.leader_id || user?.id);
+                    const discipleId = selectedConnection?.type === 'leader' ? user?.id : (selectedConnection?.disciple_id || null);
+                    const groupId = selectedConnection?.type === 'group' ? selectedConnection.id : null;
+                    
+                    await discipleshipService.clearConversation(leaderId, discipleId, groupId);
+                    setNotes([]);
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    setAlertBanner({ isOpen: true, message: 'Conversa limpa com sucesso.', type: 'success' });
+                } catch (error) {
+                    setAlertBanner({ isOpen: true, message: 'Erro ao limpar conversa.', type: 'error' });
+                }
+            }
+        });
+    };
+
     const handleSendMessage = async (fileData: any = null) => {
         if (!user || (!noteInput.trim() && !fileData) || !selectedConnection || isSending) return;
         
@@ -510,22 +616,38 @@ const Discipleship: React.FC = () => {
         const discipleId = selectedConnection.type === 'leader' ? user.id : (selectedConnection.disciple_id || null);
         const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
 
-        setIsSending(true);
+        const tempId = `temp-${Date.now()}`;
+        const tempNote = {
+            id: tempId,
+            leader_id: leaderId,
+            disciple_id: discipleId,
+            author_id: user.id,
+            group_id: groupId,
+            content,
+            file_url: fileData?.url,
+            file_name: fileData?.name,
+            file_type: fileData?.type,
+            is_read: false,
+            created_at: new Date().toISOString(),
+            profiles: profile,
+            isSending: true
+        };
+
+        setNotes(prev => [...prev, tempNote as any]);
+        setNoteInput('');
+        if (presenceChannelRef.current) {
+            presenceChannelRef.current.track({ isTyping: false, name: profile?.username || 'Usuário' });
+        }
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+
         try {
             const newNote = await discipleshipService.addNote(leaderId, discipleId, user.id, content, groupId, fileData);
-            setNotes(prev => {
-                const exists = prev.find(n => n.id === newNote.id);
-                if (exists) return prev;
-                return [...prev, newNote];
-            });
-            setNoteInput('');
-            // Scroll to bottom
-            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+            setNotes(prev => prev.map(n => n.id === tempId ? newNote : n));
         } catch (error) {
             console.error('Error sending message:', error);
+            setNotes(prev => prev.filter(n => n.id !== tempId));
+            setNoteInput(content);
             setAlertBanner({ isOpen: true, message: 'Erro ao enviar mensagem.', type: 'error' });
-        } finally {
-            setIsSending(false);
         }
     };
 
@@ -909,6 +1031,9 @@ const Discipleship: React.FC = () => {
                                                 <AnimatePresence>
                                                     {isMenuOpen && (
                                                         <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
+                                                            <button onClick={() => { handleClearConversation(); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
+                                                                <Trash2 className="w-4 h-4 text-white/40" /> Limpar Conversa
+                                                            </button>
                                                             {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
                                                                 <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
                                                                     <UserPlus className="w-4 h-4" />
@@ -1061,7 +1186,7 @@ const Discipleship: React.FC = () => {
                                                                                 )}
                                                                                 {n.content && (
                                                                                     n.content.startsWith('[CHALLENGE]:') ? (
-                                                                                        <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} isMine={isMine} />
+                                                                                        <ChallengeMessageCard note={n} isMine={isMine} />
                                                                                     ) : (
                                                                                         <p className="text-sm mt-2">{n.content}</p>
                                                                                     )
@@ -1069,7 +1194,7 @@ const Discipleship: React.FC = () => {
                                                                             </div>
                                                                         ) : (
                                                                             n.content.startsWith('[CHALLENGE]:') ? (
-                                                                                <ChallengeMessageCard content={n.content} onParticipate={() => setIsMyChallengesOpen(true)} isMine={isMine} />
+                                                                                <ChallengeMessageCard note={n} isMine={isMine} />
                                                                             ) : (
                                                                                 <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
                                                                             )
@@ -1109,6 +1234,24 @@ const Discipleship: React.FC = () => {
                                     </div>
                                 </div>
 
+                                {/* Typing Indicator */}
+                                <AnimatePresence>
+                                    {typingUsers.length > 0 && (
+                                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="px-6 md:px-10 pb-4">
+                                            <div className="flex items-center gap-2 bg-white/5 w-max px-4 py-2 rounded-full border border-white/10 shadow-lg backdrop-blur-sm">
+                                                <div className="flex gap-1 items-center">
+                                                    <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                    <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                    <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/50 ml-1">
+                                                    {typingUsers.length === 1 ? `${typingUsers[0].name.split(' ')[0]} está digitando...` : `${typingUsers.length} pessoas estão digitando...`}
+                                                </span>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
                                 {/* Input Area */}
                                 <footer className="p-6 bg-[#080808] border-t border-white/5">
                                     <div className="max-w-4xl mx-auto flex gap-3 items-end">
@@ -1119,7 +1262,7 @@ const Discipleship: React.FC = () => {
                                             </button>
                                         </div>
                                         <div className="flex-1 bg-white/[0.03] rounded-[32px] flex flex-col p-2 transition-all group/input">
-                                            <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
+                                            <textarea rows={1} value={noteInput} onChange={(e) => handleTyping(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
                                             <div className="flex justify-end p-2 opacity-60 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => handleSendMessage()} disabled={(!noteInput.trim() && !isUploading) || isSending} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
                                                     {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
@@ -1190,14 +1333,44 @@ const Discipleship: React.FC = () => {
                                                             <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">{member.role === 'admin' ? 'Co-Líder' : 'Membro'}</p>
                                                         </div>
                                                     </div>
-                                                    {selectedConnection.leader_id === user?.id && !isMe && (
-                                                        <button 
-                                                            onClick={() => handleViewMemberStats(member.user_id)}
-                                                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5"
-                                                        >
-                                                            <BookOpen className="w-3 h-3" /> Atividades
-                                                        </button>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        {selectedConnection.leader_id === user?.id && !isMe && (
+                                                            <div className="flex gap-1.5">
+                                                                {member.role === 'member' && (
+                                                                    <button 
+                                                                        onClick={() => handlePromoteMember(member.id, 'admin')}
+                                                                        className="px-2 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-blue-500/10"
+                                                                        title="Promover a Co-líder"
+                                                                    >
+                                                                        <TrendingUp className="w-3 h-3" /> Co-líder
+                                                                    </button>
+                                                                )}
+                                                                {member.role === 'admin' && (
+                                                                    <button 
+                                                                        onClick={() => handlePromoteMember(member.id, 'member')}
+                                                                        className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-white/5"
+                                                                        title="Remover Co-líder"
+                                                                    >
+                                                                        Rebaixar
+                                                                    </button>
+                                                                )}
+                                                                <button 
+                                                                    onClick={() => handleTransferLeadership(member.user_id)}
+                                                                    className="px-2 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-indigo-500/10"
+                                                                    title="Tornar Líder"
+                                                                >
+                                                                    Líder
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleRemoveMember(member.user_id)}
+                                                                    className="px-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-red-500/10"
+                                                                    title="Remover do Grupo"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             );
                                         })
@@ -1208,50 +1381,7 @@ const Discipleship: React.FC = () => {
                     )}
                 </AnimatePresence>
 
-                <AnimatePresence>
-                    {selectedMemberStats && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
-                                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                    <h3 className="text-xl font-black italic tracking-tight">Atividades de Leitura</h3>
-                                    <button onClick={() => setSelectedMemberStats(null)} className="p-2 bg-white/5 rounded-xl"><X className="w-5 h-5" /></button>
-                                </div>
-                                <div className="p-6 space-y-6">
-                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-3">
-                                            <TrendingUp className="w-5 h-5 text-white/60" />
-                                            <span className="text-xs font-bold uppercase tracking-widest text-white/60">Total Lido</span>
-                                        </div>
-                                        <span className="text-xl font-black text-white/60">{(selectedMemberStats.stats as any)?.totalChaptersRead || 0} caps</span>
-                                    </div>
 
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Últimos Lidos</p>
-                                        <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
-                                            {selectedMemberStats.activity && selectedMemberStats.activity.length > 0 ? (
-                                                selectedMemberStats.activity.map(act => (
-                                                    <div key={act.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <BookOpen className="w-4 h-4 text-white/40" />
-                                                            <span className="text-sm font-bold">{act.book_abbrev} {act.chapter_number}</span>
-                                                        </div>
-                                                        <span className="text-[10px] text-white/40 uppercase tracking-widest font-black">
-                                                            {new Date(act.created_at).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-sm text-white/40 italic py-4 text-center">Nenhum capítulo lido recentemente.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
-                                    <button onClick={() => setSelectedMemberStats(null)} className="w-full py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all">Fechar</button>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
                 <AnimatePresence>
                     {confirmModal.isOpen && (
@@ -1288,9 +1418,10 @@ const Discipleship: React.FC = () => {
     );
 };
 
-const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: string, onParticipate: () => void, isMine?: boolean }) => {
+const ChallengeMessageCard = ({ note, isMine }: { note: any, isMine?: boolean }) => {
     try {
-        const data = JSON.parse(content.replace('[CHALLENGE]:', ''));
+        const data = JSON.parse(note.content.replace('[CHALLENGE]:', ''));
+
         return (
             <div className={cn(
                 "bg-black border border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 max-w-sm shadow-2xl relative overflow-hidden group",
@@ -1311,22 +1442,15 @@ const ChallengeMessageCard = ({ content, onParticipate, isMine }: { content: str
 
                 <div className="space-y-2 relative">
                     <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">Meta Proposta</p>
-                    <div className="py-4 px-6 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm">
+                    <div className="py-4 px-6 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner shadow-black">
                         <p className="text-2xl font-black italic tracking-tighter text-white">{data.book}</p>
                         <p className="text-sm font-medium text-white/60 mt-1 italic">Capítulos {data.start} até {data.end}</p>
                     </div>
                 </div>
-
-                <button
-                    onClick={(e) => { e.stopPropagation(); onParticipate(); }}
-                    className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/10 relative overflow-hidden"
-                >
-                    Participar do Desafio
-                </button>
             </div>
         );
     } catch (e) {
-        return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
+        return <p className="text-sm leading-relaxed whitespace-pre-wrap">{note.content}</p>;
     }
 };
 

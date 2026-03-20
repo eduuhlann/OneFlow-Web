@@ -164,6 +164,22 @@ CREATE POLICY "Leaders can view disciple progress" ON public.reading_progress FO
   user_id IN (SELECT user_id FROM public.discipleship_group_members WHERE group_id IN (SELECT id FROM public.discipleship_groups WHERE leader_id = auth.uid()))
 );
 
+-- 8. CHAT CLEAR HISTORY
+CREATE TABLE IF NOT EXISTS public.chat_clear_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  group_id UUID REFERENCES public.discipleship_groups(id) ON DELETE CASCADE,
+  partner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  cleared_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS policies for Chat Clear History
+ALTER TABLE public.chat_clear_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage their own clear history" ON public.chat_clear_history;
+CREATE POLICY "Users manage their own clear history" ON public.chat_clear_history FOR ALL USING (user_id = auth.uid());
+
+
 -- FUNÇÃO E GATILHO PARA NOVOS USUÁRIOS (Corrigido/Garantido)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
