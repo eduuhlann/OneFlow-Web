@@ -360,7 +360,7 @@ const Discipleship: React.FC = () => {
                 handleSelectConnection(formattedConn);
             }
         } catch (error) {
-            alert('Erro ao enviar convite.');
+            setAlertBanner({ isOpen: true, message: 'Erro ao enviar convite. Verifique se as tabelas do banco de dados foram criadas.', type: 'error' });
         }
     };
 
