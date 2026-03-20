@@ -83,43 +83,70 @@ ALTER TABLE public.discipleship_invites ENABLE ROW LEVEL SECURITY;
 
 -- POLÍTICAS RLS BÁSICAS (Simplificadas para funcionar)
 -- Profiles
-CREATE POLICY IF NOT EXISTS "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY IF NOT EXISTS "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Groups: Membros podem ver, Líder pode tudo
+DROP POLICY IF EXISTS "View groups" ON public.discipleship_groups;
 CREATE POLICY "View groups" ON public.discipleship_groups FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.discipleship_group_members WHERE group_id = id AND user_id = auth.uid()) OR leader_id = auth.uid()
 );
+
+DROP POLICY IF EXISTS "Leader manage groups" ON public.discipleship_groups;
 CREATE POLICY "Leader manage groups" ON public.discipleship_groups FOR ALL USING (leader_id = auth.uid());
 
 -- Group Members
+DROP POLICY IF EXISTS "View members" ON public.discipleship_group_members;
 CREATE POLICY "View members" ON public.discipleship_group_members FOR SELECT USING (
   group_id IN (SELECT g.id FROM public.discipleship_groups g WHERE g.leader_id = auth.uid()) OR user_id = auth.uid()
 );
+
+DROP POLICY IF EXISTS "Manage members" ON public.discipleship_group_members;
 CREATE POLICY "Manage members" ON public.discipleship_group_members FOR ALL USING (
   group_id IN (SELECT g.id FROM public.discipleship_groups g WHERE g.leader_id = auth.uid()) OR user_id = auth.uid()
 );
 
 -- Connections
+DROP POLICY IF EXISTS "View connections" ON public.discipleship_connections;
 CREATE POLICY "View connections" ON public.discipleship_connections FOR SELECT USING (leader_id = auth.uid() OR disciple_id = auth.uid());
+
+DROP POLICY IF EXISTS "Manage connections" ON public.discipleship_connections;
 CREATE POLICY "Manage connections" ON public.discipleship_connections FOR ALL USING (leader_id = auth.uid() OR disciple_id = auth.uid());
 
 -- Notes
+DROP POLICY IF EXISTS "View notes" ON public.discipleship_notes;
 CREATE POLICY "View notes" ON public.discipleship_notes FOR SELECT USING (
   author_id = auth.uid() OR leader_id = auth.uid() OR disciple_id = auth.uid() OR 
   group_id IN (SELECT group_id FROM public.discipleship_group_members WHERE user_id = auth.uid())
 );
+
+DROP POLICY IF EXISTS "Insert notes" ON public.discipleship_notes;
 CREATE POLICY "Insert notes" ON public.discipleship_notes FOR INSERT WITH CHECK (author_id = auth.uid());
+
+DROP POLICY IF EXISTS "Update own notes" ON public.discipleship_notes;
 CREATE POLICY "Update own notes" ON public.discipleship_notes FOR UPDATE USING (author_id = auth.uid());
+
+DROP POLICY IF EXISTS "Delete own notes" ON public.discipleship_notes;
 CREATE POLICY "Delete own notes" ON public.discipleship_notes FOR DELETE USING (author_id = auth.uid());
 
 -- Tasks
+DROP POLICY IF EXISTS "View tasks" ON public.discipleship_tasks;
 CREATE POLICY "View tasks" ON public.discipleship_tasks FOR SELECT USING (leader_id = auth.uid() OR disciple_id = auth.uid());
+
+DROP POLICY IF EXISTS "Manage tasks" ON public.discipleship_tasks;
 CREATE POLICY "Manage tasks" ON public.discipleship_tasks FOR ALL USING (leader_id = auth.uid() OR disciple_id = auth.uid());
 
 -- Invites
+DROP POLICY IF EXISTS "Manage invites" ON public.discipleship_invites;
 CREATE POLICY "Manage invites" ON public.discipleship_invites FOR ALL USING (leader_id = auth.uid());
+
+DROP POLICY IF EXISTS "View invites" ON public.discipleship_invites;
 CREATE POLICY "View invites" ON public.discipleship_invites FOR SELECT USING (true);
 
 -- FUNÇÃO E GATILHO PARA NOVOS USUÁRIOS (Corrigido/Garantido)
