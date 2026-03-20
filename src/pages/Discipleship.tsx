@@ -1348,53 +1348,54 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh, currentUs
                         </div>
                         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                             {myActiveTasks.length === 0 ? (
-                            <div className="text-center py-12 opacity-20">
-                                <TrendingUp className="w-12 h-12 mx-auto mb-4" />
-                                <p className="text-sm font-black uppercase tracking-widest">Nenhum desafio ativo</p>
-                            </div>
-                        ) : (
-                            tasks.filter(t => t.type === 'reading' && !t.is_completed).map(task => {
-                                let progress = 0;
-                                let target = { book: '', start: 0, end: 0 };
-                                try {
-                                    target = JSON.parse(task.target_id || '{}');
-                                    const readingHistory = (stats as any)?.readingHistory;
-                                    if (readingHistory) {
-                                        const bookStats = readingHistory.find((s: any) => s.book === target.book);
-                                        if (bookStats) {
-                                            const completedInTarget = bookStats.chapters.filter((c: number) => c >= target.start && c <= target.end).length;
-                                            const totalTarget = target.end - target.start + 1;
-                                            progress = Math.min(100, Math.round((completedInTarget / totalTarget) * 100));
+                                <div className="text-center py-12 opacity-20">
+                                    <TrendingUp className="w-12 h-12 mx-auto mb-4" />
+                                    <p className="text-sm font-black uppercase tracking-widest">Nenhum desafio ativo</p>
+                                </div>
+                            ) : (
+                                myActiveTasks.map(task => {
+                                    let progress = 0;
+                                    let target = { book: '', start: 0, end: 0 };
+                                    try {
+                                        target = JSON.parse(task.target_id || '{}');
+                                        const readingHistory = (stats as any)?.readingHistory;
+                                        if (readingHistory) {
+                                            const bookStats = readingHistory.find((s: any) => s.book === target.book);
+                                            if (bookStats) {
+                                                const completedInTarget = bookStats.chapters.filter((c: number) => c >= target.start && c <= target.end).length;
+                                                const totalTarget = target.end - target.start + 1;
+                                                progress = Math.min(100, Math.round((completedInTarget / totalTarget) * 100));
+                                            }
                                         }
-                                    }
-                                } catch (e) { }
+                                    } catch (e) { }
 
-                                return (
-                                    <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-lg font-black italic text-white/80">{target.book} {target.start}-{target.end}</p>
-                                            <span className="text-[10px] font-black bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{progress}%</span>
+                                    return (
+                                        <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-lg font-black italic text-white/80">{target.book} {target.start}-{target.end}</p>
+                                                <span className="text-[10px] font-black bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{progress}%</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-white transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                            </div>
+                                            {progress === 100 && (
+                                                <button
+                                                    onClick={() => discipleshipService.completeTask(task.id).then(() => { onRefresh(); onClose(); })}
+                                                    className="w-full py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl"
+                                                >
+                                                    Marcar como Concluído ✅
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-white transition-all duration-1000" style={{ width: `${progress}%` }} />
-                                        </div>
-                                        {progress === 100 && (
-                                            <button
-                                                onClick={() => discipleshipService.completeTask(task.id).then(() => { onRefresh(); onClose(); })}
-                                                className="w-full py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl"
-                                            >
-                                                Marcar como Concluído ✅
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </motion.div>
                 </motion.div>
-            </motion.div>
-        )}
-    </AnimatePresence>
-);
+            )}
+        </AnimatePresence>
+    );
+};
 
 export default Discipleship;
