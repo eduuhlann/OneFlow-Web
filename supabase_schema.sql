@@ -1,3 +1,11 @@
+-- LIMPAR TABELAS ANTIGAS PARA RE-CRIAR COM AS NOVAS CHAVES ESTRANGEIRAS
+DROP TABLE IF EXISTS public.discipleship_tasks CASCADE;
+DROP TABLE IF EXISTS public.discipleship_notes CASCADE;
+DROP TABLE IF EXISTS public.discipleship_connections CASCADE;
+DROP TABLE IF EXISTS public.discipleship_group_members CASCADE;
+DROP TABLE IF EXISTS public.discipleship_groups CASCADE;
+DROP TABLE IF EXISTS public.discipleship_invites CASCADE;
+
 -- 1. TABELA DE PERFIS (Já existente)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
