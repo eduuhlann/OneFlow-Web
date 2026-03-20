@@ -65,9 +65,9 @@ const Discipleship: React.FC = () => {
     const [isMyChallengesOpen, setIsMyChallengesOpen] = useState(false);
     const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null } | null>(null);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
-    const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void | Promise<void> }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const [alertBanner, setAlertBanner] = useState<{ isOpen: boolean, message: string, type: 'error' | 'success' }>({ isOpen: false, message: '', type: 'error' });
+    const [isSending, setIsSending] = useState(false);
 
     // Data States
     const [connections, setConnections] = useState<any[]>([]);
@@ -111,11 +111,11 @@ const Discipleship: React.FC = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [notes]);
 
-    useEffect(() => {
-        if (isMembersModalOpen && selectedConnection?.type === 'group') {
-            discipleshipService.getGroupMembers(selectedConnection.id).then(setGroupMembers);
-        }
-    }, [isMembersModalOpen, selectedConnection]);
+    const getProfile = (p: any) => {
+        if (!p) return null;
+        if (Array.isArray(p)) return p[0];
+        return p;
+    };
 
     const loadConnections = async () => {
         if (!user) return;
@@ -129,9 +129,9 @@ const Discipleship: React.FC = () => {
 
             // Normalize connections for the list
             let all = [
-                ...leaders.map(l => ({ ...l, type: 'leader', profile: l.profiles })),
-                ...disciples.map(d => ({ ...d, type: 'disciple', profile: d.profiles })),
-                ...groups.map(g => ({ ...g, type: 'group' }))
+                ...leaders.map(l => ({ ...l, type: 'leader', profile: l.profiles, partnerId: l.leader_id })),
+                ...disciples.map(d => ({ ...d, type: 'disciple', profile: d.profiles, partnerId: d.disciple_id })),
+                ...groups.map(g => ({ ...g, type: 'group', partnerId: g.id }))
             ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
             // Handle "Você" chat and remove duplicates
@@ -184,9 +184,9 @@ const Discipleship: React.FC = () => {
                 const isLeader = leaderId === user.id;
 
                 [noteList, members, taskList] = await Promise.all([
-                    discipleshipService.getNotes(leaderId, null, groupId),
+                    discipleshipService.getNotes(null, null, groupId),
                     discipleshipService.getGroupMembers(groupId),
-                    isLeader ? discipleshipService.getTasks(user.id, true) : discipleshipService.getTasks(user.id, false)
+                    discipleshipService.getTasks(null, true, groupId)
                 ]);
 
                 // If leader, filter tasks that belong to this group (by parsing target_id)
@@ -218,10 +218,15 @@ const Discipleship: React.FC = () => {
                     statsService.getUserStats(discipleId)
                 ]);
             }
-
             setNotes(noteList);
             setTasks(taskList);
             setStats(bibleStats);
+            console.log('Chat data state updated:', { 
+                notes: noteList.length, 
+                tasks: taskList.length, 
+                members: (selectedConnection.type === 'group') ? groupMembers.length : 0,
+                type: selectedConnection.type 
+            });
         } catch (error) {
             console.error('Error loading chat data:', error);
         }
@@ -280,39 +285,35 @@ const Discipleship: React.FC = () => {
                 },
                 async (payload) => {
                     const newNote = payload.new as DiscipleshipNote;
-                    if (newNote.author_id === user.id) return;
-
-                    // Verify if note belongs to user (private or group)
-                    const isPrivateForUser = newNote.leader_id === user.id || newNote.disciple_id === user.id;
-                    const belongsToUser = isPrivateForUser || (newNote.group_id && connectionsRef.current.some(c => c.type === 'group' && c.id === newNote.group_id));
-
-                    if (!belongsToUser) return;
-
-                    // Check if it's for the selected connection
-                    const currentSelected = selectedConnectionRef.current;
-                    const isForSelected = currentSelected && (
-                        (newNote.group_id && currentSelected.id === newNote.group_id) ||
-                        (!newNote.group_id && currentSelected.type !== 'group' && (
-                            (newNote.leader_id === currentSelected.leader_id && newNote.disciple_id === currentSelected.disciple_id) ||
-                            (newNote.leader_id === currentSelected.disciple_id && newNote.disciple_id === currentSelected.leader_id)
+                    const current = selectedConnectionRef.current;
+                    
+                    const isForSelected = !!(current && (
+                        (newNote.group_id && current.id === newNote.group_id) ||
+                        (!newNote.group_id && current.type !== 'group' && (
+                            (newNote.leader_id === current.leader_id && newNote.disciple_id === current.disciple_id) ||
+                            (newNote.leader_id === current.disciple_id && newNote.disciple_id === current.leader_id)
                         ))
-                    );
+                    ));
 
                     if (isForSelected) {
                         setNotes(prev => {
-                            if (prev.some(note => note.id === newNote.id)) return prev;
+                            if (prev.some(n => n.id === newNote.id)) return prev;
                             return [...prev, newNote];
                         });
-                        // Automatically mark as read if it's the active chat
                         discipleshipService.markNotesAsRead(newNote.leader_id, newNote.disciple_id, user.id, newNote.group_id);
                     } else {
-                        // Increment unread count for background chat
-                        const key = newNote.group_id || (newNote.leader_id === user.id ? newNote.disciple_id : newNote.leader_id);
-                        if (key) {
-                            setUnreadCounts(prev => ({
-                                ...prev,
-                                [key]: (prev[key] || 0) + 1
-                            }));
+                        const isPrivateForUser = newNote.leader_id === user.id || newNote.disciple_id === user.id;
+                        const userGroups = connectionsRef.current.filter(c => c.type === 'group');
+                        const belongsToUserGroup = newNote.group_id && userGroups.some(c => c.id === newNote.group_id);
+
+                        if (isPrivateForUser || belongsToUserGroup) {
+                            const key = newNote.group_id || (newNote.leader_id === user.id ? newNote.disciple_id : newNote.leader_id);
+                            if (key) {
+                                setUnreadCounts(prev => ({
+                                    ...prev,
+                                    [key]: (prev[key] || 0) + 1
+                                }));
+                            }
                         }
                     }
                 }
@@ -478,7 +479,6 @@ const Discipleship: React.FC = () => {
                 type: conn.leader_id === user.id ? 'disciple' : 'leader',
                 profile: conn.profiles
             };
-            setIsMembersModalOpen(false);
             handleSelectConnection(formattedConn);
         } catch (error) {
             setAlertBanner({ isOpen: true, message: 'Erro ao iniciar chat privado.', type: 'error' });
@@ -502,16 +502,29 @@ const Discipleship: React.FC = () => {
     };
 
     const handleSendMessage = async (fileData: any = null) => {
-        if (!user || (!noteInput.trim() && !fileData) || !selectedConnection) return;
+        if (!user || (!noteInput.trim() && !fileData) || !selectedConnection || isSending) return;
+        
+        const content = noteInput.trim();
         const leaderId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : (selectedConnection.leader_id || user.id);
         const discipleId = selectedConnection.type === 'leader' ? user.id : (selectedConnection.disciple_id || null);
         const groupId = selectedConnection.type === 'group' ? selectedConnection.id : null;
 
+        setIsSending(true);
         try {
-            await discipleshipService.addNote(leaderId, discipleId, user.id, noteInput, groupId, fileData);
+            const newNote = await discipleshipService.addNote(leaderId, discipleId, user.id, content, groupId, fileData);
+            setNotes(prev => {
+                const exists = prev.find(n => n.id === newNote.id);
+                if (exists) return prev;
+                return [...prev, newNote];
+            });
             setNoteInput('');
+            // Scroll to bottom
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         } catch (error) {
             console.error('Error sending message:', error);
+            setAlertBanner({ isOpen: true, message: 'Erro ao enviar mensagem.', type: 'error' });
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -595,7 +608,6 @@ const Discipleship: React.FC = () => {
             if (conn) {
                 handleSelectConnection(conn);
             } else {
-                // If no connection, maybe show invite modal for that user?
                 setSearchQuery(member.profiles?.username || '');
                 setIsSearchOpen(true);
                 handleSearch(member.profiles?.username || '');
@@ -846,13 +858,10 @@ const Discipleship: React.FC = () => {
                                                 <h3 className="font-bold text-sm md:text-xl tracking-tight leading-tight">{selectedConnection.name || selectedConnection.profile?.username}</h3>
                                                 <div className="flex items-center gap-2">
                                                     {selectedConnection.type === 'group' ? (
-                                                        <div className="flex -space-x-1.5 overflow-hidden">
-                                                            {groupMembers.slice(0, 3).map(m => (
-                                                                <button key={m.id} onClick={() => handleMemberAction(m)} className="w-4 h-4 rounded-full border border-black bg-white/10 overflow-hidden hover:scale-110 transition-transform">
-                                                                    {m.profiles?.avatar_url ? <img src={m.profiles.avatar_url} className="w-full h-full object-cover" /> : <User className="w-2.5 h-2.5 text-white/40 m-auto" />}
-                                                                </button>
-                                                            ))}
-                                                            {groupMembers.length > 3 && <span className="text-[8px] font-bold text-white/30 ml-2">+{groupMembers.length - 3}</span>}
+                                                        <div className="flex items-center gap-1.5 overflow-hidden">
+                                                            <span className="text-[10px] md:text-[11px] font-medium text-white/40 truncate flex-1">
+                                                                {groupMembers.length > 0 ? groupMembers.map(m => getProfile(m.profiles)?.username).filter(Boolean).join(', ') : 'Carregando participantes...'}
+                                                            </span>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5">
@@ -879,29 +888,29 @@ const Discipleship: React.FC = () => {
                                             <MoreVertical className="w-5 h-5" />
                                         </button>
 
-                                        <AnimatePresence>
-                                            {isMenuOpen && (
-                                                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
-                                                    {selectedConnection.type === 'group' && (
-                                                        <button onClick={() => { setIsMembersModalOpen(true); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
-                                                            <Users className="w-4 h-4" /> Ver Membros
-                                                        </button>
+                                                <AnimatePresence>
+                                                    {isMenuOpen && (
+                                                        <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
+                                                            {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
+                                                                <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
+                                                                    <UserPlus className="w-4 h-4" />
+                                                                    Adicionar Membro
+                                                                </button>
+                                                            )}
+                                                            {selectedConnection.type === 'group' && (
+                                                                selectedConnection.leader_id === user!.id ? (
+                                                                    <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                                                                        <Trash2 className="w-4 h-4" /> Excluir Grupo
+                                                                    </button>
+                                                                ) : (
+                                                                    <button onClick={handleLeaveGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                                                                        <LogOut className="w-4 h-4" /> Sair do Grupo
+                                                                    </button>
+                                                                )
+                                                            )}
+                                                        </motion.div>
                                                     )}
-                                                    {selectedConnection.type === 'group' && (
-                                                        selectedConnection.leader_id === user!.id ? (
-                                                            <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
-                                                                <Trash2 className="w-4 h-4" /> Excluir Grupo
-                                                            </button>
-                                                        ) : (
-                                                            <button onClick={handleLeaveGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
-                                                                <LogOut className="w-4 h-4" /> Sair do Grupo
-                                                            </button>
-                                                        )
-                                                    )}
-
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                                </AnimatePresence>
                                     </div>
                                 </header>
 
@@ -978,7 +987,9 @@ const Discipleship: React.FC = () => {
                                                 if (isMine) {
                                                     authorProfile = profile;
                                                 } else if (selectedConnection.type === 'group') {
-                                                    authorProfile = getProfile(groupMembers.find(m => m.user_id === n.author_id)?.profiles) || getProfile((n as any).profiles);
+                                                    const memberInGroup = groupMembers.find(m => m.user_id === n.author_id);
+                                                    authorProfile = getProfile(memberInGroup?.profiles) || getProfile((n as any).profiles);
+                                                    if (!authorProfile && (n as any).profiles) authorProfile = getProfile((n as any).profiles);
                                                 } else {
                                                     authorProfile = getProfile(selectedConnection.profile) || getProfile((n as any).profiles);
                                                 }
@@ -1085,15 +1096,15 @@ const Discipleship: React.FC = () => {
                                     <div className="max-w-4xl mx-auto flex gap-3 items-end">
                                         <div className="relative">
                                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" />
-                                            <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="p-4 bg-white/5 text-white/40 rounded-[24px] hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50">
-                                                {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Paperclip className="w-5 h-5" />}
+                                            <button onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSending} className="p-4 bg-white/5 text-white/40 rounded-[24px] hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50">
+                                                {isUploading || isSending ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Paperclip className="w-5 h-5" />}
                                             </button>
                                         </div>
                                         <div className="flex-1 bg-white/[0.03] rounded-[32px] flex flex-col p-2 transition-all group/input">
                                             <textarea rows={1} value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
                                             <div className="flex justify-end p-2 opacity-60 hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleSendMessage()} disabled={!noteInput.trim() && !isUploading} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
-                                                    <Send className="w-5 h-5" />
+                                                <button onClick={() => handleSendMessage()} disabled={(!noteInput.trim() && !isUploading) || isSending} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
+                                                    {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                                                 </button>
                                             </div>
                                         </div>
@@ -1111,70 +1122,7 @@ const Discipleship: React.FC = () => {
                     </main>
                 </div>
 
-                <AnimatePresence>
-                    {isMembersModalOpen && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
-                                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <Users className="w-5 h-5 text-white/40" />
-                                        <h2 className="text-xl font-black italic tracking-tight">Membros do Grupo</h2>
-                                    </div>
-                                    <button onClick={() => setIsMembersModalOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
-                                </div>
-                                <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-2">
-                                    {groupMembers.map(m => {
-                                        const mProfile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
-                                        const isStaff = m.user_id === selectedConnection?.leader_id || m.role === 'admin';
-                                        return (
-                                            <div key={m.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group/member">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden flex items-center justify-center border border-white/5 shadow-inner">
-                                                        {mProfile?.avatar_url ? <img src={mProfile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-white/10" />}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="text-sm font-bold text-white/90">{mProfile?.username || 'Usuário'}</p>
-                                                            <span className={cn(
-                                                                "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full",
-                                                                isStaff ? "bg-white text-black" : "bg-white/5 text-white/40"
-                                                            )}>
-                                                                {m.user_id === selectedConnection?.leader_id ? 'Líder' : (m.role === 'admin' ? 'ADM' : 'Membro')}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-[10px] text-white/20 uppercase tracking-widest font-black leading-none mt-1.5">{m.status === 'active' ? 'Ativo' : 'Pendente'}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {m.user_id !== user?.id && (
-                                                        <button
-                                                            onClick={() => handleStartPrivateChat(m.user_id)}
-                                                            className="px-4 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/10"
-                                                        >
-                                                            Conversar
-                                                        </button>
-                                                    )}
-                                                    {selectedConnection.leader_id === user?.id && m.user_id !== user?.id && (
-                                                        <button
-                                                            onClick={async () => {
-                                                                const s = await statsService.getUserStats(m.user_id);
-                                                                setSelectedMemberStats({ userId: m.user_id, stats: s });
-                                                            }}
-                                                            title="Ver Progresso"
-                                                            className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
-                                                        >
-                                                            <Target className="w-4 h-4 text-white/40" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+
 
                 <MyChallengesModal
                     isOpen={isMyChallengesOpen}

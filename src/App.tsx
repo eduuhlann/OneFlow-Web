@@ -11,7 +11,7 @@ import { DiscipleshipListener } from './components/DiscipleshipListener';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Bible from './pages/Bible';
-import Olyviah from './pages/Olyviah';
+
 import Plans from './pages/Plans';
 import AiPlanGenerator from './pages/AiPlanGenerator';
 import PlanDetails from './pages/PlanDetails';
@@ -58,11 +58,7 @@ function AnimatedRoutes() {
             <Discipleship />
           </ProtectedRoute>
         } />
-        <Route path="/olyviah" element={
-          <ProtectedRoute>
-            <Olyviah />
-          </ProtectedRoute>
-        } />
+
         <Route path="/plans" element={
           <ProtectedRoute>
             <Plans />

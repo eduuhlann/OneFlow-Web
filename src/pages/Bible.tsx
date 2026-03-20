@@ -22,7 +22,7 @@ import { Chapter, Book } from '../types';
 import { statsService } from '../services/features/statsService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { OlyviahExegesisPanel } from '../components/olyviah/OlyviahExegesisPanel';
+
 import { Loading } from '../components/Loading';
 
 function cn(...inputs: ClassValue[]) {
@@ -58,8 +58,7 @@ const Bible: React.FC = () => {
     const bookAbbrev = book?.toLowerCase() || null;
 
     useEffect(() => {
-        const savedAvatar = localStorage.getItem('olyviah_avatar');
-        if (savedAvatar) setAiAvatar(savedAvatar);
+
 
         // Load versions and auto-reset if saved version no longer exists
         bibleApi.getVersions().then(v => {
@@ -468,16 +467,7 @@ const Bible: React.FC = () => {
                                             {v.number === 1 ? v.text.slice(1) : v.text}
                                         </p>
                                     </div>
-                                    <button
-                                        onClick={() => {
-                                            setSelectedVerseForStudy({ number: v.number, text: v.text });
-                                            setIsExegesisOpen(true);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-2 text-white/30 hover:text-white hover:bg-white/10 rounded-full transition-all shrink-0 active:scale-95"
-                                        title="Estudar com Olyviah"
-                                    >
-                                        <Lightbulb className="w-5 h-5" />
-                                    </button>
+
                                 </div>
                             ))}
                         </div>
@@ -534,16 +524,7 @@ const Bible: React.FC = () => {
                 </div>
             )}
 
-            {/* Olyviah Exegesis Panel */}
-            <OlyviahExegesisPanel
-                isOpen={isExegesisOpen}
-                onClose={() => setIsExegesisOpen(false)}
-                book={selectedBook?.name || ''}
-                chapter={chapterNum || 1}
-                verseNumber={selectedVerseForStudy?.number || 1}
-                verseText={selectedVerseForStudy?.text || ''}
-                aiAvatar={aiAvatar}
-            />
+
         </div>
     );
 };

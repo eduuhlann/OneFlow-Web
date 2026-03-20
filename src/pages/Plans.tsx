@@ -101,7 +101,7 @@ const Plans: React.FC = () => {
                     </div>
                     <div className="flex-1">
                         <h2 className="text-2xl font-black mb-2 tracking-tight italic">Plano Personalizado com IA</h2>
-                        <p className="text-white/40 text-sm font-medium leading-relaxed">Deixe a Olyviah criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
+                        <p className="text-white/40 text-sm font-medium leading-relaxed">Deixe a nossa IA criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
                     </div>
                     <button 
                         onClick={() => navigate('/plans/ai-generator')}

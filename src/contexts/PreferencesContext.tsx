@@ -24,7 +24,7 @@ const defaultPreferences: UserPreferences = {
     theme: 'classic-dark',
     wallpaper: 'particles',
     dashboardLayout: ['nav'],
-    menuOrder: ['bible', 'journey', 'olyviah', 'plans', 'prayer', 'customize'],
+    menuOrder: ['bible', 'journey', 'plans', 'prayer', 'customize'],
     uploadedWallpapers: [],
     glassStyle: 'frosted',
     dashboardStyle: 'dock'

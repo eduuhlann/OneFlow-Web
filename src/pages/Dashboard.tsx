@@ -24,7 +24,7 @@ import {
     BookOpen,
     Settings,
     LogOut,
-    BrainCircuit,
+
     Calendar,
     Sparkles,
     ChevronRight,
@@ -296,7 +296,7 @@ export default function Dashboard() {
             { id: 'bible', icon: BookOpen, label: 'Bíblia', description: 'Continue sua leitura', path: '/bible' },
             { id: 'discipleship', icon: User, label: 'Discipulado', description: 'Cresça acompanhado', path: '/discipleship' },
             { id: 'journey', icon: MapIcon, label: 'Jornada', description: 'Explore o caminho da fé', path: '/journey' },
-            { id: 'olyviah', icon: BrainCircuit, label: 'Olyviah', description: 'IA Assistente Espiritual', path: '/olyviah' },
+
             { id: 'plans', icon: Calendar, label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
             { id: 'prayer', icon: Clock, label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
             { id: 'customize', icon: PaletteIcon, label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
