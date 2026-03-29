@@ -403,13 +403,16 @@ export const discipleshipService = {
     },
 
     async uploadFile(file: File): Promise<{ url: string; name: string; type: string }> {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin';
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
         const filePath = `notes/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
             .from('discipleship_files')
-            .upload(filePath, file);
+            .upload(filePath, file, {
+                contentType: file.type || 'application/octet-stream',
+                upsert: false,
+            });
 
         if (uploadError) throw uploadError;
 
@@ -420,9 +423,42 @@ export const discipleshipService = {
         return {
             url: data.publicUrl,
             name: file.name,
-            type: file.type
+            type: file.type,
         };
     },
+
+    async uploadGroupAvatar(groupId: string, file: File): Promise<string> {
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+        const filePath = `avatars/group-${groupId}.${fileExt}`;
+
+        // Map common extensions to correct MIME types
+        const mimeMap: Record<string, string> = {
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            avif: 'image/avif',
+        };
+        const contentType = file.type || mimeMap[fileExt] || 'image/png';
+
+        const { error: uploadError } = await supabase.storage
+            .from('discipleship_files')
+            .upload(filePath, file, {
+                contentType,
+                upsert: true, // overwrite previous avatar
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+            .from('discipleship_files')
+            .getPublicUrl(filePath);
+
+        // Append cache-busting param so the browser reloads the image
+        return `${data.publicUrl}?t=${Date.now()}`;
+    },
+
 
     async getPrivateConnection(user1Id: string, user2Id: string): Promise<any | null> {
         // Find existing connection in either direction
@@ -614,6 +650,85 @@ export const discipleshipService = {
         
         const { error } = await query;
         if (error) console.error('Error marking notes as read:', error);
+    },
+
+    async getRecentNotifications(userId: string): Promise<any[]> {
+        const notifications: any[] = [];
+
+        // 1. Unread messages (notes) sent by others to this user
+        const { data: unreadNotes } = await supabase
+            .from('discipleship_notes')
+            .select('*, profiles:author_id(username, avatar_url)')
+            .eq('is_read', false)
+            .neq('author_id', userId)
+            .or(`leader_id.eq.${userId},disciple_id.eq.${userId}`)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (unreadNotes) {
+            unreadNotes.forEach(note => {
+                const sender = (note.profiles as any);
+                notifications.push({
+                    id: `note-${note.id}`,
+                    type: 'message',
+                    title: sender?.username || 'Alguém',
+                    body: note.file_url ? '📎 Enviou um arquivo' : (note.content?.slice(0, 60) + (note.content?.length > 60 ? '…' : '') || ''),
+                    avatar_url: sender?.avatar_url || null,
+                    created_at: note.created_at,
+                    action: '/discipleship',
+                });
+            });
+        }
+
+        // 2. Pending discipleship connection invites
+        const { data: pendingConnections } = await supabase
+            .from('discipleship_connections')
+            .select('*, profiles:leader_id(username, avatar_url)')
+            .eq('disciple_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (pendingConnections) {
+            pendingConnections.forEach(conn => {
+                const sender = (conn.profiles as any);
+                notifications.push({
+                    id: `conn-${conn.id}`,
+                    type: 'invite',
+                    title: sender?.username || 'Alguém',
+                    body: 'te convidou para ser discípulo',
+                    avatar_url: sender?.avatar_url || null,
+                    created_at: conn.created_at,
+                    action: '/discipleship',
+                });
+            });
+        }
+
+        // 3. Pending group invites
+        const { data: pendingGroupInvites } = await supabase
+            .from('discipleship_group_members')
+            .select('*, group:group_id(name, avatar_url)')
+            .eq('user_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (pendingGroupInvites) {
+            pendingGroupInvites.forEach(inv => {
+                const group = (inv.group as any);
+                notifications.push({
+                    id: `group-${inv.id}`,
+                    type: 'group_invite',
+                    title: group?.name || 'Grupo',
+                    body: 'você foi convidado para este grupo',
+                    avatar_url: group?.avatar_url || null,
+                    created_at: inv.created_at,
+                    action: '/discipleship',
+                });
+            });
+        }
+
+        // Sort all by date desc
+        notifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return notifications.slice(0, 15);
     },
 
     async getUnreadCounts(userId: string): Promise<Record<string, number>> {

@@ -8,6 +8,7 @@ export interface UserProfile {
     avatar_url: string | null;
     banner_url: string | null;
     bio: string | null;
+    discord_decoration_url: string | null;
 }
 
 interface ProfileContextType {

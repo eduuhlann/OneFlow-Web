@@ -707,21 +707,30 @@ const Discipleship: React.FC = () => {
 
         setIsUploading(true);
         try {
-            const result = await discipleshipService.uploadFile(file);
             if (isGroupAvatar && selectedConnection?.type === 'group') {
-                await discipleshipService.updateGroupAvatar(selectedConnection.id, result.url);
-                setSelectedConnection(prev => ({ ...prev, avatar_url: result.url }));
+                const avatarUrl = await discipleshipService.uploadGroupAvatar(selectedConnection.id, file);
+                await discipleshipService.updateGroupAvatar(selectedConnection.id, avatarUrl);
+                setSelectedConnection(prev => ({ ...prev, avatar_url: avatarUrl }));
                 loadConnections();
             } else {
+                const result = await discipleshipService.uploadFile(file);
                 await handleSendMessage(result);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Upload error:', error);
-            setAlertBanner({ isOpen: true, message: 'Erro ao subir arquivo.', type: 'error' });
+            const msg = error?.message?.includes('mime type')
+                ? 'Tipo de arquivo não suportado. Use PNG, JPG, GIF ou WebP.'
+                : error?.message?.includes('Bucket not found')
+                ? 'Bucket de armazenamento não encontrado. Verifique as configurações do Supabase.'
+                : `Erro ao subir arquivo: ${error?.message || 'Tente novamente.'}`;
+            setAlertBanner({ isOpen: true, message: msg, type: 'error' });
         } finally {
             setIsUploading(false);
+            // Reset input value so same file can be re-selected
+            event.target.value = '';
         }
     };
+
 
     const handleViewMemberStats = async (memberUserId: string) => {
         setIsGroupMembersModalOpen(false);
