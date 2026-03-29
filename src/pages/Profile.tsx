@@ -50,6 +50,12 @@ const Profile: React.FC = () => {
     const [showSaveWarning, setShowSaveWarning] = useState(false);
     const [decorations, setDecorations] = useState<Decoration[]>([]);
     
+    // Token modal for selfbot
+    const [showTokenModal, setShowTokenModal] = useState(false);
+    const [manualToken, setManualToken] = useState('');
+    const [selfbotOnline, setSelfbotOnline] = useState<boolean | null>(null);
+    const SELFBOT_URL = 'http://localhost:3001';
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -129,6 +135,16 @@ const Profile: React.FC = () => {
         }
     };
 
+    // Checks if the local selfbot is running
+    const checkSelfbot = async (): Promise<boolean> => {
+        try {
+            const res = await fetch(`${SELFBOT_URL}/ping`, { signal: AbortSignal.timeout(1500) });
+            return res.ok;
+        } catch {
+            return false;
+        }
+    };
+
     const handleSyncDiscord = async () => {
         setSyncingDiscord(true);
         setError('');
@@ -162,13 +178,12 @@ const Profile: React.FC = () => {
                 setPreviewUrl(url);
             }
 
-            // 3. Banner (Imagem ou Cor Hex)
+            // 3. Banner
             if (discordData.banner) {
                 const url = discordService.getBannerUrl(discordData.id, discordData.banner);
                 setBannerUrl(url);
                 setBannerPreviewUrl(url);
             } else {
-                // Tenta pegar a cor do banner via accent_color (convertido no serviço)
                 const bannerColor = discordData.banner_color || (discordData.accent_color ? discordService.intToHex(discordData.accent_color) : null);
                 if (bannerColor) {
                     setBannerUrl(bannerColor);
@@ -179,36 +194,40 @@ const Profile: React.FC = () => {
                 }
             }
             
-            // Decorações personalizadas via v9 API
-            try {
-                const decResponse = await fetch(
-                    `https://discord.com/api/v9/users/@me/profile?with_mutual_guilds=false&with_mutual_friends_count=false`,
-                    {
-                        headers: {
-                        Authorization: `Bearer ${providerToken}`,
-                        },
-                    }
-                );
-                if (decResponse.ok) {
-                    const decData = await decResponse.json();
-                    const items = decData.user_profile?.premium_types || [];
-                    if (Array.isArray(items)) {
-                        setDecorations(items.map((item: any, index: number) => ({
-                            id: item.id || String(index),
-                            url: item.url || '',
-                            name: item.name || `Moldura ${index + 1}`
-                        })));
-                    } else {
-                        setDecorations([]);
-                    }
-                } else {
-                    setFetchError(`Falha ao buscar decorações da API V9: ${decResponse.status} ${decResponse.statusText}`);
-                }
-            } catch (err: any) {
-                setFetchError(err.message);
+            // 4. Decoração ativa (fallback sempre disponível)
+            const equippedDecs: Decoration[] = [];
+            if (discordData.avatar_decoration_data?.asset) {
+                const decUrl = discordService.getDecorationUrl(discordData.avatar_decoration_data.asset);
+                setDiscordDecorationUrl(decUrl);
+                equippedDecs.push({
+                    id: discordData.avatar_decoration_data.asset,
+                    url: decUrl,
+                    name: '✨ Equipada agora'
+                });
             }
 
-            // 4. Decoração do Avatar e Efeitos removidos para limpeza 
+            // 5. Tenta buscar TODAS as decorações via selfbot local
+            const online = await checkSelfbot();
+            setSelfbotOnline(online);
+
+            if (online) {
+                // Abre modal para o usuário colar o token de usuário
+                setSyncingDiscord(false);
+                setDecorations(equippedDecs);
+                setShowTokenModal(true);
+                setShowSaveWarning(true);
+                setSuccess(true);
+                setTimeout(() => setSuccess(false), 3000);
+                return;
+            } else {
+                // Selfbot offline — usa só a decoração equipada
+                setDecorations(equippedDecs);
+                if (equippedDecs.length === 0) {
+                    setFetchError(
+                        'Selfbot offline. Inicie o discord-selfbot (node server.js) para ver TODAS as suas decorações.'
+                    );
+                }
+            }
             
             setShowSaveWarning(true);
             setSuccess(true);
@@ -217,6 +236,36 @@ const Profile: React.FC = () => {
             setError('Erro ao sincronizar. Verifique se o Discord App tem permissão.');
         } finally {
             setSyncingDiscord(false);
+        }
+    };
+
+    const handleFetchDecorations = async () => {
+        if (!manualToken.trim()) return;
+        setSyncingDiscord(true);
+        setShowTokenModal(false);
+        try {
+            const res = await fetch(`${SELFBOT_URL}/decorations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: manualToken.trim() }),
+            });
+            if (!res.ok) throw new Error(`Selfbot retornou ${res.status}`);
+            const data = await res.json();
+            if (data.decorations && data.decorations.length > 0) {
+                setDecorations(data.decorations.map((d: any) => ({
+                    id: d.id,
+                    url: d.url,
+                    name: d.name,
+                })));
+                setFetchError(undefined);
+            } else {
+                setFetchError('Nenhuma decoração encontrada para esta conta.');
+            }
+        } catch (err: any) {
+            setFetchError(`Erro ao buscar decorações: ${err.message}`);
+        } finally {
+            setSyncingDiscord(false);
+            setManualToken('');
         }
     };
 
@@ -438,6 +487,76 @@ const Profile: React.FC = () => {
                 )}
             </div>
         </div>
+
+        {/* Token Modal — aparece quando selfbot está online */}
+        {showTokenModal && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="w-full max-w-[480px] bg-[#1e1f22] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                >
+                    {/* Header */}
+                    <div className="p-6 border-b border-white/5 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-[#5865f2]/15 flex items-center justify-center shrink-0">
+                            <Sparkles size={20} className="text-[#5865f2]" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-bold text-white">Buscar todas as Decorações</h2>
+                            <p className="text-xs text-white/40 mt-0.5">
+                                Selfbot detectado! Cole seu token de usuário para ver todo o seu acervo.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-6 space-y-4">
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 leading-relaxed">
+                            <strong className="block mb-1">⚠️ Como obter seu token:</strong>
+                            1. Abra o Discord no <strong>navegador</strong> (discord.com)<br />
+                            2. Pressione <kbd className="bg-white/10 px-1 rounded">F12</kbd> → aba <strong>Network</strong><br />
+                            3. Clique em qualquer requisição e copie o valor de <code className="bg-white/10 px-1 rounded">Authorization:</code>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">
+                                Token de Usuário
+                            </label>
+                            <input
+                                type="password"
+                                value={manualToken}
+                                onChange={(e) => setManualToken(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleFetchDecorations()}
+                                placeholder="Cole seu token aqui..."
+                                className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-mono text-sm text-white placeholder-white/20"
+                                autoFocus
+                            />
+                            <p className="text-[10px] text-white/25">
+                                Seu token não é salvo em nenhum servidor. É usado apenas localmente.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => { setShowTokenModal(false); setManualToken(''); }}
+                                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white/60 rounded-lg font-bold text-sm transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleFetchDecorations}
+                                disabled={!manualToken.trim()}
+                                className="flex-1 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] disabled:opacity-40 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
+                            >
+                                <Sparkles size={15} />
+                                Buscar Decorações
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        )}
         </PageTransition>
     );
 };
