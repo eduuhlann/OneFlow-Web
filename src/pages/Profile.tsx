@@ -22,6 +22,7 @@ import { discordService } from '../services/features/discordService';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
 import PageTransition from '../components/PageTransition';
+import ProfileDecorations, { Decoration } from '../components/ProfileDecorations';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -38,13 +39,16 @@ const Profile: React.FC = () => {
     const [previewUrl, setPreviewUrl] = useState(profile?.avatar_url || '');
     const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
     const [bannerPreviewUrl, setBannerPreviewUrl] = useState(profile?.banner_url || '');
+    const [discordDecorationUrl, setDiscordDecorationUrl] = useState(profile?.discord_decoration_url || '');
     
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [syncingDiscord, setSyncingDiscord] = useState(false);
     const [error, setError] = useState('');
+    const [fetchError, setFetchError] = useState<string | undefined>(undefined);
     const [success, setSuccess] = useState(false);
     const [showSaveWarning, setShowSaveWarning] = useState(false);
+    const [decorations, setDecorations] = useState<Decoration[]>([]);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +62,7 @@ const Profile: React.FC = () => {
             setPreviewUrl(profile.avatar_url || '');
             setBannerUrl(profile.banner_url || '');
             setBannerPreviewUrl(profile.banner_url || '');
+            setDiscordDecorationUrl(profile.discord_decoration_url || '');
         }
     }, [profile]);
 
@@ -127,6 +132,7 @@ const Profile: React.FC = () => {
     const handleSyncDiscord = async () => {
         setSyncingDiscord(true);
         setError('');
+        setFetchError(undefined);
         try {
             if (user?.app_metadata?.provider !== 'discord') {
                 setError('Sincronização disponível apenas para login via Discord.');
@@ -172,6 +178,35 @@ const Profile: React.FC = () => {
                     setBannerPreviewUrl('');
                 }
             }
+            
+            // Decorações personalizadas via v9 API
+            try {
+                const decResponse = await fetch(
+                    `https://discord.com/api/v9/users/@me/profile?with_mutual_guilds=false&with_mutual_friends_count=false`,
+                    {
+                        headers: {
+                        Authorization: `Bearer ${providerToken}`,
+                        },
+                    }
+                );
+                if (decResponse.ok) {
+                    const decData = await decResponse.json();
+                    const items = decData.user_profile?.premium_types || [];
+                    if (Array.isArray(items)) {
+                        setDecorations(items.map((item: any, index: number) => ({
+                            id: item.id || String(index),
+                            url: item.url || '',
+                            name: item.name || `Moldura ${index + 1}`
+                        })));
+                    } else {
+                        setDecorations([]);
+                    }
+                } else {
+                    setFetchError(`Falha ao buscar decorações da API V9: ${decResponse.status} ${decResponse.statusText}`);
+                }
+            } catch (err: any) {
+                setFetchError(err.message);
+            }
 
             // 4. Decoração do Avatar e Efeitos removidos para limpeza 
             
@@ -194,7 +229,8 @@ const Profile: React.FC = () => {
                 username: name, 
                 bio, 
                 avatar_url: avatarUrl || null,
-                banner_url: bannerUrl || null
+                banner_url: bannerUrl || null,
+                discord_decoration_url: discordDecorationUrl || null
             });
             setShowSaveWarning(false);
             setSuccess(true);
@@ -277,6 +313,15 @@ const Profile: React.FC = () => {
                                             <Camera size={20} className="text-white" />
                                         </div>
                                     </div>
+                                    {discordDecorationUrl && (
+                                        <div className="absolute inset-[-18.5%] w-[137%] h-[137%] pointer-events-none z-20">
+                                            <img 
+                                                src={discordDecorationUrl} 
+                                                alt="Decoração" 
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -361,6 +406,17 @@ const Profile: React.FC = () => {
                                     rows={4}
                                 />
                             </div>
+                            {user?.app_metadata?.provider === 'discord' && (
+                                <ProfileDecorations 
+                                    decorations={decorations}
+                                    error={fetchError}
+                                    loading={syncingDiscord}
+                                    onSelectDecoration={(url) => {
+                                        setDiscordDecorationUrl(url);
+                                        setShowSaveWarning(true);
+                                    }} 
+                                />
+                            )}
                         </div>
                     </div>
         </div>

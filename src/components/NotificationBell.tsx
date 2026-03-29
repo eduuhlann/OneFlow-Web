@@ -1,82 +1,243 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { discipleshipService } from '../services/features/discipleshipService';
 import { useNavigate } from 'react-router-dom';
+import { MessageCircle, Users, UserPlus, Bell, BellDot } from 'lucide-react';
+
+interface Notification {
+    id: string;
+    type: 'message' | 'invite' | 'group_invite';
+    title: string;
+    body: string;
+    avatar_url: string | null;
+    created_at: string;
+    action: string;
+}
+
+function timeAgo(dateStr: string): string {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
+}
+
+const typeIcon: Record<string, React.ReactNode> = {
+    message: <MessageCircle size={12} />,
+    invite: <UserPlus size={12} />,
+    group_invite: <Users size={12} />,
+};
+
+const typeLabel: Record<string, string> = {
+    message: 'Mensagem',
+    invite: 'Convite',
+    group_invite: 'Grupo',
+};
+
+const typeColor: Record<string, string> = {
+    message: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    invite: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    group_invite: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+};
 
 export const NotificationBell: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [count, setCount] = useState(0);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [open, setOpen] = useState(false);
+    const [loadingNotifs, setLoadingNotifs] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const loadCount = useCallback(async () => {
+        if (!user) return;
+        const c = await discipleshipService.getNotificationCount(user.id);
+        setCount(c);
+    }, [user]);
+
+    const loadNotifications = useCallback(async () => {
+        if (!user) return;
+        setLoadingNotifs(true);
+        try {
+            const notifs = await discipleshipService.getRecentNotifications(user.id);
+            setNotifications(notifs);
+        } finally {
+            setLoadingNotifs(false);
+        }
+    }, [user]);
 
     useEffect(() => {
         if (!user) return;
-
-        // Initial load
-        const loadCount = async () => {
-            const c = await discipleshipService.getNotificationCount(user.id);
-            setCount(c);
-        };
         loadCount();
 
-        // Subscribe to changes in notes and connections
-        const notesChannel = supabase
+        const channel = supabase
             .channel('notification-sync')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'discipleship_notes'
-                },
-                () => loadCount()
-            )
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'discipleship_connections',
-                    filter: `disciple_id=eq.${user.id}`
-                },
-                () => loadCount()
-            )
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_notes' }, () => loadCount())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_connections', filter: `disciple_id=eq.${user.id}` }, () => loadCount())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_group_members', filter: `user_id=eq.${user.id}` }, () => loadCount())
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(notesChannel);
+        return () => { supabase.removeChannel(channel); };
+    }, [user, loadCount]);
+
+    // Close on outside click
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
         };
-    }, [user]);
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const handleToggle = () => {
+        if (!open) {
+            loadNotifications();
+        }
+        setOpen(prev => !prev);
+    };
+
+    const handleNotifClick = (notif: Notification) => {
+        setOpen(false);
+        navigate(notif.action);
+    };
 
     return (
-        <button
-            onClick={() => navigate('/discipleship')}
-            className="group relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
-        >
-            <motion.svg 
-                viewBox="0 0 448 512" 
-                className="w-5 h-5 md:w-6 md:h-6 fill-white"
-                whileHover={{
-                    rotate: [0, 10, -10, 5, -5, 2, 0],
-                    transition: { duration: 0.9, ease: "easeInOut" }
-                }}
+        <div ref={containerRef} className="relative">
+            {/* Bell Button */}
+            <button
+                onClick={handleToggle}
+                className="group relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
             >
-                <path d="M224 0c-17.7 0-32 14.3-32 32V49.9C119.5 61.4 64 124.2 64 200v33.4c0 45.4-15.5 89.5-43.8 124.9L5.3 377c-5.8 7.2-6.9 17.1-2.9 25.4S14.8 416 24 416H424c9.2 0 17.6-5.3 21.6-13.6s2.9-18.2-2.9-25.4l-14.9-18.6C399.5 322.9 384 278.8 384 233.4V200c0-75.8-55.5-138.6-128-150.1V32c0-17.7-14.3-32-32-32zm0 96h8c57.4 0 104 46.6 104 104v33.4c0 47.9 13.9 94.6 39.7 134.6H72.3C98.1 328 112 281.3 112 233.4V200c0-57.4 46.6-104 104-104h8zm64 352H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7s18.7-28.3 18.7-45.3z" />
-            </motion.svg>
+                <motion.div
+                    whileHover={{ rotate: [0, 10, -10, 5, -5, 2, 0], transition: { duration: 0.9, ease: 'easeInOut' } }}
+                >
+                    {count > 0 ? (
+                        <BellDot size={22} className="fill-white text-white" />
+                    ) : (
+                        <Bell size={22} className="text-white" />
+                    )}
+                </motion.div>
 
+                <AnimatePresence>
+                    {count > 0 && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-black flex items-center justify-center"
+                        >
+                            <span className="text-[10px] font-black text-white">{count > 9 ? '9+' : count}</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </button>
+
+            {/* Dropdown Panel */}
             <AnimatePresence>
-                {count > 0 && (
+                {open && (
                     <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-black flex items-center justify-center"
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="absolute right-0 top-[calc(100%+10px)] w-[340px] z-[200] origin-top-right"
+                        style={{ maxHeight: '480px' }}
                     >
-                        <span className="text-[10px] font-black text-white">{count > 9 ? '9+' : count}</span>
+                        {/* Panel */}
+                        <div className="bg-black/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                                <span className="text-[11px] font-black tracking-[0.2em] text-white/50 uppercase">Notificações</span>
+                                {count > 0 && (
+                                    <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5">
+                                        {count} nova{count > 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* List */}
+                            <div className="overflow-y-auto" style={{ maxHeight: '380px' }}>
+                                {loadingNotifs ? (
+                                    <div className="flex items-center justify-center py-10">
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                                            className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full"
+                                        />
+                                    </div>
+                                ) : notifications.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-10 gap-3">
+                                        <Bell size={28} className="text-white/10" />
+                                        <p className="text-[11px] font-bold text-white/20 tracking-widest uppercase">
+                                            Sem notificações
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-white/5">
+                                        {notifications.map((notif, i) => (
+                                            <motion.button
+                                                key={notif.id}
+                                                initial={{ opacity: 0, x: -8 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: i * 0.04 }}
+                                                onClick={() => handleNotifClick(notif)}
+                                                className="w-full flex items-start gap-3.5 px-5 py-4 hover:bg-white/5 transition-colors text-left group"
+                                            >
+                                                {/* Avatar */}
+                                                <div className="flex-shrink-0 w-9 h-9 rounded-xl overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center">
+                                                    {notif.avatar_url ? (
+                                                        <img src={notif.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-sm font-bold text-white/30">
+                                                            {notif.title.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className="text-[12px] font-bold text-white truncate">
+                                                            {notif.title}
+                                                        </span>
+                                                        <span className={`flex-shrink-0 flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full border ${typeColor[notif.type]}`}>
+                                                            {typeIcon[notif.type]}
+                                                            {typeLabel[notif.type]}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-white/40 truncate">{notif.body}</p>
+                                                </div>
+
+                                                {/* Time */}
+                                                <span className="flex-shrink-0 text-[10px] text-white/20 font-bold pt-0.5">
+                                                    {timeAgo(notif.created_at)}
+                                                </span>
+                                            </motion.button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            {notifications.length > 0 && (
+                                <div className="border-t border-white/5 px-5 py-3">
+                                    <button
+                                        onClick={() => { setOpen(false); navigate('/discipleship'); }}
+                                        className="w-full text-[10px] font-black tracking-[0.2em] text-white/30 hover:text-white uppercase transition-colors"
+                                    >
+                                        Ver tudo no Discipulado →
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </button>
+        </div>
     );
 };

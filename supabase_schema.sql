@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   avatar_url TEXT,
   banner_url TEXT,
   bio TEXT,
+  discord_decoration_url TEXT,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
