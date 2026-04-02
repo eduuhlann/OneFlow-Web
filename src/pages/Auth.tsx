@@ -44,7 +44,7 @@ export default function Auth() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + '/dashboard',
+                    redirectTo: `${import.meta.env.VITE_SITE_URL || window.location.origin}/dashboard`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
@@ -65,7 +65,7 @@ export default function Auth() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: {
-                    redirectTo: window.location.origin + '/dashboard',
+                    redirectTo: `${import.meta.env.VITE_SITE_URL || window.location.origin}/dashboard`,
                     scopes: 'identify email',
                 },
             });

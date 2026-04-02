@@ -485,11 +485,25 @@ export const discipleshipService = {
         return null;
     },
 
-    async leaveGroup(groupId: string, userId: string): Promise<void> {
+    async leaveGroup(groupId: string, userId: string, username: string): Promise<void> {
+        // Enviar mensagem de sistema antes de sair
+        const { data: group } = await supabase.from('discipleship_groups').select('leader_id').eq('id', groupId).single();
+        if (group) {
+            await this.addNote(group.leader_id, null, userId, `[SYSTEM]: ${username} saiu do grupo.`, groupId);
+        }
         await this.removeGroupMember(groupId, userId);
     },
 
-    async removeGroupMember(groupId: string, userId: string): Promise<void> {
+    async removeGroupMember(groupId: string, userId: string, targetUsername?: string): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (targetUsername && user) {
+            const { data: group } = await supabase.from('discipleship_groups').select('leader_id').eq('id', groupId).single();
+            if (group) {
+                await this.addNote(group.leader_id, null, user.id, `[SYSTEM]: ${targetUsername} foi removido do grupo.`, groupId);
+            }
+        }
+
         const { error } = await supabase
             .from('discipleship_group_members')
             .delete()
@@ -573,6 +587,23 @@ export const discipleshipService = {
     },
 
     async respondToGroupInvite(memberId: string, accept: boolean): Promise<void> {
+        if (accept) {
+            // Get member details to send system message
+            const { data: member } = await supabase
+                .from('discipleship_group_members')
+                .select('user_id, group_id, profiles:user_id(username), group:group_id(leader_id)')
+                .eq('id', memberId)
+                .single();
+
+            if (member) {
+                const username = (member.profiles as any)?.username || 'Um usuário';
+                const groupId = member.group_id;
+                const groupLeaderId = (member.group as any)?.leader_id;
+                
+                await this.addNote(groupLeaderId, null, member.user_id, `[SYSTEM]: ${username} entrou no grupo.`, groupId);
+            }
+        }
+
         const { error } = await supabase
             .from('discipleship_group_members')
             .update({ status: accept ? 'active' : 'inactive' })

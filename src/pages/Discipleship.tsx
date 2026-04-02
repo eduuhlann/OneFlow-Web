@@ -465,10 +465,10 @@ const Discipleship: React.FC = () => {
         });
     };
 
-    const handleRemoveMember = async (targetUserId: string) => {
-        if (!selectedConnection || !window.confirm('Tem certeza que deseja remover este membro?')) return;
+    const handleRemoveMember = async (targetUserId: string, targetUsername: string) => {
+        if (!selectedConnection || !window.confirm(`Tem certeza que deseja remover ${targetUsername}?`)) return;
         try {
-            await discipleshipService.removeGroupMember(selectedConnection.id, targetUserId);
+            await discipleshipService.removeGroupMember(selectedConnection.id, targetUserId, targetUsername);
             const updated = await discipleshipService.getGroupMembers(selectedConnection.id);
             setGroupMembers(updated);
         } catch (error) {
@@ -689,7 +689,8 @@ const Discipleship: React.FC = () => {
             message: 'Tem certeza que deseja sair deste grupo de discipulado?',
             onConfirm: async () => {
                 try {
-                    await discipleshipService.leaveGroup(selectedConnection.id, user.id);
+                    const username = profile?.username || 'Um usuário';
+                    await discipleshipService.leaveGroup(selectedConnection.id, user.id, username);
                     setSelectedConnection(null);
                     setView('list');
                     loadConnections();
@@ -1135,6 +1136,19 @@ const Discipleship: React.FC = () => {
                                                 const isMine = n.author_id === user!.id;
                                                 const getProfile = (p: any) => Array.isArray(p) ? p[0] : p;
 
+                                                // System message rendering
+                                                if (n.content?.startsWith('[SYSTEM]:')) {
+                                                    return (
+                                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={n.id} className="flex justify-center py-2">
+                                                            <div className="bg-white/5 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 text-center">
+                                                                    {n.content.replace('[SYSTEM]:', '').trim()}
+                                                                </p>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                }
+
                                                 let authorProfile = null;
                                                 if (isMine) {
                                                     authorProfile = profile;
@@ -1371,7 +1385,7 @@ const Discipleship: React.FC = () => {
                                                                     Líder
                                                                 </button>
                                                                 <button 
-                                                                    onClick={() => handleRemoveMember(member.user_id)}
+                                                                    onClick={() => handleRemoveMember(member.user_id, memberProfile?.username || 'Usuário')}
                                                                     className="px-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-red-500/10"
                                                                     title="Remover do Grupo"
                                                                 >
