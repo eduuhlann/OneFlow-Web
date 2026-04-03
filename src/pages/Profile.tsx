@@ -18,11 +18,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { supabase } from '../services/supabase';
-import { discordService } from '../services/features/discordService';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
 import PageTransition from '../components/PageTransition';
-import ProfileDecorations, { Decoration } from '../components/ProfileDecorations';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -43,12 +41,10 @@ const Profile: React.FC = () => {
     
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [syncingDiscord, setSyncingDiscord] = useState(false);
     const [error, setError] = useState('');
     const [fetchError, setFetchError] = useState<string | undefined>(undefined);
     const [success, setSuccess] = useState(false);
     const [showSaveWarning, setShowSaveWarning] = useState(false);
-    const [decorations, setDecorations] = useState<Decoration[]>([]);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -129,77 +125,6 @@ const Profile: React.FC = () => {
         }
     };
 
-    const handleSyncDiscord = async () => {
-        setSyncingDiscord(true);
-        setError('');
-        setFetchError(undefined);
-        try {
-            if (user?.app_metadata?.provider !== 'discord') {
-                setError('Sincronização disponível apenas para login via Discord.');
-                setSyncingDiscord(false);
-                return;
-            }
-
-            const { data: { session } } = await supabase.auth.getSession();
-            const providerToken = session?.provider_token;
-
-            if (!providerToken) {
-                setError('Sessão expirada. Refaça o login com Discord.');
-                setSyncingDiscord(false);
-                return;
-            }
-
-            const discordData = await discordService.getUserData(providerToken);
-            
-            // 1. Nome
-            if (discordData.global_name) setName(discordData.global_name);
-            else setName(discordData.username);
-
-            // 2. Avatar (GIF)
-            if (discordData.avatar) {
-                const url = discordService.getAvatarUrl(discordData.id, discordData.avatar);
-                setAvatarUrl(url);
-                setPreviewUrl(url);
-            }
-
-            // 3. Banner
-            if (discordData.banner) {
-                const url = discordService.getBannerUrl(discordData.id, discordData.banner);
-                setBannerUrl(url);
-                setBannerPreviewUrl(url);
-            } else {
-                const bannerColor = discordData.banner_color || (discordData.accent_color ? discordService.intToHex(discordData.accent_color) : null);
-                if (bannerColor) {
-                    setBannerUrl(bannerColor);
-                    setBannerPreviewUrl(bannerColor);
-                } else {
-                    setBannerUrl('');
-                    setBannerPreviewUrl('');
-                }
-            }
-            
-            // 4. Decoração ativa
-            if (discordData.avatar_decoration_data?.asset) {
-                const decUrl = discordService.getDecorationUrl(discordData.avatar_decoration_data.asset);
-                setDiscordDecorationUrl(decUrl);
-                setDecorations([{
-                    id: discordData.avatar_decoration_data.asset,
-                    url: decUrl,
-                    name: '✨ Moldura Atual'
-                }]);
-            } else {
-              setDecorations([]);
-            }
-            
-            setShowSaveWarning(true);
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError('Erro ao sincronizar. Verifique se o Discord App tem permissão.');
-        } finally {
-            setSyncingDiscord(false);
-        }
-    };
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -324,14 +249,6 @@ const Profile: React.FC = () => {
 
                             <div className="flex flex-col items-end gap-3">
                                 <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={handleSyncDiscord}
-                                        disabled={syncingDiscord}
-                                        className="px-4 py-2.5 bg-[#5865f2]/10 hover:bg-[#5865f2]/20 text-[#5865f2] rounded-md font-bold text-[13px] transition-all flex items-center gap-2 border border-[#5865f2]/20"
-                                    >
-                                        <Zap size={16} className={cn(syncingDiscord && "animate-pulse")} />
-                                        {syncingDiscord ? 'Puxando...' : 'Puxar do Discord'}
-                                    </button>
                                     
                                     <button
                                         onClick={handleSave}
@@ -387,36 +304,11 @@ const Profile: React.FC = () => {
                                     rows={4}
                                 />
                             </div>
-                            {user?.app_metadata?.provider === 'discord' && (
-                                <ProfileDecorations 
-                                    decorations={decorations}
-                                    error={fetchError}
-                                    loading={syncingDiscord}
-                                    onSelectDecoration={(url) => {
-                                        setDiscordDecorationUrl(url);
-                                        setShowSaveWarning(true);
-                                    }} 
-                                />
-                            )}
                         </div>
                     </div>
         </div>
                 </div>
 
-                {user?.app_metadata?.provider !== 'discord' && (
-                    <div className="mt-8 p-6 bg-[#5865f2]/5 border border-[#5865f2]/10 rounded-2xl flex items-center justify-between gap-6">
-                        <div className="space-y-1">
-                            <p className="text-sm font-bold text-white/80">Quer usar seus assets animados do Discord?</p>
-                            <p className="text-xs text-white/40">Faça login pelo Discord para liberar GIFs e Molduras.</p>
-                        </div>
-                        <button 
-                            onClick={() => navigate('/auth')}
-                            className="px-4 py-2 bg-[#5865f2] text-white text-[11px] font-black uppercase tracking-wider rounded-lg"
-                        >
-                            Ir para Login
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
         </PageTransition>
