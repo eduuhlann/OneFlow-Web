@@ -38,7 +38,8 @@ import {
     TreePine,
     Map as MapIcon,
     Compass,
-    Palette as PaletteIcon
+    Palette as PaletteIcon,
+    Image
 } from 'lucide-react';
 import {
     IconBook,
@@ -299,6 +300,7 @@ export default function Dashboard() {
 
             { id: 'plans', icon: Calendar, label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
             { id: 'prayer', icon: Clock, label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
+            { id: 'biblioteca', icon: Image, label: 'Biblioteca', description: 'Wallpapers do Wallpaper Engine', path: '/biblioteca' },
             { id: 'customize', icon: PaletteIcon, label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
         ];
 

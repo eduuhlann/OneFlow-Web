@@ -65,7 +65,7 @@ export default function Auth() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: {
-                    redirectTo: `${import.meta.env.VITE_SITE_URL || window.location.origin}/dashboard`,
+                    redirectTo: `${window.location.origin}/dashboard`,
                     scopes: 'identify email',
                 },
             });
@@ -75,6 +75,7 @@ export default function Auth() {
             setLoading(false);
         }
     };
+
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -333,6 +334,7 @@ export default function Auth() {
                                             </svg>
                                             CONTINUAR COM DISCORD
                                         </button>
+
                                     </>
                                 )}
 
