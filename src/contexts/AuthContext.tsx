@@ -17,11 +17,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const hasHashToken = window.location.hash.includes('access_token') || 
+                           window.location.hash.includes('refresh_token') ||
+                           window.location.hash.includes('error');
+
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
-            setLoading(false);
+            // If we have a hash, we wait for onAuthStateChange to confirm the session
+            if (!hasHashToken) {
+                setLoading(false);
+            }
         }).catch(err => {
             console.error('Failed to get session:', err);
             setLoading(false);
