@@ -47,22 +47,7 @@ function buildPath(nodes: PathNode[]): string {
     return d;
 }
 
-/* ─── Tree ───────────────────────────────────────────────── */
-const Tree: React.FC<{ size: number; opacity: number; flip?: boolean; delay?: number }> = ({ size, opacity, flip, delay = 0 }) => (
-    <motion.div
-        animate={{ rotate: [0, 1.6, -1.6, 0] }}
-        transition={{ duration: 5.5 + delay * 0.4, repeat: Infinity, ease: 'easeInOut', delay }}
-        style={{ transformOrigin: 'bottom center', display: 'inline-block' }}
-    >
-        <svg width={size} height={size * 1.75} viewBox="0 0 40 70" fill="white"
-            style={{ opacity, transform: flip ? 'scaleX(-1)' : undefined, display: 'block' }}>
-            <rect x="17" y="54" width="6" height="16" rx="2" fillOpacity="0.45" />
-            <polygon points="20,2 33,24 7,24"   fillOpacity="0.95" />
-            <polygon points="20,14 35,38 5,38"  fillOpacity="0.72" />
-            <polygon points="20,27 37,52 3,52"  fillOpacity="0.52" />
-        </svg>
-    </motion.div>
-);
+
 
 /* ─── Floating particle ──────────────────────────────────── */
 const Particle: React.FC<{ x: number; y: number; delay: number; size?: number }> = ({ x, y, delay, size = 2 }) => (
@@ -260,19 +245,10 @@ function JourneyMap({ nodes, navigate }: { nodes: PathNode[]; navigate: (p: stri
     }, []);
 
     /* decorations */
-    const { leftTrees, rightTrees, particles, fogBlobs } = useMemo(() => {
+    const { particles, fogBlobs } = useMemo(() => {
         const rnd  = seededRand(77);
         const n    = nodes.length;
-        const step = totalH / (n + 3);
 
-        const leftTrees = Array.from({ length: n + 6 }).map((_, i) => ({
-            id: i, x: -12 + rnd() * 58, y: i * step + rnd() * 55 - 20,
-            size: 18 + rnd() * 38, opacity: 0.05 + rnd() * 0.13, delay: rnd() * 4,
-        }));
-        const rightTrees = Array.from({ length: n + 6 }).map((_, i) => ({
-            id: i + 300, x: COL_W + 10 + rnd() * 58, y: i * step + rnd() * 55 - 20,
-            size: 16 + rnd() * 36, opacity: 0.05 + rnd() * 0.13, delay: rnd() * 4,
-        }));
         const particles = Array.from({ length: 40 }).map((_, i) => ({
             id: i, x: rnd() * (COL_W + 120) - 60, y: rnd() * totalH,
             delay: rnd() * 5, size: rnd() > 0.8 ? 3 : 2,
@@ -282,7 +258,7 @@ function JourneyMap({ nodes, navigate }: { nodes: PathNode[]; navigate: (p: stri
             y: rnd() * totalH, w: 140 + rnd() * 240, h: 55 + rnd() * 90,
             opacity: 0.018 + rnd() * 0.028,
         }));
-        return { leftTrees, rightTrees, particles, fogBlobs };
+        return { particles, fogBlobs };
     }, [totalH, nodes.length]);
 
     const completedCount = nodes.filter(n => n.isCompleted).length;
@@ -317,17 +293,7 @@ function JourneyMap({ nodes, navigate }: { nodes: PathNode[]; navigate: (p: stri
                         style={{ left: b.x, top: b.y, width: b.w, height: b.h, opacity: b.opacity }} />
                 ))}
 
-                {/* Forests */}
-                {leftTrees.map(t => (
-                    <div key={`l-${t.id}`} className="absolute pointer-events-none" style={{ left: t.x, top: t.y }}>
-                        <Tree size={t.size} opacity={t.opacity} delay={t.delay} />
-                    </div>
-                ))}
-                {rightTrees.map(t => (
-                    <div key={`r-${t.id}`} className="absolute pointer-events-none" style={{ left: t.x, top: t.y }}>
-                        <Tree size={t.size} opacity={t.opacity} flip delay={t.delay} />
-                    </div>
-                ))}
+
 
                 {/* Floating particles */}
                 {particles.map(p => <Particle key={`p-${p.id}`} x={p.x} y={p.y} delay={p.delay} size={p.size} />)}

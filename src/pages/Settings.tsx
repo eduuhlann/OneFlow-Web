@@ -9,7 +9,8 @@ import {
     Trash2,
     ChevronRight,
     Info,
-    ExternalLink
+    ExternalLink,
+    MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,13 +20,14 @@ import { twMerge } from 'tailwind-merge';
 // Sub-views
 import SecurityView from '../components/settings/SecurityView';
 import LegalView from '../components/settings/LegalView';
+import FeedbackView from '../components/settings/FeedbackView';
 import PageTransition from '../components/PageTransition';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-type SettingsTab = 'main' | 'security' | 'legal';
+type SettingsTab = 'main' | 'security' | 'legal' | 'feedback';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -103,6 +105,8 @@ const Settings: React.FC = () => {
                 return <SecurityView />;
             case 'legal':
                 return <LegalView />;
+            case 'feedback':
+                return <FeedbackView onBack={() => setActiveTab('main')} />;
             default:
                 return (
                     <div className="space-y-12">
@@ -121,7 +125,13 @@ const Settings: React.FC = () => {
                             />
                         </SettingSection>
 
-                        <SettingSection title="Apoio & Legal">
+                        <SettingSection title="Apoio, Comunidade & Legal">
+                            <SettingItem
+                                icon={MessageSquare}
+                                title="Enviar Feedback"
+                                subtitle="Ideias, bugs ou sugestões"
+                                onClick={() => setActiveTab('feedback')}
+                            />
                             <SettingItem
                                 icon={Info}
                                 title="Termos e Privacidade"

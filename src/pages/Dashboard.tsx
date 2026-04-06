@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion, useMotionValue, useTransform, useSpring } from 'motion/react';
 import { FloatingDock } from '../components/ui/floating-dock';
+import { Terminal } from '../components/Terminal';
+import { IconTerminal2 } from '@tabler/icons-react';
 import {
   DndContext,
   closestCenter,
@@ -35,7 +37,6 @@ import {
     User,
     Heart,
     Mountain,
-    TreePine,
     Map as MapIcon,
     Compass,
     Palette as PaletteIcon,
@@ -238,6 +239,7 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const { preferences, updatePreference } = usePreferences();
     const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
+    const [isTerminalOpen, setIsTerminalOpen] = useState(false);
     const [stats, setStats] = useState(statsService.getStats());
     const [testamentFilter, setTestamentFilter] = useState<'VT' | 'NT' | null>(null);
 
@@ -293,15 +295,17 @@ export default function Dashboard() {
             { id: 'plans', icon: Calendar, label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
             { id: 'prayer', icon: Clock, label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
             { id: 'customize', icon: PaletteIcon, label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
+            { id: 'terminal', icon: IconTerminal2, label: 'Terminal', description: 'Acesso ao sistema', action: () => setIsTerminalOpen(true) },
         ];
 
         if (preferences.menuOrder) {
-            return [...items].sort((a, b) => {
+            const sortedItems = [...items].sort((a, b) => {
                 const indexA = preferences.menuOrder!.indexOf(a.id);
                 const indexB = preferences.menuOrder!.indexOf(b.id);
-                if (indexA === -1 || indexB === -1) return 0;
+                if (indexA === -1 || indexB === -1) return 1; // Put new items at the end
                 return indexA - indexB;
             });
+            return sortedItems;
         }
         return items;
     }, [preferences.menuOrder]);
@@ -402,9 +406,9 @@ export default function Dashboard() {
             const size = 16 + rnd() * 48;
             const opacity = 0.05 + rnd() * 0.15;
             let Icon = Mountain;
-            if (type > 0.8) Icon = TreePine;
-            else if (type > 0.6) Icon = Sparkles;
-            else if (type > 0.4) Icon = Compass;
+            if (type > 0.8) Icon = Sparkles;
+            else if (type > 0.6) Icon = Compass;
+            else if (type > 0.4) Icon = Sparkles;
 
             const depth = rnd(); // 0 to 1
             let layer: 'far' | 'mid' | 'near' = 'mid';
@@ -531,6 +535,11 @@ export default function Dashboard() {
             <CustomizationModal
                 isOpen={isCustomizationOpen}
                 onClose={() => setIsCustomizationOpen(false)}
+            />
+
+            <Terminal 
+                isOpen={isTerminalOpen}
+                onClose={() => setIsTerminalOpen(false)}
             />
         </PageTransition>
     );
