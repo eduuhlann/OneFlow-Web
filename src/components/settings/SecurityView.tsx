@@ -1,65 +1,22 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Save, AlertCircle, CheckCircle2, Shield, Trash2, X } from 'lucide-react';
+import { AlertCircle, Shield, Trash2, X, Globe, UserCheck } from 'lucide-react';
+import { IconBrandDiscord, IconBrandGoogle } from '@tabler/icons-react';
 import { supabase } from '../../services/supabase';
 import { translateAuthError } from '../../services/authErrors';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { useAuth } from '../../contexts/AuthContext';
 
 const SecurityView: React.FC = () => {
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+    const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    const handleUpdatePassword = async () => {
-        if (!password) {
-            setError('Digite uma nova senha.');
-            return;
-        }
-        if (password !== confirmPassword) {
-            setError('As senhas não coincidem.');
-            return;
-        }
-        if (password.length < 6) {
-            setError('A senha deve ter pelo menos 6 caracteres.');
-            return;
-        }
-
-        setIsSaving(true);
-        setError('');
-        setSuccess(false);
-
-        try {
-            const { error: updateError } = await supabase.auth.updateUser({
-                password: password
-            });
-
-            if (updateError) throw updateError;
-
-            setSuccess(true);
-            setPassword('');
-            setConfirmPassword('');
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError(translateAuthError(err.message));
-        } finally {
-            setIsSaving(false);
-        }
-    };
 
     const handleDeleteAccount = async () => {
         setIsSaving(true);
         try {
-            // In a real scenario, this would call an Edge Function to delete the user from auth.users
-            // Since client-side can't delete self via standard Supabase Auth, 
-            // we'll simulate the process and sign out.
+            // Since client-side can't delete self via standard Supabase Auth easily,
+            // we'll sign out and redirect. In a production app, this would trigger an Edge Function.
             await supabase.auth.signOut();
             window.location.href = '/';
         } catch (err: any) {
@@ -68,6 +25,8 @@ const SecurityView: React.FC = () => {
             setIsSaving(false);
         }
     };
+
+    const provider = user?.app_metadata.provider;
 
     return (
         <div className="space-y-12">
@@ -86,55 +45,30 @@ const SecurityView: React.FC = () => {
                 </motion.div>
             )}
 
-            {success && (
-                <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-white/10 border border-white/20 rounded-2xl text-white flex items-center gap-3 text-sm font-bold"
-                >
-                    <CheckCircle2 size={18} /> Senha atualizada com sucesso!
-                </motion.div>
-            )}
-
             <div className="space-y-6">
-                <div className="p-10 bg-white/5 border border-white/10 rounded-[3rem] space-y-10">
-                    <div className="space-y-4">
-                        <label className="text-[10px] font-black tracking-widest text-white/30 uppercase flex items-center gap-2">
-                            <Lock size={12} /> NOVA SENHA
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl py-5 px-8 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all font-bold text-xl tracking-tight"
-                        />
+                <div className="p-10 bg-white/5 border border-white/10 rounded-[3rem] space-y-8">
+                    <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center text-white/20 border border-white/5">
+                            {provider === 'google' ? <IconBrandGoogle size={40} /> : 
+                             provider === 'discord' ? <IconBrandDiscord size={40} /> : 
+                             <UserCheck size={40} />}
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black tracking-widest text-white/20 uppercase block mb-1">Método de Acesso</span>
+                            <h4 className="text-2xl font-black italic tracking-tighter uppercase">
+                                {provider || 'OAuth'} Ativo
+                            </h4>
+                        </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <label className="text-[10px] font-black tracking-widest text-white/30 uppercase flex items-center gap-2">
-                            <Lock size={12} /> CONFIRMAR NOVA SENHA
-                        </label>
-                        <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl py-5 px-8 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all font-bold text-xl tracking-tight"
-                        />
-                    </div>
-
-                    <div className="pt-4">
-                        <button
-                            onClick={handleUpdatePassword}
-                            disabled={isSaving}
-                            className="w-full py-6 bg-white text-black rounded-[2rem] font-black text-xs tracking-[0.3em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-                        >
-                            {isSaving ? (
-                                <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                            ) : <Save size={18} />}
-                            {isSaving ? 'ATUALIZANDO...' : 'ATUALIZAR SENHA'}
-                        </button>
+                    <div className="p-6 bg-black/40 border border-white/5 rounded-2xl space-y-3">
+                        <p className="text-white/40 text-xs font-medium leading-relaxed">
+                            Sua conta está vinculada ao seu perfil do <span className="text-white font-bold capitalize">{provider}</span>. 
+                            O gerenciamento de senha e segurança de dois fatores é feito diretamente através da sua conta {provider}.
+                        </p>
+                        <div className="flex items-center gap-2 text-[9px] font-bold tracking-widest text-white/20 uppercase">
+                            <Globe size={10} /> Conectado via provedor externo
+                        </div>
                     </div>
                 </div>
 
