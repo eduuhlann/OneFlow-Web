@@ -13,6 +13,7 @@ interface ProfileEditModalProps {
 export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
     const { profile, updateProfile } = useProfile();
     const { user } = useAuth();
+    const [displayName, setDisplayName] = useState(profile?.display_name || profile?.username || '');
     const [username, setUsername] = useState(profile?.username ?? '');
     const [bio, setBio] = useState(profile?.bio ?? '');
     const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
@@ -77,7 +78,8 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
         setError('');
         setSuccess(false);
         try {
-            await updateProfile({ username, avatar_url: avatarUrl || null, bio });
+            const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '_');
+            await updateProfile({ display_name: displayName, username: cleanUsername, avatar_url: avatarUrl || null, bio });
             setSuccess(true);
             setTimeout(() => onClose(), 1200);
         } catch (err: any) {
@@ -152,15 +154,26 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                         <p className="text-[10px] text-white/20 text-center mt-2">Máximo 20MB · GIFs animados suportados</p>
                     </div>
 
-                    {/* Username */}
+                    {/* Display Name */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">USERNAME</label>
+                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">NOME DE EXIBIÇÃO</label>
+                        <input
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            placeholder="Como quer ser chamado"
+                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/10 text-sm"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">USERNAME (@)</label>
                         <input
                             type="text"
                             value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder="seu_nome"
-                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/10 text-sm"
+                            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                            placeholder="seu_id_unico"
+                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/10 text-sm font-bold lowercase"
                         />
                     </div>
 

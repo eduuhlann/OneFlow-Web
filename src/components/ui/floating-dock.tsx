@@ -89,7 +89,7 @@ const FloatingDockMobile = ({
   );
 };
 
-const FloatingDockDesktop = ({
+export const FloatingDockDesktop = ({
   items,
   className,
 }: {
@@ -137,8 +137,8 @@ function IconContainer({
   let widthTransform = useTransform(distance, [-150, 0, 150], [56, 100, 56]);
   let heightTransform = useTransform(distance, [-150, 0, 150], [56, 100, 56]);
 
-  let widthIconTransform = useTransform(distance, [-150, 0, 150], [28, 50, 28]);
-  let heightIconTransform = useTransform(distance, [-150, 0, 150], [28, 50, 28]);
+  let widthIconTransform = useTransform(distance, [-150, 0, 150], [34, 60, 34]);
+  let heightIconTransform = useTransform(distance, [-150, 0, 150], [34, 60, 34]);
 
   let width = useSpring(widthTransform, {
     mass: 0.1,
@@ -179,18 +179,7 @@ function IconContainer({
         onMouseLeave={() => setHovered(false)}
         className="aspect-square rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center relative"
       >
-        <AnimatePresence>
-          {hovered && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, x: "-50%" }}
-              animate={{ opacity: 1, y: 0, x: "-50%" }}
-              exit={{ opacity: 0, y: 2, x: "-50%" }}
-              className="px-2 py-0.5 whitespace-pre rounded-md bg-gray-100 border border-gray-200 text-neutral-700 absolute left-1/2 -top-8 w-fit text-xs"
-            >
-              {title}
-            </motion.div>
-          )}
-        </AnimatePresence>
+
         <motion.div
           style={{ width: widthIcon, height: heightIcon }}
           className="flex items-center justify-center"

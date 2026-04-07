@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion, useMotionValue, useTransform, useSpring } from 'motion/react';
-import { FloatingDock } from '../components/ui/floating-dock';
+import { FloatingDock, FloatingDockDesktop } from '../components/ui/floating-dock';
 import { Terminal } from '../components/Terminal';
 import { IconTerminal2 } from '@tabler/icons-react';
 import {
@@ -284,7 +284,7 @@ export default function Dashboard() {
         navigate('/auth');
     };
 
-    const displayName = profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário';
+    const displayName = profile?.display_name || profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário';
 
     const menuItems = useMemo(() => {
         const items = [
@@ -449,9 +449,7 @@ export default function Dashboard() {
                     {/* Header */}
                     <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 md:mb-16">
                         <div className="flex items-center gap-3 md:gap-6">
-                            <Link to="/dashboard" className="hover:opacity-80 transition-opacity">
-                                <img src={logo} alt="OneFlow" className="w-24 md:w-28 h-auto object-contain" />
-                            </Link>
+
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Bem-vindo</span>
                                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter">
@@ -460,33 +458,36 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 md:gap-4">
-                            {/* Notification Bell */}
-                            <NotificationBell />
-
-                            {/* Profile Avatar */}
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center">
-                                {profile?.avatar_url ? (
-                                    <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                                ) : (
-                                    <User size={22} className="text-white/40" />
-                                )}
-                            </div>
-                            <button
-                                onClick={() => navigate('/settings')}
-                                title="Configurações e Perfil"
-                                className="p-3 md:p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
-                            >
-                                <Settings size={24} />
-                            </button>
-                            <button
-                                onClick={handleSignOut}
-                                title="Sair"
-                                className="p-3 md:p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 text-red-500/80 hover:text-red-400 shadow-lg shadow-black/20"
-                            >
-                                <LogOut size={24} />
-                            </button>
-                        </div>
+                        <FloatingDockDesktop
+                            className="!flex mx-0 h-[72px] pb-2 px-4 bg-gray-50 dark:bg-neutral-900 rounded-full shadow-lg items-end gap-3 translate-y-2 md:translate-y-0"
+                            items={[
+                                {
+                                    title: "Notificações",
+                                    icon: <NotificationBell dockMode={true} />,
+                                    href: "#",
+                                },
+                                {
+                                    title: "Perfil",
+                                    icon: profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} alt="avatar" className="absolute inset-0 w-full h-full object-cover rounded-full" />
+                                    ) : (
+                                        <User className="absolute inset-0 w-full h-full p-[20%] text-white/40" />
+                                    ),
+                                    href: "/settings"
+                                },
+                                {
+                                    title: "Configurações",
+                                    icon: <Settings className="w-[85%] h-[85%] text-white/80" />,
+                                    href: "/settings"
+                                },
+                                {
+                                    title: "Sair",
+                                    icon: <LogOut className="w-[85%] h-[85%] text-red-500/80" />,
+                                    href: "#",
+                                    onClick: handleSignOut
+                                }
+                            ]}
+                        />
                     </header>
 
                     {preferences.dashboardStyle === 'cards' ? (

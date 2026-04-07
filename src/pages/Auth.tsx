@@ -104,7 +104,7 @@ export default function Auth() {
                                     <span className="text-white/30 group-hover:text-white transition-colors duration-700">ONEFLOW</span>
                                 </h1>
                                 <p className="text-[9px] font-bold tracking-[0.5em] text-white/20 uppercase">
-                                    Conecte-se com sua conta social
+                                    Escolha como se conectar
                                 </p>
                             </div>
 

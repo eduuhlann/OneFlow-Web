@@ -30,7 +30,7 @@ export default function AiPlanGenerator() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { profile } = useProfile();
-    const displayName = profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'irmão';
+    const displayName = profile?.display_name || profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'irmão';
 
     const [currentStep, setCurrentStep] = useState<Step>('theme');
     const [config, setConfig] = useState<PlanConfig>({

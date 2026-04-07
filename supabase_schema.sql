@@ -91,81 +91,7 @@ CREATE TABLE IF NOT EXISTS public.reading_progress (
   UNIQUE(user_id, book_abbrev, chapter_number)
 );
 
--- ATIVAR RLS EM TODAS AS TABELAS
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.discipleship_groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.discipleship_group_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.discipleship_connections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.discipleship_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.discipleship_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.discipleship_invites ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reading_progress ENABLE ROW LEVEL SECURITY;
-
--- POLÍTICAS RLS (Corrigidas para evitar recursão e garantir permissões)
--- Profiles
-DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
-CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
-CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Groups
-DROP POLICY IF EXISTS "View groups" ON public.discipleship_groups;
-CREATE POLICY "View groups" ON public.discipleship_groups FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Leader manage groups" ON public.discipleship_groups;
-CREATE POLICY "Leader manage groups" ON public.discipleship_groups FOR ALL USING (leader_id = auth.uid());
-
--- Group Members
-DROP POLICY IF EXISTS "View members" ON public.discipleship_group_members;
-CREATE POLICY "View members" ON public.discipleship_group_members FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Manage members" ON public.discipleship_group_members;
-CREATE POLICY "Manage members" ON public.discipleship_group_members FOR ALL USING (
-  user_id = auth.uid() OR 
-  group_id IN (SELECT id FROM public.discipleship_groups WHERE leader_id = auth.uid())
-);
-
--- Connections
-DROP POLICY IF EXISTS "View connections" ON public.discipleship_connections;
-CREATE POLICY "View connections" ON public.discipleship_connections FOR SELECT USING (leader_id = auth.uid() OR disciple_id = auth.uid());
-DROP POLICY IF EXISTS "Manage connections" ON public.discipleship_connections;
-CREATE POLICY "Manage connections" ON public.discipleship_connections FOR ALL USING (leader_id = auth.uid() OR disciple_id = auth.uid());
-
--- Notes
-DROP POLICY IF EXISTS "View notes" ON public.discipleship_notes;
-CREATE POLICY "View notes" ON public.discipleship_notes FOR SELECT USING (
-  author_id = auth.uid() OR leader_id = auth.uid() OR disciple_id = auth.uid() OR 
-  group_id IN (SELECT group_id FROM public.discipleship_group_members WHERE user_id = auth.uid() AND status = 'active')
-);
-DROP POLICY IF EXISTS "Insert notes" ON public.discipleship_notes;
-CREATE POLICY "Insert notes" ON public.discipleship_notes FOR INSERT WITH CHECK (author_id = auth.uid());
-DROP POLICY IF EXISTS "Update own notes" ON public.discipleship_notes;
-CREATE POLICY "Update own notes" ON public.discipleship_notes FOR UPDATE USING (author_id = auth.uid());
-DROP POLICY IF EXISTS "Delete own notes" ON public.discipleship_notes;
-CREATE POLICY "Delete own notes" ON public.discipleship_notes FOR DELETE USING (author_id = auth.uid());
-
--- Tasks
-DROP POLICY IF EXISTS "View tasks" ON public.discipleship_tasks;
-CREATE POLICY "View tasks" ON public.discipleship_tasks FOR SELECT USING (leader_id = auth.uid() OR disciple_id = auth.uid());
-DROP POLICY IF EXISTS "Manage tasks" ON public.discipleship_tasks;
-CREATE POLICY "Manage tasks" ON public.discipleship_tasks FOR ALL USING (leader_id = auth.uid() OR disciple_id = auth.uid());
-
--- Invites
-DROP POLICY IF EXISTS "Manage invites" ON public.discipleship_invites;
-CREATE POLICY "Manage invites" ON public.discipleship_invites FOR ALL USING (leader_id = auth.uid());
-DROP POLICY IF EXISTS "View invites" ON public.discipleship_invites;
-CREATE POLICY "View invites" ON public.discipleship_invites FOR SELECT USING (true);
-
--- Reading Progress
-DROP POLICY IF EXISTS "Users can manage own reading progress" ON public.reading_progress;
-CREATE POLICY "Users can manage own reading progress" ON public.reading_progress FOR ALL USING (user_id = auth.uid());
-DROP POLICY IF EXISTS "Leaders can view disciple progress" ON public.reading_progress;
-CREATE POLICY "Leaders can view disciple progress" ON public.reading_progress FOR SELECT USING (
-  user_id IN (SELECT disciple_id FROM public.discipleship_connections WHERE leader_id = auth.uid()) OR
-  user_id IN (SELECT user_id FROM public.discipleship_group_members WHERE group_id IN (SELECT id FROM public.discipleship_groups WHERE leader_id = auth.uid()))
-);
-
--- 8. CHAT CLEAR HISTORY
+-- 9. HISTÓRICO DE LIMPEZA DE CHAT
 CREATE TABLE IF NOT EXISTS public.chat_clear_history (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -174,20 +100,137 @@ CREATE TABLE IF NOT EXISTS public.chat_clear_history (
   cleared_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- RLS policies for Chat Clear History
+-- 10. FEEDBACK
+CREATE TABLE IF NOT EXISTS public.feedback (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  username TEXT,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- ATIVAR RLS EM TODAS AS TABELAS
+-- =====================================================
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipleship_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipleship_group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipleship_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipleship_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipleship_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discipleship_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reading_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_clear_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
+-- =====================================================
+-- POLÍTICAS RLS
+-- =====================================================
+
+-- Profiles: apenas usuários autenticados podem ver perfis
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by authenticated users" ON public.profiles;
+CREATE POLICY "Profiles are viewable by authenticated users" ON public.profiles
+  FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+CREATE POLICY "Users can insert own profile" ON public.profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Groups: apenas autenticados podem ver
+DROP POLICY IF EXISTS "View groups" ON public.discipleship_groups;
+CREATE POLICY "View groups" ON public.discipleship_groups
+  FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Leader manage groups" ON public.discipleship_groups;
+CREATE POLICY "Leader manage groups" ON public.discipleship_groups
+  FOR ALL USING (leader_id = auth.uid());
+
+-- Group Members: apenas autenticados podem ver; apenas líderes podem elevar roles
+DROP POLICY IF EXISTS "View members" ON public.discipleship_group_members;
+CREATE POLICY "View members" ON public.discipleship_group_members
+  FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Manage members" ON public.discipleship_group_members;
+CREATE POLICY "Members can manage their own membership" ON public.discipleship_group_members
+  FOR ALL USING (
+    -- Usuário pode gerenciar sua própria linha MAS não pode promover a si mesmo para admin
+    (user_id = auth.uid() AND (role IS NULL OR role = 'member')) OR
+    -- Líderes do grupo têm controle total
+    group_id IN (SELECT id FROM public.discipleship_groups WHERE leader_id = auth.uid())
+  );
+
+-- Connections
+DROP POLICY IF EXISTS "View connections" ON public.discipleship_connections;
+CREATE POLICY "View connections" ON public.discipleship_connections
+  FOR SELECT USING (leader_id = auth.uid() OR disciple_id = auth.uid());
+DROP POLICY IF EXISTS "Manage connections" ON public.discipleship_connections;
+CREATE POLICY "Manage connections" ON public.discipleship_connections
+  FOR ALL USING (leader_id = auth.uid() OR disciple_id = auth.uid());
+
+-- Notes
+DROP POLICY IF EXISTS "View notes" ON public.discipleship_notes;
+CREATE POLICY "View notes" ON public.discipleship_notes FOR SELECT USING (
+  author_id = auth.uid() OR leader_id = auth.uid() OR disciple_id = auth.uid() OR
+  group_id IN (SELECT group_id FROM public.discipleship_group_members WHERE user_id = auth.uid() AND status = 'active')
+);
+DROP POLICY IF EXISTS "Insert notes" ON public.discipleship_notes;
+CREATE POLICY "Insert notes" ON public.discipleship_notes
+  FOR INSERT WITH CHECK (author_id = auth.uid());
+DROP POLICY IF EXISTS "Update own notes" ON public.discipleship_notes;
+CREATE POLICY "Update own notes" ON public.discipleship_notes
+  FOR UPDATE USING (author_id = auth.uid());
+DROP POLICY IF EXISTS "Delete own notes" ON public.discipleship_notes;
+CREATE POLICY "Delete own notes" ON public.discipleship_notes
+  FOR DELETE USING (author_id = auth.uid());
+
+-- Tasks
+DROP POLICY IF EXISTS "View tasks" ON public.discipleship_tasks;
+CREATE POLICY "View tasks" ON public.discipleship_tasks
+  FOR SELECT USING (leader_id = auth.uid() OR disciple_id = auth.uid());
+DROP POLICY IF EXISTS "Manage tasks" ON public.discipleship_tasks;
+CREATE POLICY "Manage tasks" ON public.discipleship_tasks
+  FOR ALL USING (leader_id = auth.uid() OR disciple_id = auth.uid());
+
+-- Invites: apenas autenticados podem ver (para validar código)
+DROP POLICY IF EXISTS "Manage invites" ON public.discipleship_invites;
+CREATE POLICY "Manage invites" ON public.discipleship_invites
+  FOR ALL USING (leader_id = auth.uid());
+DROP POLICY IF EXISTS "View invites" ON public.discipleship_invites;
+CREATE POLICY "View invites" ON public.discipleship_invites
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Reading Progress
+DROP POLICY IF EXISTS "Users can manage own reading progress" ON public.reading_progress;
+CREATE POLICY "Users can manage own reading progress" ON public.reading_progress
+  FOR ALL USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Leaders can view disciple progress" ON public.reading_progress;
+CREATE POLICY "Leaders can view disciple progress" ON public.reading_progress FOR SELECT USING (
+  user_id IN (SELECT disciple_id FROM public.discipleship_connections WHERE leader_id = auth.uid()) OR
+  user_id IN (SELECT user_id FROM public.discipleship_group_members WHERE group_id IN (SELECT id FROM public.discipleship_groups WHERE leader_id = auth.uid()))
+);
+
+-- Chat Clear History
 DROP POLICY IF EXISTS "Users manage their own clear history" ON public.chat_clear_history;
-CREATE POLICY "Users manage their own clear history" ON public.chat_clear_history FOR ALL USING (user_id = auth.uid());
+CREATE POLICY "Users manage their own clear history" ON public.chat_clear_history
+  FOR ALL USING (user_id = auth.uid());
 
+-- Feedback: qualquer usuário autenticado pode inserir o seu próprio; ninguém pode ler
+DROP POLICY IF EXISTS "Users can only insert their own feedback" ON public.feedback;
+CREATE POLICY "Users can only insert their own feedback" ON public.feedback
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Feedback only viewable by admins" ON public.feedback;
+-- SELECT bloqueado por padrão — apenas via service role no dashboard do Supabase
 
--- FUNÇÃO E GATILHO PARA NOVOS USUÁRIOS (Corrigido/Garantido)
+-- =====================================================
+-- FUNÇÃO E GATILHO PARA NOVOS USUÁRIOS
+-- =====================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, username, avatar_url)
   VALUES (
-    new.id, 
+    new.id,
     COALESCE(new.raw_user_meta_data->>'username', new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'avatar_url'
   )

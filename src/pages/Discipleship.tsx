@@ -305,7 +305,7 @@ const Discipleship: React.FC = () => {
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    await channel.track({ isTyping: false, name: profile?.username || 'Usuário' });
+                    await channel.track({ isTyping: false, name: profile?.display_name || profile?.username || 'Usuário' });
                 }
             });
 
@@ -315,18 +315,18 @@ const Discipleship: React.FC = () => {
             channel.unsubscribe();
             presenceChannelRef.current = null;
         };
-    }, [selectedConnection?.id, user, profile?.username]);
+    }, [selectedConnection?.id, user, profile?.display_name, profile?.username]);
 
     const handleTyping = (text: string) => {
         setNoteInput(text);
         
         if (presenceChannelRef.current) {
-            presenceChannelRef.current.track({ isTyping: text.trim().length > 0, name: profile?.username || 'Usuário' });
+            presenceChannelRef.current.track({ isTyping: text.trim().length > 0, name: profile?.display_name || profile?.username || 'Usuário' });
             
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             typingTimeoutRef.current = setTimeout(() => {
                 if (presenceChannelRef.current) {
-                    presenceChannelRef.current.track({ isTyping: false, name: profile?.username || 'Usuário' });
+                    presenceChannelRef.current.track({ isTyping: false, name: profile?.display_name || profile?.username || 'Usuário' });
                 }
             }, 3000);
         }
@@ -507,7 +507,7 @@ const Discipleship: React.FC = () => {
                 book: challengeData.book,
                 start: challengeData.start,
                 end: challengeData.end,
-                leaderName: profile?.username || 'Líder',
+                leaderName: profile?.display_name || profile?.username || 'Líder',
                 participants: []
             })}`;
 
@@ -689,8 +689,8 @@ const Discipleship: React.FC = () => {
             message: 'Tem certeza que deseja sair deste grupo de discipulado?',
             onConfirm: async () => {
                 try {
-                    const username = profile?.username || 'Um usuário';
-                    await discipleshipService.leaveGroup(selectedConnection.id, user.id, username);
+                    const userNameForLog = profile?.display_name || profile?.username || 'Um usuário';
+                    await discipleshipService.leaveGroup(selectedConnection.id, user.id, userNameForLog);
                     setSelectedConnection(null);
                     setView('list');
                     loadConnections();
@@ -929,7 +929,7 @@ const Discipleship: React.FC = () => {
                                         </div>
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="font-bold text-sm">{conn.type === 'group' ? conn.name : (conn.profile?.username || 'Usuário')}</span>
+                                                <span className="font-bold text-sm">{conn.type === 'group' ? conn.name : (conn.profile?.display_name || conn.profile?.username || 'Usuário')}</span>
                                                 {conn.type !== 'self' && (
                                                     <span className={cn(
                                                         "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
@@ -1002,7 +1002,7 @@ const Discipleship: React.FC = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-sm md:text-xl tracking-tight leading-tight">{selectedConnection.name || selectedConnection.profile?.username}</h3>
+                                                <h3 className="font-bold text-sm md:text-xl tracking-tight leading-tight">{selectedConnection.name || selectedConnection.profile?.display_name || selectedConnection.profile?.username}</h3>
                                                 <div className="flex items-center gap-2">
                                                     {selectedConnection.type === 'group' ? (
                                                         <div 

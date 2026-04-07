@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 export interface UserProfile {
     id: string;
     username: string | null;
+    display_name: string | null;
     avatar_url: string | null;
     banner_url: string | null;
     bio: string | null;

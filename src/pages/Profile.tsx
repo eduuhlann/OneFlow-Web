@@ -31,7 +31,8 @@ const Profile: React.FC = () => {
     const { user } = useAuth();
     const { profile, updateProfile } = useProfile();
     
-    const [name, setName] = useState(profile?.username || user?.user_metadata?.username || '');
+    const [displayName, setDisplayName] = useState(profile?.display_name || profile?.username || user?.user_metadata?.username || '');
+    const [username, setUsername] = useState(profile?.username || user?.user_metadata?.username || '');
     const [bio, setBio] = useState(profile?.bio || '');
     const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
     const [previewUrl, setPreviewUrl] = useState(profile?.avatar_url || '');
@@ -52,7 +53,8 @@ const Profile: React.FC = () => {
     // Update internal state when profile context changes
     useEffect(() => {
         if (profile) {
-            setName(profile.username || '');
+            setDisplayName(profile.display_name || profile.username || '');
+            setUsername(profile.username || '');
             setBio(profile.bio || '');
             setAvatarUrl(profile.avatar_url || '');
             setPreviewUrl(profile.avatar_url || '');
@@ -131,8 +133,12 @@ const Profile: React.FC = () => {
         setError('');
         setSuccess(false);
         try {
+            // Basic validation for username
+            const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '_');
+            
             await updateProfile({ 
-                username: name, 
+                display_name: displayName,
+                username: cleanUsername, 
                 bio, 
                 avatar_url: avatarUrl || null,
                 banner_url: bannerUrl || null,
@@ -238,12 +244,12 @@ const Profile: React.FC = () => {
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                    <h2 className="text-2xl font-bold">
-                                        {name || user?.user_metadata?.username || user?.email?.split('@')[0]}
+                                    <h2 className="text-2xl font-black font-outfit uppercase tracking-tight">
+                                        {displayName || username || user?.email?.split('@')[0]}
                                     </h2>
                                 </div>
-                                <p className="text-white/30 text-xs mt-1 font-medium italic">
-                                    {user?.app_metadata?.provider === 'discord' ? 'Perfil Discord Sincronizado' : 'Perfil OneFlow'}
+                                <p className="text-white text-[11px] mt-0.5 font-black lowercase tracking-widest">
+                                    @{username || 'usuario'}
                                 </p>
                             </div>
 
@@ -285,16 +291,29 @@ const Profile: React.FC = () => {
                         )}
 
                         <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Nome de Exibição</label>
+                                    <input
+                                        type="text"
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3.5 px-4 focus:outline-none transition-all font-bold text-sm text-white"
+                                        placeholder="Como você quer ser chamado"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Nome de Usuário (@)</label>
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                                        className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3.5 px-4 focus:outline-none transition-all font-bold text-sm text-white"
+                                        placeholder="seu_id_unico"
+                                    />
+                                </div>
+                            </div>
                             <div className="space-y-2">
-                                <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Nome de Exibição</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm text-white"
-                                    placeholder="Seu nome"
-                                />
-                                                  <div className="space-y-2">
                                 <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Sobre Mim</label>
                                 <textarea
                                     value={bio}
@@ -306,9 +325,7 @@ const Profile: React.FC = () => {
                             </div>
                         </div>
                     </div>
-        </div>
                 </div>
-
             </div>
         </div>
         </PageTransition>

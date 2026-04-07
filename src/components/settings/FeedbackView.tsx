@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { MessageSquare, ChevronRight, Send, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, ChevronRight, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProfile } from '../../contexts/ProfileContext';
+import { supabase } from '../../services/supabase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -11,40 +13,40 @@ function cn(...inputs: ClassValue[]) {
 
 const FeedbackView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const { user } = useAuth();
+    const { profile } = useProfile();
     const [feedback, setFeedback] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!feedback.trim()) return;
+        if (!feedback.trim() || !user) return;
 
         setSubmitting(true);
-        const userName = user?.user_metadata?.name || user?.email || 'Usuário Anônimo';
-        
-        const data = {
-            username: userName,
-            feedback: feedback
-        };
+        setError('');
+
+        const userName = profile?.display_name || profile?.username || user?.user_metadata?.name || user?.email || 'Usuário Anônimo';
 
         try {
-            const res = await fetch('/api/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
-            if (res.ok) {
-                setSubmitted(true);
-                setFeedback('');
-                setTimeout(() => {
-                    onBack();
-                }, 2000);
-            } else {
-                console.error('Falha ao salvar feedback');
-            }
-        } catch (error) {
-            console.error('Erro ao enviar feedback', error);
+            const { error: supabaseError } = await supabase
+                .from('feedback')
+                .insert({
+                    user_id: user.id,
+                    username: userName,
+                    content: feedback.trim(),
+                });
+
+            if (supabaseError) throw supabaseError;
+
+            setSubmitted(true);
+            setFeedback('');
+            setTimeout(() => {
+                onBack();
+            }, 2500);
+        } catch (err: any) {
+            console.error('Erro ao enviar feedback', err);
+            setError('Não foi possível enviar o feedback. Tente novamente.');
         } finally {
             setSubmitting(false);
         }
@@ -80,10 +82,16 @@ const FeedbackView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <div className="flex flex-col items-center justify-center py-12 text-center text-emerald-400">
                             <CheckCircle2 size={64} className="mb-4 opacity-80" />
                             <h3 className="text-2xl font-black italic -rotate-1 mb-2">Obrigado pelo seu feedback!</h3>
-                            <p className="text-white/60">Seu feedback foi salvo com sucesso na pasta do projeto!</p>
+                            <p className="text-white/60">Seu feedback foi enviado com sucesso. Agradecemos a sua opinião!</p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {error && (
+                                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3 text-sm">
+                                    <AlertCircle size={16} />
+                                    {error}
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase mb-4">
                                     Conte-nos a sua ideia, bugs ou sugestões

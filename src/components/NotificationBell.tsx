@@ -42,7 +42,7 @@ const typeColor: Record<string, string> = {
     group_invite: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 
-export const NotificationBell: React.FC = () => {
+export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [count, setCount] = useState(0);
@@ -107,19 +107,23 @@ export const NotificationBell: React.FC = () => {
     };
 
     return (
-        <div ref={containerRef} className="relative">
+        <div ref={containerRef} className={`relative ${dockMode ? 'w-full h-full' : ''}`}>
             {/* Bell Button */}
             <button
                 onClick={handleToggle}
-                className="group relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
+                className={dockMode 
+                    ? "relative w-full h-full flex items-center justify-center" 
+                    : "group relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-gray-50 dark:bg-neutral-900 rounded-2xl hover:bg-gray-200 dark:hover:bg-neutral-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20"
+                }
             >
                 <motion.div
+                    className={dockMode ? "w-full h-full flex items-center justify-center" : ""}
                     whileHover={{ rotate: [0, 10, -10, 5, -5, 2, 0], transition: { duration: 0.9, ease: 'easeInOut' } }}
                 >
                     {count > 0 ? (
-                        <BellDot size={22} className="fill-white text-white" />
+                        <BellDot className={`fill-white text-white ${dockMode ? 'w-[85%] h-[85%]' : 'w-[22px] h-[22px]'}`} />
                     ) : (
-                        <Bell size={22} className="text-white" />
+                        <Bell className={`text-white ${dockMode ? 'w-[85%] h-[85%]' : 'w-[22px] h-[22px]'}`} />
                     )}
                 </motion.div>
 

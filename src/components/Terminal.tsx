@@ -28,7 +28,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const displayName = profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'usuario';
+    const displayName = profile?.display_name || profile?.username || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'usuario';
 
     useEffect(() => {
         if (isOpen) {
