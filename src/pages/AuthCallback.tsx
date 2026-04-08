@@ -12,12 +12,18 @@ export default function AuthCallback() {
         handled.current = true;
 
         const handleCallback = async () => {
-            const params = new URLSearchParams(window.location.search);
-            const code = params.get('code');
-            const errorParam = params.get('error');
-            const errorDescription = params.get('error_description');
+            // 1. Tenta pegar parâmetros tanto da interrogação (?) quanto do hash (#)
+            // O Supabase v2 pode usar ?code= (PKCE) ou #access_token= (Implicit)
+            const searchParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+            
+            const code = searchParams.get('code');
+            const errorParam = searchParams.get('error') || hashParams.get('error');
+            const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
+            
+            const hasAccessToken = hashParams.get('access_token');
 
-            // Erro vindo do provider (Google/Supabase)
+            // Erro vindo do provider
             if (errorParam) {
                 console.error('[AuthCallback] Provider error:', errorParam, errorDescription);
                 setErrorMsg(errorDescription || errorParam);
@@ -25,12 +31,11 @@ export default function AuthCallback() {
                 return;
             }
 
-            // PKCE: troca explícita do code por sessão
+            // Fluxo PKCE (código explícito na URL)
             if (code) {
                 const { data, error } = await supabase.auth.exchangeCodeForSession(code);
                 if (error) {
-                    console.error('[AuthCallback] exchangeCodeForSession error:', error);
-                    setErrorMsg(error.message);
+                    setErrorMsg("Falha ao trocar código: " + error.message);
                     setTimeout(() => navigate('/auth', { replace: true }), 3000);
                     return;
                 }
@@ -40,7 +45,22 @@ export default function AuthCallback() {
                 }
             }
 
-            // Sem code na URL — verifica se já há sessão ativa (implicit flow / fallback)
+            // Fluxo Implícito (Supabase client não pegou porque detectSessionInUrl = false)
+            if (hasAccessToken) {
+               const refreshToken = hashParams.get('refresh_token');
+               if (refreshToken) {
+                   const { data, error } = await supabase.auth.setSession({
+                       access_token: hasAccessToken,
+                       refresh_token: refreshToken
+                   });
+                   if (!error && data.session) {
+                       navigate('/dashboard', { replace: true });
+                       return;
+                   }
+               }
+            }
+
+            // Tenta pegar a sessão ativa (fallback geral)
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 navigate('/dashboard', { replace: true });
@@ -48,8 +68,9 @@ export default function AuthCallback() {
             }
 
             // Nada funcionou
-            console.warn('[AuthCallback] No code param and no session found.');
-            navigate('/auth', { replace: true });
+            setErrorMsg("Nenhuma credencial de login encontrada na URL. Tente novamente.");
+            setTimeout(() => navigate('/auth', { replace: true }), 3000);
+            return;
         };
 
         handleCallback();
