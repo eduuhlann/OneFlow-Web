@@ -31,7 +31,7 @@ export default function Auth() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `${import.meta.env.VITE_SITE_URL || window.location.origin}/dashboard`,
+                    redirectTo: `${import.meta.env.VITE_SITE_URL || window.location.origin}/auth/callback`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',

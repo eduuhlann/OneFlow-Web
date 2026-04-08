@@ -9,6 +9,7 @@ import { DiscipleshipListener } from './components/DiscipleshipListener';
 
 // Pages
 import Auth from './pages/Auth';
+import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Bible from './pages/Bible';
 
@@ -29,10 +30,11 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to={`/dashboard${location.search}${location.hash}`} replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
@@ -101,16 +103,16 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ProfileProvider>
-        <PreferencesProvider>
-          <Router>
+    <Router>
+      <AuthProvider>
+        <ProfileProvider>
+          <PreferencesProvider>
             <DiscipleshipListener />
             <AnimatedRoutes />
-          </Router>
-        </PreferencesProvider>
-      </ProfileProvider>
-    </AuthProvider>
+          </PreferencesProvider>
+        </ProfileProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
