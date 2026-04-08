@@ -1,43 +1,55 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 
 export default function AuthCallback() {
     const navigate = useNavigate();
     const handled = useRef(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
         if (handled.current) return;
         handled.current = true;
 
-        let timeoutId: ReturnType<typeof setTimeout>;
-
         const handleCallback = async () => {
-            // 1) Verifica se já há sessão (caso o Supabase tenha processado antes de montar)
-            const { data: { session: existingSession } } = await supabase.auth.getSession();
-            if (existingSession) {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const errorParam = params.get('error');
+            const errorDescription = params.get('error_description');
+
+            // Erro vindo do provider (Google/Supabase)
+            if (errorParam) {
+                console.error('[AuthCallback] Provider error:', errorParam, errorDescription);
+                setErrorMsg(errorDescription || errorParam);
+                setTimeout(() => navigate('/auth', { replace: true }), 3000);
+                return;
+            }
+
+            // PKCE: troca explícita do code por sessão
+            if (code) {
+                const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+                if (error) {
+                    console.error('[AuthCallback] exchangeCodeForSession error:', error);
+                    setErrorMsg(error.message);
+                    setTimeout(() => navigate('/auth', { replace: true }), 3000);
+                    return;
+                }
+                if (data.session) {
+                    navigate('/dashboard', { replace: true });
+                    return;
+                }
+            }
+
+            // Sem code na URL — verifica se já há sessão ativa (implicit flow / fallback)
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
                 navigate('/dashboard', { replace: true });
                 return;
             }
 
-            // 2) Escuta mudanças de auth — aguarda SIGNED_IN
-            //    NÃO redireciona em INITIAL_SESSION (pode vir com session null antes do exchange)
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN' && session) {
-                    clearTimeout(timeoutId);
-                    subscription.unsubscribe();
-                    navigate('/dashboard', { replace: true });
-                }
-                // Ignora INITIAL_SESSION com null — o Supabase ainda está trocando o code
-                // Só redireciona pro auth se houver TOKEN_REFRESHED_ERROR ou similar
-            });
-
-            // 3) Timeout de segurança: tenta getSession uma última vez após 6s
-            timeoutId = setTimeout(async () => {
-                subscription.unsubscribe();
-                const { data: { session: fallbackSession } } = await supabase.auth.getSession();
-                navigate(fallbackSession ? '/dashboard' : '/auth', { replace: true });
-            }, 6000);
+            // Nada funcionou
+            console.warn('[AuthCallback] No code param and no session found.');
+            navigate('/auth', { replace: true });
         };
 
         handleCallback();
@@ -53,24 +65,37 @@ export default function AuthCallback() {
             flexDirection: 'column',
             gap: '16px',
         }}>
-            <div style={{
-                width: 40,
-                height: 40,
-                border: '3px solid rgba(255,255,255,0.1)',
-                borderTop: '3px solid white',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-            }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            <p style={{
-                color: 'rgba(255,255,255,0.4)',
-                fontSize: 12,
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                fontFamily: 'sans-serif',
-            }}>
-                Autenticando...
-            </p>
+            {errorMsg ? (
+                <>
+                    <p style={{ color: '#ef4444', fontSize: 13, fontFamily: 'sans-serif', textAlign: 'center', maxWidth: 320, padding: '0 16px' }}>
+                        {errorMsg}
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontFamily: 'sans-serif' }}>
+                        Redirecionando...
+                    </p>
+                </>
+            ) : (
+                <>
+                    <div style={{
+                        width: 40,
+                        height: 40,
+                        border: '3px solid rgba(255,255,255,0.1)',
+                        borderTop: '3px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite',
+                    }} />
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    <p style={{
+                        color: 'rgba(255,255,255,0.4)',
+                        fontSize: 12,
+                        letterSpacing: '0.3em',
+                        textTransform: 'uppercase',
+                        fontFamily: 'sans-serif',
+                    }}>
+                        Autenticando...
+                    </p>
+                </>
+            )}
         </div>
     );
 }
