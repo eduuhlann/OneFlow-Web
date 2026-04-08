@@ -10,26 +10,34 @@ export default function AuthCallback() {
         if (handled.current) return;
         handled.current = true;
 
+        let timeoutId: ReturnType<typeof setTimeout>;
+
         const handleCallback = async () => {
-            // Supabase detectSessionInUrl faz o exchange automaticamente.
-            // Só precisa esperar o onAuthStateChange disparar.
+            // 1) Verifica se já há sessão (caso o Supabase tenha processado antes de montar)
+            const { data: { session: existingSession } } = await supabase.auth.getSession();
+            if (existingSession) {
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+
+            // 2) Escuta mudanças de auth — aguarda SIGNED_IN
+            //    NÃO redireciona em INITIAL_SESSION (pode vir com session null antes do exchange)
             const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_IN' && session) {
+                    clearTimeout(timeoutId);
                     subscription.unsubscribe();
                     navigate('/dashboard', { replace: true });
-                } else if (event === 'SIGNED_OUT' || !session) {
-                    subscription.unsubscribe();
-                    navigate('/auth', { replace: true });
                 }
+                // Ignora INITIAL_SESSION com null — o Supabase ainda está trocando o code
+                // Só redireciona pro auth se houver TOKEN_REFRESHED_ERROR ou similar
             });
 
-            // Timeout de segurança: se demorar mais de 5s, manda pro auth
-            setTimeout(() => {
+            // 3) Timeout de segurança: tenta getSession uma última vez após 6s
+            timeoutId = setTimeout(async () => {
                 subscription.unsubscribe();
-                supabase.auth.getSession().then(({ data: { session } }) => {
-                    navigate(session ? '/dashboard' : '/auth', { replace: true });
-                });
-            }, 5000);
+                const { data: { session: fallbackSession } } = await supabase.auth.getSession();
+                navigate(fallbackSession ? '/dashboard' : '/auth', { replace: true });
+            }, 6000);
         };
 
         handleCallback();
@@ -54,7 +62,13 @@ export default function AuthCallback() {
                 animation: 'spin 0.8s linear infinite',
             }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', fontFamily: 'sans-serif' }}>
+            <p style={{
+                color: 'rgba(255,255,255,0.4)',
+                fontSize: 12,
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                fontFamily: 'sans-serif',
+            }}>
                 Autenticando...
             </p>
         </div>
