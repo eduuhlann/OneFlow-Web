@@ -54,9 +54,52 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'lord-icon': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        src?: string;
+        trigger?: string;
+        colors?: string;
+        style?: React.CSSProperties;
+      };
+    }
+  }
+}
+
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
+
+// Wrapper for LordIcon. When a valid JSON src is provided, it renders the animated icon.
+// Fallbacks to the default Lucide/Tabler icon if src is empty or placeholder.
+const AnimatedIcon = ({ 
+    src, 
+    fallback: FallbackIcon, 
+    size = 24, 
+    className 
+}: { 
+    src?: string, 
+    fallback: React.ElementType, 
+    size?: number,
+    className?: string
+}) => {
+    // If user hasn't added the URL yet, render the original static icon
+    if (!src || src.includes('COLOQUE_O_LINK_AQUI')) {
+        return <FallbackIcon size={size} className={className} />;
+    }
+
+    return (
+        <div className={cn("flex items-center justify-center", className)} style={{ width: size, height: size }}>
+            <lord-icon
+                src={src}
+                trigger="hover"
+                colors="primary:#ffffff,secondary:#ffffff"
+                style={{ width: `${size}px`, height: `${size}px` }}
+            ></lord-icon>
+        </div>
+    );
+};
 
 const MAP_SIZE = 4000;
 const NODE_SPACING = 300;
@@ -202,10 +245,15 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
                     style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
                 >
                     <div 
-                        className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 transition-all"
+                        className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 relative"
                         style={{ transform: "translateZ(30px)" }}
                     >
-                        <item.icon size={20} className="text-white" />
+                        <AnimatedIcon 
+                            src={item.lordIconSrc} 
+                            fallback={item.icon} 
+                            size={20} 
+                            className="text-white transition-all duration-300 group-hover:scale-[1.2]" 
+                        />
                     </div>
 
                     <h3 
@@ -288,14 +336,19 @@ export default function Dashboard() {
 
     const menuItems = useMemo(() => {
         const items = [
-            { id: 'bible', icon: BookOpen, label: 'Bíblia', description: 'Continue sua leitura', path: '/bible' },
-            { id: 'discipleship', icon: User, label: 'Discipulado', description: 'Cresça acompanhado', path: '/discipleship' },
-            { id: 'journey', icon: MapIcon, label: 'Jornada', description: 'Explore o caminho da fé', path: '/journey' },
+            // Para adicionar os ícones animados:
+            // 1. Acesse https://lordicon.com/icons/system/regular
+            // 2. Escolha o ícone
+            // 3. Clique em "Embed HTML" e copie a URL do src (ex: https://cdn.lordicon.com/wxnxiano.json)
+            // 4. Cole no 'lordIconSrc' abaixo
+            { id: 'bible', icon: BookOpen, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_BIBLIA.json', label: 'Bíblia', description: 'Continue sua leitura', path: '/bible' },
+            { id: 'discipleship', icon: User, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_DISCIPULADO.json', label: 'Discipulado', description: 'Cresça acompanhado', path: '/discipleship' },
+            { id: 'journey', icon: MapIcon, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_JORNADA.json', label: 'Jornada', description: 'Explore o caminho da fé', path: '/journey' },
 
-            { id: 'plans', icon: Calendar, label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
-            { id: 'prayer', icon: Clock, label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
-            { id: 'customize', icon: PaletteIcon, label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
-            { id: 'terminal', icon: IconTerminal2, label: 'Terminal', description: 'Acesso ao sistema', action: () => setIsTerminalOpen(true) },
+            { id: 'plans', icon: Calendar, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_PLANOS.json', label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
+            { id: 'prayer', icon: Clock, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_ORACAO.json', label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
+            { id: 'customize', icon: PaletteIcon, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_PERSONALIZAR.json', label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
+            { id: 'terminal', icon: IconTerminal2, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_TERMINAL.json', label: 'Terminal', description: 'Acesso ao sistema', action: () => setIsTerminalOpen(true) },
         ];
 
         if (preferences.menuOrder) {
@@ -477,12 +530,12 @@ export default function Dashboard() {
                                 },
                                 {
                                     title: "Configurações",
-                                    icon: <Settings className="w-[85%] h-[85%] text-white/80" />,
+                                    icon: <AnimatedIcon fallback={Settings} src="COLOQUE_O_LINK_AQUI_PARA_CONFIGURACOES.json" className="w-[85%] h-[85%] text-white/80 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />,
                                     href: "/settings"
                                 },
                                 {
                                     title: "Sair",
-                                    icon: <LogOut className="w-[85%] h-[85%] text-red-500/80" />,
+                                    icon: <LogOut className="w-[85%] h-[85%] text-red-500/80 transition-all duration-300 group-hover:-translate-x-1 group-hover:scale-110" />,
                                     href: "#",
                                     onClick: handleSignOut
                                 }
@@ -522,7 +575,7 @@ export default function Dashboard() {
                                     mobileClassName="translate-y-20"
                                     items={menuItems.map(item => ({
                                         title: item.label,
-                                        icon: <item.icon className="h-full w-full text-neutral-500 dark:text-neutral-300" />,
+                                        icon: <AnimatedIcon src={item.lordIconSrc} fallback={item.icon} className="h-full w-full text-neutral-500 dark:text-neutral-300" />,
                                         href: item.path || '#',
                                         onClick: item.action
                                     }))}

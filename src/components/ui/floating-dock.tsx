@@ -170,7 +170,7 @@ function IconContainer({
         if (onClick) onClick();
         else window.location.href = href;
       }}
-      className="cursor-pointer"
+      className="cursor-pointer group"
     >
       <motion.div
         ref={ref}

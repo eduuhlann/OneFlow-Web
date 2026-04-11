@@ -1,18 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
     ArrowLeft,
     Camera,
     Save,
     User,
-    Mail,
-    Lock,
     Upload,
     AlertCircle,
-    CheckCircle2,
-    MessageSquare,
-    Zap,
-    Sparkles
+    CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -156,19 +151,29 @@ const Profile: React.FC = () => {
 
     return (
         <PageTransition>
-        <div className="min-h-screen bg-[#0f0f10] text-white overflow-x-hidden font-sans">
-            <div className="max-w-[800px] mx-auto p-4 md:p-8 mb-20">
-                <header className="flex items-center gap-6 mb-12 text-white/40">
-                    <button onClick={() => navigate('/settings')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-white">
-                        <ArrowLeft size={20} />
+        <div className="min-h-screen bg-black text-white overflow-x-hidden font-sans selection:bg-white/20">
+            {/* Ambient Background Glow */}
+            <div className="fixed inset-0 pointer-events-none opacity-20 hidden md:block">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500 blur-[150px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500 blur-[150px]" />
+            </div>
+
+            <div className="max-w-4xl mx-auto p-4 md:p-8 md:pt-12 mb-20 relative z-10">
+                <header className="flex items-center gap-6 mb-10">
+                    <button 
+                        onClick={() => navigate('/settings')} 
+                        className="group p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-2xl transition-all text-white/50 hover:text-white"
+                    >
+                        <ArrowLeft size={22} className="group-hover:-translate-x-1 transition-transform" />
                     </button>
-                    <h1 className="text-xl font-bold tracking-tight text-white">Editar Perfil</h1>
+                    <div>
+                        <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase mb-1 block">Ajustes OneFlow</span>
+                        <h1 className="text-3xl font-black italic tracking-tighter">Editar Perfil</h1>
+                    </div>
                 </header>
 
-                <div className="bg-[#1e1f22] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
+                <div className="bg-white/[0.02] backdrop-blur-2xl rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative">
                     
-                    {/* Efeitos de Perfil Desativados para Limpeza */}
-
                     {/* Banner Section */}
                     <div className="relative group/banner z-10">
                         <input
@@ -179,24 +184,28 @@ const Profile: React.FC = () => {
                             onChange={(e) => handleFileChange(e, 'banner')}
                         />
                         <div 
-                            className="w-full aspect-[2.5/1] relative cursor-pointer overflow-hidden transition-all bg-black"
+                            className="w-full h-48 md:h-64 relative cursor-pointer overflow-hidden transition-all bg-black/40"
                             onClick={() => bannerInputRef.current?.click()}
                             style={bannerPreviewUrl && bannerPreviewUrl.startsWith('#') ? { backgroundColor: bannerPreviewUrl } : {}}
                         >
                             {bannerPreviewUrl && !bannerPreviewUrl.startsWith('#') ? (
                                 <img src={bannerPreviewUrl} alt="Banner" className="w-full h-full object-cover" />
                             ) : !bannerPreviewUrl && (
-                                <div className="w-full h-full bg-[#111214] flex items-center justify-center text-white/5">
-                                    <Upload size={32} />
+                                <div className="w-full h-full flex flex-col items-center justify-center text-white/20 bg-gradient-to-br from-white/[0.05] to-transparent">
+                                    <Upload size={32} className="mb-2" />
+                                    <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Adicionar Banner</span>
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/banner:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                                <Camera size={24} className="text-white drop-shadow-lg" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/banner:opacity-100 transition-all flex flex-col items-center justify-center backdrop-blur-sm">
+                                <Camera size={28} className="text-white mb-2" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-white">Alterar Banner</span>
                             </div>
+                            {/* Inner shadow for smooth blending */}
+                            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent pointer-events-none" />
                         </div>
 
                         {/* Avatar Overlay */}
-                        <div className="absolute -bottom-16 left-6 z-20">
+                        <div className="absolute -bottom-16 left-8 z-20">
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -204,25 +213,24 @@ const Profile: React.FC = () => {
                                 accept="image/*,.gif"
                                 onChange={(e) => handleFileChange(e, 'avatar')}
                             />
-                            <div className="relative">
+                            <div className="relative group/avatar">
                                 <div 
-                                    className="w-32 h-32 rounded-full bg-[#1e1f22] p-[6px] cursor-pointer group/avatar relative z-10"
+                                    className="w-36 h-36 rounded-full bg-[#0a0a0a] p-2 cursor-pointer relative z-10"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
-
-                                    <div className="w-full h-full rounded-full bg-[#2b2d31] overflow-hidden relative border border-white/5">
+                                    <div className="w-full h-full rounded-full bg-white/5 overflow-hidden relative border border-white/10 group-hover/avatar:border-white/30 transition-colors">
                                         {previewUrl ? (
                                             <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
                                         ) : (
-                                            <User size={48} className="text-white/10 m-auto mt-7" />
+                                            <User size={48} className="text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                         )}
                                         {uploading && (
-                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
                                                 <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Camera size={20} className="text-white" />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-all flex flex-col items-center justify-center backdrop-blur-sm pb-1">
+                                            <Camera size={24} className="text-white mb-1" />
                                         </div>
                                     </div>
                                     {discordDecorationUrl && (
@@ -239,88 +247,123 @@ const Profile: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Profile Header */}
-                    <div className="pt-20 px-6 pb-6 border-b border-white/5 relative z-10">
-                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-2xl font-black font-outfit uppercase tracking-tight">
-                                        {displayName || username || user?.email?.split('@')[0]}
-                                    </h2>
-                                </div>
-                                <p className="text-white text-[11px] mt-0.5 font-black lowercase tracking-widest">
-                                    @{username || 'usuario'}
-                                </p>
-                            </div>
+                    {/* Profile Header actions */}
+                    <div className="pt-20 px-8 pb-8 flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-white/5 relative z-10">
+                        <div className="flex flex-col">
+                            <h2 className="text-3xl font-black tracking-tighter">
+                                {displayName || username || user?.email?.split('@')[0]}
+                            </h2>
+                            <p className="text-white/40 text-sm mt-1 font-bold lowercase tracking-wide flex items-center gap-1">
+                                <span className="text-white/20">@</span>{username || 'usuario'}
+                            </p>
+                        </div>
 
-                            <div className="flex flex-col items-end gap-3">
-                                <div className="flex items-center gap-3">
-                                    
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={isSaving || uploading}
-                                        className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-md font-bold text-[13px] transition-all disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {isSaving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
-                                        Salvar Perfil
-                                    </button>
-                                </div>
+                        <div className="flex flex-col items-end gap-3">
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleSave}
+                                disabled={isSaving || uploading}
+                                className="px-8 py-3.5 bg-white text-black hover:bg-white/90 rounded-2xl font-black text-xs tracking-[0.1em] uppercase transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                            >
+                                {isSaving ? (
+                                    <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                    <Save size={16} />
+                                )}
+                                Salvar Perfil
+                            </motion.button>
+                            <AnimatePresence>
                                 {showSaveWarning && (
                                     <motion.p 
-                                        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-                                        className="text-[10px] text-[#5865f2] font-black uppercase tracking-widest"
+                                        initial={{ opacity: 0, y: -5, filter: 'blur(4px)' }} 
+                                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                        exit={{ opacity: 0, y: -5, filter: 'blur(4px)' }}
+                                        className="text-[10px] text-white/50 font-bold uppercase tracking-widest"
                                     >
-                                        Dados sincronizados! Clique em "Salvar" para aplicar.
+                                        Dados sincronizados! Clique em salvar.
                                     </motion.p>
                                 )}
-                            </div>
+                            </AnimatePresence>
                         </div>
                     </div>
 
-                    {/* Detailed Info */}
-                    <div className="p-6 space-y-8 bg-[#18191c] relative z-10 min-h-[300px]">
-                        {error && (
-                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 flex items-center gap-3 text-xs font-bold">
-                                <AlertCircle size={16} /> {error}
-                            </div>
-                        )}
-                        {success && !showSaveWarning && (
-                            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 flex items-center gap-3 text-xs font-bold">
-                                <CheckCircle2 size={16} /> Sucesso! Alterações salvas.
-                            </div>
-                        )}
+                    {/* Form Fields */}
+                    <div className="p-8 space-y-8 relative z-10">
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }} 
+                                    animate={{ opacity: 1, height: 'auto' }} 
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3 text-sm font-medium mb-8">
+                                        <AlertCircle size={18} /> {error}
+                                    </div>
+                                </motion.div>
+                            )}
+                            {success && !showSaveWarning && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }} 
+                                    animate={{ opacity: 1, height: 'auto' }} 
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-green-400 flex items-center gap-3 text-sm font-medium mb-8">
+                                        <CheckCircle2 size={18} /> Sucesso! Alterações salvas.
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Nome de Exibição</label>
-                                    <input
-                                        type="text"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3.5 px-4 focus:outline-none transition-all font-bold text-sm text-white"
-                                        placeholder="Como você quer ser chamado"
-                                    />
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black tracking-[0.2em] text-white/40 uppercase ml-1 block">
+                                        Nome de Exibição
+                                    </label>
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-bold text-sm shadow-inner"
+                                            placeholder="Como você quer ser chamado"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Nome de Usuário (@)</label>
-                                    <input
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-                                        className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3.5 px-4 focus:outline-none transition-all font-bold text-sm text-white"
-                                        placeholder="seu_id_unico"
-                                    />
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black tracking-[0.2em] text-white/40 uppercase ml-1 block">
+                                        Username
+                                    </label>
+                                    <div className="relative group flex items-center">
+                                        <span className="absolute left-5 text-white/20 font-bold pointer-events-none">@</span>
+                                        <input
+                                            type="text"
+                                            value={username}
+                                            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 pl-10 pr-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-bold text-sm shadow-inner lowercase"
+                                            placeholder="seu_id_unico"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black tracking-wider text-white/40 uppercase">Sobre Mim</label>
+                            
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between ml-1 mb-1">
+                                    <label className="text-[10px] font-black tracking-[0.2em] text-white/40 uppercase">
+                                        Sobre Mim
+                                    </label>
+                                    <span className="text-[10px] font-bold text-white/20">
+                                        {bio.length}/160
+                                    </span>
+                                </div>
                                 <textarea
                                     value={bio}
-                                    onChange={(e) => setBio(e.target.value)}
-                                    className="w-full bg-[#111214] border border-transparent focus:border-[#5865f2] rounded-lg py-3 px-4 focus:outline-none transition-all font-medium text-sm text-white resize-none"
-                                    placeholder="Conte um pouco sobre você..."
-                                    rows={4}
+                                    onChange={(e) => setBio(e.target.value.slice(0, 160))}
+                                    className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-medium text-sm resize-none shadow-inner leading-relaxed min-h-[120px]"
+                                    placeholder="Escreva algo sobre você..."
                                 />
                             </div>
                         </div>
@@ -333,3 +376,4 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
+
