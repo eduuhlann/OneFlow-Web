@@ -168,7 +168,7 @@ const Profile: React.FC = () => {
                     </button>
                     <div>
                         <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase mb-1 block">Ajustes OneFlow</span>
-                        <h1 className="text-3xl font-black italic tracking-tighter">Editar Perfil</h1>
+                        <h1 className="text-3xl sm:text-4xl font-serif font-black italic -rotate-1 tracking-tighter">Editar Perfil</h1>
                     </div>
                 </header>
 
