@@ -22,7 +22,7 @@ import Discipleship from '@/src/pages/Discipleship';
 import Profile from './pages/Profile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
-import Journey from './pages/Journey';
+// import Journey from './pages/Journey';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -81,11 +81,11 @@ function AnimatedRoutes() {
             <Prayer />
           </ProtectedRoute>
         } />
-        <Route path="/journey" element={
+        {/* <Route path="/journey" element={
           <ProtectedRoute>
             <Journey />
           </ProtectedRoute>
-        } />
+        } /> */}
         <Route path="/settings" element={
           <ProtectedRoute>
             <Settings />

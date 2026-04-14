@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
+import { MfaVerificationModal } from '../components/MfaVerificationModal';
 import { supabase } from '../services/supabase';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
@@ -41,6 +42,8 @@ const Profile: React.FC = () => {
     const [fetchError, setFetchError] = useState<string | undefined>(undefined);
     const [success, setSuccess] = useState(false);
     const [showSaveWarning, setShowSaveWarning] = useState(false);
+    const [showMfaModal, setShowMfaModal] = useState(false);
+    const [pendingUpdates, setPendingUpdates] = useState<any>(null);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -128,9 +131,41 @@ const Profile: React.FC = () => {
         setError('');
         setSuccess(false);
         try {
-            // Basic validation for username
             const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '_');
             
+            // 1. Check if username changed and if it is unique
+            if (cleanUsername !== profile?.username) {
+                const { data: existingUser, error: checkError } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('username', cleanUsername)
+                    .single();
+
+                if (existingUser && existingUser.id !== user?.id) {
+                    setError('Este nome de usuário já está em uso.');
+                    setIsSaving(false);
+                    return;
+                }
+                
+                if (checkError && checkError.code !== 'PGRST116') {
+                    throw checkError;
+                }
+
+                // 2. Trigger MFA Modal for username change
+                setPendingUpdates({
+                    display_name: displayName,
+                    username: cleanUsername, 
+                    bio, 
+                    avatar_url: avatarUrl || null,
+                    banner_url: bannerUrl || null,
+                    discord_decoration_url: discordDecorationUrl || null
+                });
+                setShowMfaModal(true);
+                setIsSaving(false);
+                return;
+            }
+
+            // Normal update if username didn't change
             await updateProfile({ 
                 display_name: displayName,
                 username: cleanUsername, 
@@ -144,6 +179,22 @@ const Profile: React.FC = () => {
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
             setError(err.message || 'Erro ao salvar perfil.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleMfaVerified = async () => {
+        if (!pendingUpdates) return;
+        setIsSaving(true);
+        setShowMfaModal(false);
+        try {
+            await updateProfile(pendingUpdates);
+            setSuccess(true);
+            setPendingUpdates(null);
+            setTimeout(() => setSuccess(false), 3000);
+        } catch (err: any) {
+            setError(err.message || 'Erro ao salvar perfil após MFA.');
         } finally {
             setIsSaving(false);
         }
@@ -254,7 +305,7 @@ const Profile: React.FC = () => {
                                 {displayName || username || user?.email?.split('@')[0]}
                             </h2>
                             <p className="text-white/40 text-sm mt-1 font-bold lowercase tracking-wide flex items-center gap-1">
-                                <span className="text-white/20">@</span>{username || 'usuario'}
+                                {username || 'usuario'}
                             </p>
                         </div>
 
@@ -338,12 +389,11 @@ const Profile: React.FC = () => {
                                         Username
                                     </label>
                                     <div className="relative group flex items-center">
-                                        <span className="absolute left-5 text-white/20 font-bold pointer-events-none">@</span>
                                         <input
                                             type="text"
                                             value={username}
                                             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 pl-10 pr-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-bold text-sm shadow-inner lowercase"
+                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-bold text-sm shadow-inner lowercase"
                                             placeholder="seu_id_unico"
                                         />
                                     </div>
@@ -370,6 +420,12 @@ const Profile: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <MfaVerificationModal 
+                isOpen={showMfaModal}
+                onClose={() => setShowMfaModal(false)}
+                onVerified={handleMfaVerified}
+            />
         </div>
         </PageTransition>
     );

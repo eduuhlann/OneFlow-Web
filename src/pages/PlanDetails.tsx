@@ -62,7 +62,7 @@ export default function PlanDetails() {
             <header className="fixed top-0 left-0 right-0 p-6 md:p-12 z-50 flex justify-between items-center pointer-events-none">
                 <button 
                     onClick={() => navigate('/plans')} 
-                    className="pointer-events-auto flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
+                    className="pointer-events-auto flex items-center gap-2 text-white/40 hover:text-white transition-all duration-300 group"
                 >
                     <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                     <span className="font-bold text-[10px] tracking-[0.3em] uppercase sans">Voltar</span>
@@ -81,13 +81,13 @@ export default function PlanDetails() {
                     <span className="px-4 py-2 bg-white/5 rounded-full text-[10px] font-bold tracking-[0.3em] uppercase border border-white/10 text-white/40 mb-6 inline-block sans">
                         {plan.category === 'ai' ? 'Plano IA' : 'Plano Padrão'} • {plan.durationDays} Dias
                     </span>
-                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">{plan.title}</h1>
+                    <h1 className="text-4xl md:text-5xl font-serif italic tracking-tight mb-4">{plan.title}</h1>
                     <p className="text-white/40 text-lg italic opacity-80 max-w-lg mx-auto leading-relaxed">
                         {plan.description}
                     </p>
                 </motion.div>
 
-                <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[2.5rem] mb-12">
+                <div className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] mb-12 shadow-[0_10px_40px_-20px_rgba(255,255,255,0.05)]">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-bold tracking-[0.3em] uppercase text-white/40 sans">Progresso da Jornada</h3>
                         <span className="text-2xl font-black italic">{progress}%</span>
@@ -122,10 +122,10 @@ export default function PlanDetails() {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: Math.min(i * 0.05, 0.5) }}
                                 className={cn(
-                                    "w-full p-6 md:p-8 bg-white/5 border rounded-3xl transition-all",
+                                    "w-full p-6 md:p-8 bg-white/[0.03] border rounded-3xl transition-all duration-300",
                                     isCompleted 
-                                        ? "border-white/20 bg-white/10 opacity-75" 
-                                        : "border-white/5 hover:border-white/20 hover:bg-white/[0.07]"
+                                        ? "border-white/20 bg-white/10 opacity-75 shadow-inner" 
+                                        : "border-white/10 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_8px_30px_rgba(255,255,255,0.04)] hover:-translate-y-1"
                                 )}
                             >
                                 <div className="flex items-start gap-6 mb-6">
@@ -136,7 +136,7 @@ export default function PlanDetails() {
                                         {isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
                                     </div>
                                     <div className="flex-1 mt-1">
-                                        <h4 className="text-xl font-bold mb-1">Dia {dayNumber} {dayContent ? `- ${dayContent.title}` : ''}</h4>
+                                        <h4 className="text-2xl font-serif mb-1">Dia {dayNumber} {dayContent ? `- ${dayContent.title}` : ''}</h4>
                                         <p className="text-white/40 text-sm font-bold tracking-widest uppercase sans mb-4">
                                             {dayContent ? dayContent.verse : (isCompleted ? "Concluído" : "Pendente")}
                                         </p>
@@ -156,7 +156,7 @@ export default function PlanDetails() {
                                         "w-full py-4 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-2",
                                         isCompleted
                                             ? "bg-transparent border border-white/20 text-white/40 cursor-not-allowed"
-                                            : "bg-white text-black hover:bg-gray-200"
+                                            : "bg-white text-black hover:bg-white/90 hover:scale-[1.01] active:scale-[0.98]"
                                     )}
                                 >
                                     {isCompleted ? (

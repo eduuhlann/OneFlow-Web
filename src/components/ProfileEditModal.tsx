@@ -5,6 +5,7 @@ import { useProfile } from '../contexts/ProfileContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { translateAuthError } from '../services/authErrors';
+import { MfaVerificationModal } from './MfaVerificationModal';
 
 interface ProfileEditModalProps {
     onClose: () => void;
@@ -22,6 +23,8 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [showMfaModal, setShowMfaModal] = useState(false);
+    const [pendingUpdates, setPendingUpdates] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +82,44 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
         setSuccess(false);
         try {
             const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '_');
+            
+            // Uniqueness check
+            if (cleanUsername !== profile?.username) {
+                const { data: existingUser } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('username', cleanUsername)
+                    .single();
+
+                if (existingUser && existingUser.id !== user?.id) {
+                    setError('Username já está em uso.');
+                    setLoading(false);
+                    return;
+                }
+
+                // Trigger MFA
+                setPendingUpdates({ display_name: displayName, username: cleanUsername, avatar_url: avatarUrl || null, bio });
+                setShowMfaModal(true);
+                setLoading(false);
+                return;
+            }
+
             await updateProfile({ display_name: displayName, username: cleanUsername, avatar_url: avatarUrl || null, bio });
+            setSuccess(true);
+            setTimeout(() => onClose(), 1200);
+        } catch (err: any) {
+            setError(translateAuthError(err.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleMfaVerified = async () => {
+        if (!pendingUpdates) return;
+        setLoading(true);
+        setShowMfaModal(false);
+        try {
+            await updateProfile(pendingUpdates);
             setSuccess(true);
             setTimeout(() => onClose(), 1200);
         } catch (err: any) {
@@ -167,7 +207,7 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">USERNAME (@)</label>
+                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">USERNAME</label>
                         <input
                             type="text"
                             value={username}
@@ -209,6 +249,12 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                     </button>
                 </form>
             </motion.div>
+
+            <MfaVerificationModal 
+                isOpen={showMfaModal} 
+                onClose={() => setShowMfaModal(false)} 
+                onVerified={handleMfaVerified} 
+            />
         </motion.div>
     );
 }

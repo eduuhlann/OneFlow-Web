@@ -70,7 +70,7 @@ const Plans: React.FC = () => {
                         </button>
                         <div>
                             <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Jornadas Espirituais</span>
-                            <h1 className="text-2xl sm:text-4xl font-black italic -rotate-1 tracking-tighter">Meus Planos</h1>
+                            <h1 className="text-3xl sm:text-5xl font-serif italic tracking-tight">Meus Planos</h1>
                         </div>
                     </div>
                 </header>
@@ -94,13 +94,10 @@ const Plans: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-8 bg-white/[0.04] border border-white/10 rounded-[2.5rem] text-white mb-12 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group"
+                    className="p-8 bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 rounded-[2.5rem] text-white mb-12 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-all duration-300"
                 >
-                    <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-[2rem] flex items-center justify-center flex-shrink-0">
-                        <img src={logo} alt="OneFlow" className="w-10 h-10 object-contain grayscale opacity-40 group-hover:opacity-100 transition-opacity" />
-                    </div>
                     <div className="flex-1">
-                        <h2 className="text-2xl font-black mb-2 tracking-tight italic">Plano Personalizado com IA</h2>
+                        <h2 className="text-3xl font-serif mb-2 tracking-tight italic">Plano Personalizado com IA</h2>
                         <p className="text-white/40 text-sm font-medium leading-relaxed">Deixe a nossa IA criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
                     </div>
                     <button 
@@ -136,16 +133,14 @@ const Plans: React.FC = () => {
                                         <motion.div
                                             key={up.planId}
                                             layout
-                                            className="p-6 bg-white/5 border border-white/10 rounded-[2rem] group cursor-pointer hover:bg-white/[0.07] transition-all"
+                                            className="p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] group cursor-pointer hover:bg-white/[0.08] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(255,255,255,0.04)] hover:-translate-y-1"
                                             onClick={() => navigate(`/plans/${plan.id}`)}
                                         >
                                             <div className="flex items-center gap-6">
-                                                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
-                                                    <BookOpen size={24} />
-                                                </div>
+
                                                 <div className="flex-1">
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <h4 className="text-lg font-bold">{plan.title}</h4>
+                                                        <h4 className="text-xl font-serif">{plan.title}</h4>
                                                         <span className="text-[10px] font-black tracking-widest text-white/20 uppercase">{progress}% concluído</span>
                                                     </div>
                                                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -187,7 +182,7 @@ const Plans: React.FC = () => {
                                 <motion.div
                                     key={plan.id}
                                     whileHover={{ y: -5 }}
-                                    className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col justify-between group relative"
+                                    className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] flex flex-col justify-between group relative hover:bg-white/[0.05] transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(255,255,255,0.1)] hover:-translate-y-1"
                                 >
                                     {plan.category === 'ai' && (
                                         <button
@@ -202,15 +197,12 @@ const Plans: React.FC = () => {
                                         </button>
                                     )}
                                     <div>
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div className="p-4 bg-white/5 rounded-2xl text-white/20 group-hover:text-white transition-colors">
-                                                {plan.id === 'bible-365' ? <Calendar size={24} /> : <Timer size={24} />}
-                                            </div>
-                                            <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black tracking-widest uppercase border border-white/5 text-white/40">
+                                        <div className="flex items-start justify-between gap-4 mb-3">
+                                            <h4 className="text-2xl font-serif tracking-tight">{plan.title}</h4>
+                                            <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black tracking-widest uppercase border border-white/5 text-white/40 shrink-0 mt-2">
                                                 {plan.durationDays} DIAS
                                             </span>
                                         </div>
-                                        <h4 className="text-xl font-bold mb-3 tracking-tight">{plan.title}</h4>
                                         <p className="text-white/40 text-sm italic opacity-80">{plan.description}</p>
                                     </div>
                                     <div className="mt-8">

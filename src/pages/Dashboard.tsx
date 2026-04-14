@@ -3,8 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion, useMotionValue, useTransform, useSpring } from 'motion/react';
 import { FloatingDock, FloatingDockDesktop } from '../components/ui/floating-dock';
-import { Terminal } from '../components/Terminal';
-import { IconTerminal2 } from '@tabler/icons-react';
 import {
   DndContext,
   closestCenter,
@@ -37,7 +35,6 @@ import {
     User,
     Heart,
     Mountain,
-    Map as MapIcon,
     Compass,
     Palette as PaletteIcon,
     Image
@@ -54,18 +51,9 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'lord-icon': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        src?: string;
-        trigger?: string;
-        colors?: string;
-        style?: React.CSSProperties;
-      };
-    }
-  }
-}
+// function cn(...inputs: ClassValue[]) {
+//     return twMerge(clsx(inputs));
+// }
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -74,7 +62,6 @@ function cn(...inputs: ClassValue[]) {
 // Wrapper for LordIcon. When a valid JSON src is provided, it renders the animated icon.
 // Fallbacks to the default Lucide/Tabler icon if src is empty or placeholder.
 const AnimatedIcon = ({ 
-    src, 
     fallback: FallbackIcon, 
     size = 24, 
     className 
@@ -84,21 +71,7 @@ const AnimatedIcon = ({
     size?: number,
     className?: string
 }) => {
-    // If user hasn't added the URL yet, render the original static icon
-    if (!src || src.includes('COLOQUE_O_LINK_AQUI')) {
-        return <FallbackIcon size={size} className={className} />;
-    }
-
-    return (
-        <div className={cn("flex items-center justify-center", className)} style={{ width: size, height: size }}>
-            <lord-icon
-                src={src}
-                trigger="hover"
-                colors="primary:#ffffff,secondary:#ffffff"
-                style={{ width: `${size}px`, height: `${size}px` }}
-            ></lord-icon>
-        </div>
-    );
+    return <FallbackIcon size={size} className={className} />;
 };
 
 const MAP_SIZE = 4000;
@@ -287,7 +260,6 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const { preferences, updatePreference } = usePreferences();
     const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
-    const [isTerminalOpen, setIsTerminalOpen] = useState(false);
     const [stats, setStats] = useState(statsService.getStats());
     const [testamentFilter, setTestamentFilter] = useState<'VT' | 'NT' | null>(null);
 
@@ -308,15 +280,15 @@ export default function Dashboard() {
                 setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 2));
             }
         };
-        const container = constraintsRef.current;
-        if (container) {
-            container.addEventListener('wheel', handleWheel, { passive: false });
-        }
-        return () => {
-            if (container) {
-                container.removeEventListener('wheel', handleWheel);
-            }
-        };
+        // const container = constraintsRef.current;
+        // if (container) {
+        //     container.addEventListener('wheel', handleWheel, { passive: false });
+        // }
+        // return () => {
+        //     if (container) {
+        //         container.removeEventListener('wheel', handleWheel);
+        //     }
+        // };
     }, []);
 
     useEffect(() => {
@@ -341,14 +313,12 @@ export default function Dashboard() {
             // 2. Escolha o ícone
             // 3. Clique em "Embed HTML" e copie a URL do src (ex: https://cdn.lordicon.com/wxnxiano.json)
             // 4. Cole no 'lordIconSrc' abaixo
-            { id: 'bible', icon: BookOpen, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_BIBLIA.json', label: 'Bíblia', description: 'Continue sua leitura', path: '/bible' },
-            { id: 'discipleship', icon: User, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_DISCIPULADO.json', label: 'Discipulado', description: 'Cresça acompanhado', path: '/discipleship' },
-            { id: 'journey', icon: MapIcon, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_JORNADA.json', label: 'Jornada', description: 'Explore o caminho da fé', path: '/journey' },
+            { id: 'bible', icon: BookOpen, lordIconSrc: '', label: 'Bíblia', description: 'Continue sua leitura', path: '/bible' },
+            { id: 'discipleship', icon: User, lordIconSrc: '', label: 'Discipulado', description: 'Cresça acompanhado', path: '/discipleship' },
 
-            { id: 'plans', icon: Calendar, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_PLANOS.json', label: 'Planos', description: 'Sua jornada de estudo', path: '/plans' },
-            { id: 'prayer', icon: Clock, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_ORACAO.json', label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
-            { id: 'customize', icon: PaletteIcon, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_PERSONALIZAR.json', label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
-            { id: 'terminal', icon: IconTerminal2, lordIconSrc: 'COLOQUE_O_LINK_AQUI_PARA_TERMINAL.json', label: 'Terminal', description: 'Acesso ao sistema', action: () => setIsTerminalOpen(true) },
+            { id: 'plans', icon: Calendar, lordIconSrc: '', label: 'Planos', description: 'Seus planos de estudo', path: '/plans' },
+            { id: 'prayer', icon: Clock, lordIconSrc: '', label: 'Oração', description: 'Temporizador de oração', path: '/prayer' },
+            { id: 'customize', icon: PaletteIcon, lordIconSrc: '', label: 'Personalizar', description: 'Mude as cores e fundos', action: () => setIsCustomizationOpen(true) },
         ];
 
         if (preferences.menuOrder) {
@@ -390,108 +360,8 @@ export default function Dashboard() {
         }
     };
 
-    const constraintsRef = useRef<HTMLDivElement>(null);
-
-    // Calculate map state
-    const mapNodes = useMemo(() => {
-        const nodes = [];
-        let theta = 0;
-        let r = SPIRAL_A;
-
-        // Filter books based on testament selection
-        const filteredBooks = testamentFilter
-            ? STATIC_BOOKS.filter(b => b.testament === testamentFilter)
-            : STATIC_BOOKS;
-
-        for (let i = 0; i < filteredBooks.length; i++) {
-            const book = filteredBooks[i];
-
-            const noiseX = Math.sin(i * 2.1) * 60;
-            const noiseY = Math.cos(i * 1.7) * 60;
-
-            const x = MAP_SIZE / 2 + r * Math.cos(theta) + noiseX;
-            const y = MAP_SIZE / 2 + r * Math.sin(theta) + noiseY;
-
-            const isCompleted = statsService.isBookCompleted(book.abbrev.pt);
-            // ALL books are now unlocked
-            const isUnlocked = true;
-
-            nodes.push({
-                ...book,
-                index: i,
-                x,
-                y,
-                isCompleted,
-                isUnlocked,
-                isCurrent: isUnlocked && !isCompleted
-            });
-
-            const dTheta = NODE_SPACING / r;
-            theta += dTheta;
-            r = SPIRAL_A + SPIRAL_B * theta;
-        }
-        return nodes;
-    }, [stats, testamentFilter]);
-
-    const currentBookNode = useMemo(() => {
-        const abbrev = statsService.getLastReadBook();
-        const node = mapNodes.find(n => n.abbrev.pt === abbrev);
-        return node || mapNodes.find(n => n.isCurrent) || mapNodes[0];
-    }, [mapNodes]);
-
-    const initialX = useMemo(() => {
-        if (!currentBookNode) return 0;
-        const winWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth, 1280) : 1000;
-        return (winWidth / 2) - currentBookNode.x;
-    }, [currentBookNode?.x]);
-
-    const initialY = useMemo(() => {
-        if (!currentBookNode) return 0;
-        return 300 - currentBookNode.y;
-    }, [currentBookNode?.y]);
-
-    const decorations = useMemo(() => {
-        const rnd = LCG(12345);
-        return Array.from({ length: 150 }).map((_, i) => {
-            const x = rnd() * MAP_SIZE;
-            const y = rnd() * MAP_SIZE;
-            const type = rnd();
-            const size = 16 + rnd() * 48;
-            const opacity = 0.05 + rnd() * 0.15;
-            let Icon = Mountain;
-            if (type > 0.8) Icon = Sparkles;
-            else if (type > 0.6) Icon = Compass;
-            else if (type > 0.4) Icon = Sparkles;
-
-            const depth = rnd(); // 0 to 1
-            let layer: 'far' | 'mid' | 'near' = 'mid';
-            if (depth < 0.3) layer = 'far';
-            else if (depth > 0.7) layer = 'near';
-
-            return { id: i, x, y, size, opacity, Icon, layer };
-        });
-    }, []);
-
-    // Motion values for parallax
-    const mapX = useMotionValue(initialX);
-    const mapY = useMotionValue(initialY);
-
-    // Update map position when selection changes
-    useEffect(() => {
-        mapX.set(initialX);
-        mapY.set(initialY);
-    }, [initialX, initialY, mapX, mapY]);
-
-    // Parallax transforms - adjusting the relative movement
-    const farX = useTransform(mapX, (x) => (x - initialX) * -0.15);
-    const farY = useTransform(mapY, (y) => (y - initialY) * -0.15);
-
-    const nearX = useTransform(mapX, (x) => (x - initialX) * 0.15);
-    const nearY = useTransform(mapY, (y) => (y - initialY) * 0.15);
-
-    const farNodes = useMemo(() => decorations.filter(d => d.layer === 'far'), [decorations]);
-    const midNodes = useMemo(() => decorations.filter(d => d.layer === 'mid'), [decorations]);
-    const nearNodes = useMemo(() => decorations.filter(d => d.layer === 'near'), [decorations]);
+    const mapX = useMotionValue(0);
+    const mapY = useMotionValue(0);
 
     return (
         <PageTransition>
@@ -589,11 +459,6 @@ export default function Dashboard() {
             <CustomizationModal
                 isOpen={isCustomizationOpen}
                 onClose={() => setIsCustomizationOpen(false)}
-            />
-
-            <Terminal 
-                isOpen={isTerminalOpen}
-                onClose={() => setIsTerminalOpen(false)}
             />
         </PageTransition>
     );

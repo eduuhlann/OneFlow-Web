@@ -24,7 +24,7 @@ const defaultPreferences: UserPreferences = {
     theme: 'classic-dark',
     wallpaper: 'particles',
     dashboardLayout: ['nav'],
-    menuOrder: ['bible', 'journey', 'plans', 'prayer', 'customize'],
+    menuOrder: ['bible', 'plans', 'prayer', 'customize'],
     uploadedWallpapers: [],
     glassStyle: 'frosted',
     dashboardStyle: 'dock'
@@ -48,6 +48,9 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 const parsed = JSON.parse(saved);
                 if (parsed.dashboardLayout) {
                     parsed.dashboardLayout = parsed.dashboardLayout.filter((item: any) => item === 'nav');
+                }
+                if (parsed.menuOrder) {
+                    parsed.menuOrder = parsed.menuOrder.filter((item: string) => item !== 'journey');
                 }
                 return { ...defaultPreferences, ...parsed };
             } catch (e) {
