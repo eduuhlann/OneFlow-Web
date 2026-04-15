@@ -17,6 +17,8 @@ import { supabase } from '../services/supabase';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
 import PageTransition from '../components/PageTransition';
+import ImageCropModal from '../components/ImageCropModal';
+import getCroppedImg from '../utils/imageUtils';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -52,6 +54,12 @@ const Profile: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
 
+    // Cropping state
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [cropAspect, setCropAspect] = useState(1);
+    const [cropType, setCropType] = useState<'avatar' | 'banner'>('avatar');
+
     // Update internal state when profile context changes
     useEffect(() => {
         if (profile) {
@@ -68,7 +76,7 @@ const Profile: React.FC = () => {
         }
     }, [profile]);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
         const file = e.target.files?.[0];
         if (!file || !user) return;
 
@@ -77,23 +85,41 @@ const Profile: React.FC = () => {
             return;
         }
 
-        setError('');
+        const reader = new FileReader();
+        reader.onload = () => {
+            setImageToCrop(reader.result as string);
+            setCropType(type);
+            setCropAspect(type === 'banner' ? 2048 / 338 : 1);
+            setCropModalOpen(true);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const onCropComplete = async (croppedAreaPixels: any) => {
+        if (!imageToCrop || !user) return;
+        
+        setCropModalOpen(false);
         setUploading(true);
+        setError('');
 
         try {
-            const ext = file.name.split('.').pop();
-            const filePath = `${user.id}/${type}.${ext}`;
-            const bucket = type === 'avatar' ? 'avatars' : 'banners';
+            const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+            if (!croppedBlob) throw new Error('Falha ao processar imagem');
+
+            const ext = 'jpg'; // We output jpeg from getCroppedImg
+            const filePath = `${user.id}/${cropType}.${ext}`;
+            const bucket = cropType === 'avatar' ? 'avatars' : 'banners';
 
             const { error: uploadErr } = await supabase.storage
                 .from(bucket)
-                .upload(filePath, file, { upsert: true });
+                .upload(filePath, croppedBlob, { upsert: true });
 
             if (uploadErr) {
+                // Fallback to local preview if upload fails
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     const dataUrl = ev.target?.result as string;
-                    if (type === 'avatar') {
+                    if (cropType === 'avatar') {
                         setAvatarUrl(dataUrl);
                         setPreviewUrl(dataUrl);
                     } else {
@@ -101,11 +127,11 @@ const Profile: React.FC = () => {
                         setBannerPreviewUrl(dataUrl);
                     }
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(croppedBlob);
             } else {
                 const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
                 const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-                if (type === 'avatar') {
+                if (cropType === 'avatar') {
                     setAvatarUrl(publicUrl);
                     setPreviewUrl(publicUrl);
                 } else {
@@ -113,21 +139,14 @@ const Profile: React.FC = () => {
                     setBannerPreviewUrl(publicUrl);
                 }
             }
-        } catch {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const dataUrl = ev.target?.result as string;
-                if (type === 'avatar') {
-                    setAvatarUrl(dataUrl);
-                    setPreviewUrl(dataUrl);
-                } else {
-                    setBannerUrl(dataUrl);
-                    setBannerPreviewUrl(dataUrl);
-                }
-            };
-            reader.readAsDataURL(file);
+        } catch (err: any) {
+            setError(err.message || 'Erro ao processar imagem.');
         } finally {
             setUploading(false);
+            setImageToCrop(null);
+            // Reset input values to allow selecting the same file again if needed
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            if (bannerInputRef.current) bannerInputRef.current.value = '';
         }
     };
 
@@ -208,7 +227,7 @@ const Profile: React.FC = () => {
 
     return (
         <PageTransition>
-        <div className="min-h-screen bg-black/30 text-white overflow-x-hidden font-sans selection:bg-white/20">
+        <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans selection:bg-white/20">
 
             <div className="max-w-4xl mx-auto p-4 md:p-8 md:pt-12 mb-20 relative z-10">
                 <header className="flex items-center gap-6 mb-10">
@@ -224,7 +243,7 @@ const Profile: React.FC = () => {
                     </div>
                 </header>
 
-                <div className="bg-white/[0.02] backdrop-blur-2xl rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative">
+                <div className="bg-[#0a0a0a] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative">
                     
                     {/* Banner Section */}
                     <div className="relative group/banner z-10">
@@ -243,7 +262,7 @@ const Profile: React.FC = () => {
                             {bannerPreviewUrl && !bannerPreviewUrl.startsWith('#') ? (
                                 <img src={bannerPreviewUrl} alt="Banner" className="w-full h-full object-cover" />
                             ) : !bannerPreviewUrl && (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-white/20 bg-gradient-to-br from-white/[0.05] to-transparent">
+                                <div className="w-full h-full flex flex-col items-center justify-center text-white/20 bg-[#0d0d0d]">
                                     <Upload size={32} className="mb-2" />
                                     <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Adicionar Banner</span>
                                 </div>
@@ -276,7 +295,7 @@ const Profile: React.FC = () => {
                                 }}
                             >
                                 <div 
-                                    className="w-full h-full rounded-full bg-white/5 overflow-hidden relative border border-white/10 group-hover/avatar:border-white/30 transition-all font-sans"
+                                    className="w-full h-full rounded-full bg-[#121212] overflow-hidden relative border border-white/5 group-hover/avatar:border-white/20 transition-all font-sans"
                                     style={{ isolation: 'isolate', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
                                 >
                                     {previewUrl ? (
@@ -396,7 +415,7 @@ const Profile: React.FC = () => {
                                             type="text"
                                             value={displayName}
                                             onChange={(e) => setDisplayName(e.target.value)}
-                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm shadow-inner"
+                                            className="w-full bg-[#121212] border border-white/5 focus:border-sky-400/30 focus:bg-[#161616] rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm"
                                             placeholder="Como você quer ser chamado"
                                         />
                                     </div>
@@ -410,7 +429,7 @@ const Profile: React.FC = () => {
                                             type="text"
                                             value={username}
                                             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm shadow-inner lowercase"
+                                            className="w-full bg-[#121212] border border-white/5 focus:border-sky-400/30 focus:bg-[#161616] rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm lowercase"
                                             placeholder="seu_id_unico"
                                         />
                                     </div>
@@ -429,7 +448,7 @@ const Profile: React.FC = () => {
                                 <textarea
                                     value={bio}
                                     onChange={(e) => setBio(e.target.value.slice(0, 160))}
-                                    className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm resize-none shadow-inner leading-relaxed min-h-[120px]"
+                                    className="w-full bg-[#121212] border border-white/5 focus:border-sky-400/30 focus:bg-[#161616] rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm resize-none leading-relaxed min-h-[120px]"
                                     placeholder="Escreva algo sobre você..."
                                 />
                             </div>
@@ -442,6 +461,16 @@ const Profile: React.FC = () => {
                 isOpen={showMfaModal}
                 onClose={() => setShowMfaModal(false)}
                 onVerified={handleMfaVerified}
+            />
+
+            <ImageCropModal
+                isOpen={cropModalOpen}
+                onClose={() => setCropModalOpen(false)}
+                image={imageToCrop || ''}
+                aspect={cropAspect}
+                isBanner={cropType === 'banner'}
+                title={cropType === 'banner' ? 'Personalizar arte do banner' : 'Ajustar Avatar'}
+                onCropComplete={onCropComplete}
             />
         </div>
         </PageTransition>
