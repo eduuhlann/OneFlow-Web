@@ -253,6 +253,56 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
     );
 }
 
+const DockAvatar = ({ profile, user }: { profile: any, user: any }) => {
+    const [imgError, setImgError] = useState(false);
+    const [decoError, setDecoError] = useState(false);
+    
+    // Expanded fallbacks: 1. Profile URL, 2. Google metadata keys (avatar_url, picture, avatar, photoURL)
+    const meta = user?.user_metadata || {};
+    const url = profile?.avatar_url || meta.avatar_url || meta.picture || meta.avatar || meta.photoURL;
+
+    useEffect(() => {
+        setImgError(false);
+    }, [url]);
+
+    useEffect(() => {
+        setDecoError(false);
+    }, [profile?.discord_decoration_url]);
+
+    if (url && !imgError) {
+        return (
+            <div 
+                className="relative w-full h-full flex items-center justify-center rounded-full overflow-hidden"
+                style={{ isolation: 'isolate', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+            >
+                <img 
+                    key={url}
+                    src={url} 
+                    alt="avatar" 
+                    className="absolute inset-0 w-full h-full object-cover rounded-full"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={() => setImgError(true)}
+                />
+                {profile?.discord_decoration_url && !decoError && (
+                    <div className="absolute inset-[-18.5%] w-[137%] h-[137%] pointer-events-none z-20">
+                        <img 
+                            src={profile.discord_decoration_url} 
+                            alt="Decoração" 
+                            className="w-full h-full object-contain"
+                            crossOrigin="anonymous"
+                            onError={() => setDecoError(true)}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <User className="w-[85%] h-[85%] text-white/40 group-hover:text-white transition-colors" />
+    );
+};
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
@@ -365,9 +415,8 @@ export default function Dashboard() {
 
     return (
         <PageTransition>
-            <div className="min-h-screen bg-black text-white p-4 md:p-12 overflow-x-hidden selection:bg-white selection:text-black relative">
-                <ParticleBackground />
-                <div className="max-w-full relative z-10">
+        <div className="min-h-screen bg-black/30 text-white p-4 md:p-12 overflow-x-hidden selection:bg-white selection:text-black relative">
+            <div className="max-w-full relative z-10">
 
                     {/* Header */}
                     <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 md:mb-16">
@@ -391,12 +440,9 @@ export default function Dashboard() {
                                 },
                                 {
                                     title: "Perfil",
-                                    icon: profile?.avatar_url ? (
-                                        <img src={profile.avatar_url} alt="avatar" className="absolute inset-0 w-full h-full object-cover rounded-full" />
-                                    ) : (
-                                        <User className="absolute inset-0 w-full h-full p-[20%] text-white/40" />
-                                    ),
-                                    href: "/settings"
+                                    icon: <DockAvatar profile={profile} user={user} />,
+                                    href: "/profile",
+                                    full: true
                                 },
                                 {
                                     title: "Configurações",

@@ -17,8 +17,11 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
     const [displayName, setDisplayName] = useState(profile?.display_name || profile?.username || '');
     const [username, setUsername] = useState(profile?.username ?? '');
     const [bio, setBio] = useState(profile?.bio ?? '');
-    const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
-    const [previewUrl, setPreviewUrl] = useState(profile?.avatar_url ?? '');
+    const meta = user?.user_metadata || {};
+    const getBestUrl = () => profile?.avatar_url || meta.avatar_url || meta.picture || meta.avatar || meta.photoURL || '';
+
+    const [avatarUrl, setAvatarUrl] = useState(getBestUrl());
+    const [previewUrl, setPreviewUrl] = useState(getBestUrl());
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -153,9 +156,17 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                     <div
                         onClick={() => fileInputRef.current?.click()}
                         className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-white/20 bg-white/5 flex items-center justify-center cursor-pointer group"
+                        style={{ isolation: 'isolate', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
                     >
                         {previewUrl ? (
-                            <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" onError={() => setPreviewUrl('')} />
+                            <img 
+                                src={previewUrl} 
+                                alt="Avatar" 
+                                className="w-full h-full object-cover rounded-full" 
+                                referrerPolicy="no-referrer"
+                                crossOrigin="anonymous"
+                                onError={() => setPreviewUrl('')} 
+                            />
                         ) : (
                             <User size={40} className="text-white/30" />
                         )}

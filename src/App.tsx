@@ -22,6 +22,7 @@ import Discipleship from '@/src/pages/Discipleship';
 import Profile from './pages/Profile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import ParticleBackground from './components/ParticleBackground';
 // import Journey from './pages/Journey';
 
 function AnimatedRoutes() {
@@ -107,6 +108,7 @@ export default function App() {
       <AuthProvider>
         <ProfileProvider>
           <PreferencesProvider>
+            <ParticleBackground />
             <DiscipleshipListener />
             <AnimatedRoutes />
           </PreferencesProvider>

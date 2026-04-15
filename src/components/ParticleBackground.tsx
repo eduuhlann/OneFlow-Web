@@ -88,7 +88,7 @@ const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ forceParticles 
 
     return (
         <div className={cn(
-            "fixed inset-0 pointer-events-none z-0 transition-colors duration-1000",
+            "fixed inset-0 pointer-events-none z-[-1] transition-colors duration-1000 bg-black",
             preferences.wallpaper === 'mesh' && "bg-wallpaper-mesh",
             preferences.wallpaper === 'aurora' && "bg-wallpaper-aurora",
             preferences.wallpaper === 'none' && "bg-wallpaper-none"
@@ -97,7 +97,7 @@ const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ forceParticles 
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-60 mix-blend-screen" />
             )}
 
-            {isDashboard && preferences.wallpaper === 'custom' && preferences.customWallpaper && (
+            {preferences.wallpaper === 'custom' && preferences.customWallpaper && (
                 <div className="absolute inset-0 w-full h-full overflow-hidden">
                     {preferences.customWallpaper.type === 'video' ? (
                         <video

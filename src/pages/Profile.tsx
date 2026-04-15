@@ -26,15 +26,19 @@ const Profile: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { profile, updateProfile } = useProfile();
-    
     const [displayName, setDisplayName] = useState(profile?.display_name || profile?.username || user?.user_metadata?.username || '');
     const [username, setUsername] = useState(profile?.username || user?.user_metadata?.username || '');
     const [bio, setBio] = useState(profile?.bio || '');
-    const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
-    const [previewUrl, setPreviewUrl] = useState(profile?.avatar_url || '');
+    
+    const meta = user?.user_metadata || {};
+    const getBestUrl = () => profile?.avatar_url || meta.avatar_url || meta.picture || meta.avatar || meta.photoURL || '';
+
+    const [avatarUrl, setAvatarUrl] = useState(getBestUrl());
+    const [previewUrl, setPreviewUrl] = useState(getBestUrl());
     const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
     const [bannerPreviewUrl, setBannerPreviewUrl] = useState(profile?.banner_url || '');
     const [discordDecorationUrl, setDiscordDecorationUrl] = useState(profile?.discord_decoration_url || '');
+    const [decoError, setDecoError] = useState(false);
     
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -54,11 +58,13 @@ const Profile: React.FC = () => {
             setDisplayName(profile.display_name || profile.username || '');
             setUsername(profile.username || '');
             setBio(profile.bio || '');
-            setAvatarUrl(profile.avatar_url || '');
-            setPreviewUrl(profile.avatar_url || '');
+            const bestUrl = profile.avatar_url || meta.avatar_url || meta.picture || meta.avatar || meta.photoURL || '';
+            setAvatarUrl(bestUrl);
+            setPreviewUrl(bestUrl);
             setBannerUrl(profile.banner_url || '');
             setBannerPreviewUrl(profile.banner_url || '');
             setDiscordDecorationUrl(profile.discord_decoration_url || '');
+            setDecoError(false);
         }
     }, [profile]);
 
@@ -202,12 +208,7 @@ const Profile: React.FC = () => {
 
     return (
         <PageTransition>
-        <div className="min-h-screen bg-black text-white overflow-x-hidden font-sans selection:bg-white/20">
-            {/* Ambient Background Glow */}
-            <div className="fixed inset-0 pointer-events-none opacity-20 hidden md:block">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500 blur-[150px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500 blur-[150px]" />
-            </div>
+        <div className="min-h-screen bg-black/30 text-white overflow-x-hidden font-sans selection:bg-white/20">
 
             <div className="max-w-4xl mx-auto p-4 md:p-8 md:pt-12 mb-20 relative z-10">
                 <header className="flex items-center gap-6 mb-10">
@@ -255,45 +256,61 @@ const Profile: React.FC = () => {
                             <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent pointer-events-none" />
                         </div>
 
-                        {/* Avatar Overlay */}
-                        <div className="absolute -bottom-16 left-8 z-20">
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                className="hidden"
-                                accept="image/*,.gif"
-                                onChange={(e) => handleFileChange(e, 'avatar')}
-                            />
-                            <div className="relative group/avatar">
+                    </div>
+
+                    {/* Avatar Overlay */}
+                    <div className="absolute top-28 md:top-44 left-8 z-20">
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            className="hidden"
+                            accept="image/*,.gif"
+                            onChange={(e) => handleFileChange(e, 'avatar')}
+                        />
+                        <div className="relative group/avatar">
+                            <div 
+                                className="w-36 h-36 rounded-full bg-[#0a0a0a] p-2 cursor-pointer relative z-10"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    fileInputRef.current?.click();
+                                }}
+                            >
                                 <div 
-                                    className="w-36 h-36 rounded-full bg-[#0a0a0a] p-2 cursor-pointer relative z-10"
-                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full h-full rounded-full bg-white/5 overflow-hidden relative border border-white/10 group-hover/avatar:border-white/30 transition-all font-sans"
+                                    style={{ isolation: 'isolate', transform: 'translateZ(0)', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
                                 >
-                                    <div className="w-full h-full rounded-full bg-white/5 overflow-hidden relative border border-white/10 group-hover/avatar:border-white/30 transition-colors">
-                                        {previewUrl ? (
-                                            <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <User size={48} className="text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                        )}
-                                        {uploading && (
-                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                                                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                            </div>
-                                        )}
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-all flex flex-col items-center justify-center backdrop-blur-sm pb-1">
-                                            <Camera size={24} className="text-white mb-1" />
-                                        </div>
-                                    </div>
-                                    {discordDecorationUrl && (
-                                        <div className="absolute inset-[-18.5%] w-[137%] h-[137%] pointer-events-none z-20">
-                                            <img 
-                                                src={discordDecorationUrl} 
-                                                alt="Decoração" 
-                                                className="w-full h-full object-contain"
-                                            />
+                                    {previewUrl ? (
+                                        <img 
+                                            src={previewUrl} 
+                                            alt="Avatar" 
+                                            className="w-full h-full object-cover rounded-full" 
+                                            referrerPolicy="no-referrer"
+                                            crossOrigin="anonymous"
+                                            onError={() => setPreviewUrl('')} 
+                                        />
+                                    ) : (
+                                        <User size={48} className="text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                    )}
+                                    {uploading && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                                            <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                         </div>
                                     )}
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-all flex flex-col items-center justify-center backdrop-blur-sm pb-1">
+                                        <Camera size={24} className="text-white mb-1" />
+                                    </div>
                                 </div>
+                                {discordDecorationUrl && !decoError && (
+                                    <div className="absolute inset-[-18.5%] w-[137%] h-[137%] pointer-events-none z-20">
+                                        <img 
+                                            src={discordDecorationUrl} 
+                                            alt="Decoração" 
+                                            className="w-full h-full object-contain"
+                                            crossOrigin="anonymous"
+                                            onError={() => setDecoError(true)}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -301,10 +318,10 @@ const Profile: React.FC = () => {
                     {/* Profile Header actions */}
                     <div className="pt-20 px-8 pb-8 flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-white/5 relative z-10">
                         <div className="flex flex-col">
-                            <h2 className="text-3xl font-black tracking-tighter">
+                            <h2 className="text-3xl font-bold tracking-tight font-sans">
                                 {displayName || username || user?.email?.split('@')[0]}
                             </h2>
-                            <p className="text-white/40 text-sm mt-1 font-bold lowercase tracking-wide flex items-center gap-1">
+                            <p className="text-white/40 text-sm mt-1 font-normal font-sans lowercase tracking-wide flex items-center gap-1">
                                 {username || 'usuario'}
                             </p>
                         </div>
@@ -330,7 +347,7 @@ const Profile: React.FC = () => {
                                         initial={{ opacity: 0, y: -5, filter: 'blur(4px)' }} 
                                         animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                                         exit={{ opacity: 0, y: -5, filter: 'blur(4px)' }}
-                                        className="text-[10px] text-white/50 font-bold uppercase tracking-widest"
+                                        className="text-[10px] text-white/50 font-normal uppercase tracking-widest"
                                     >
                                         Dados sincronizados! Clique em salvar.
                                     </motion.p>
@@ -371,7 +388,7 @@ const Profile: React.FC = () => {
                         <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black tracking-[0.2em] text-white/40 uppercase ml-1 block">
+                                    <label className="text-[10px] font-normal tracking-[0.2em] text-white/40 uppercase ml-1 block">
                                         Nome de Exibição
                                     </label>
                                     <div className="relative group">
@@ -379,21 +396,21 @@ const Profile: React.FC = () => {
                                             type="text"
                                             value={displayName}
                                             onChange={(e) => setDisplayName(e.target.value)}
-                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-bold text-sm shadow-inner"
+                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm shadow-inner"
                                             placeholder="Como você quer ser chamado"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black tracking-[0.2em] text-white/40 uppercase ml-1 block">
-                                        Username
+                                    <label className="text-[10px] font-normal tracking-[0.2em] text-white/40 uppercase ml-1 block">
+                                        Usuário
                                     </label>
                                     <div className="relative group flex items-center">
                                         <input
                                             type="text"
                                             value={username}
                                             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-bold text-sm shadow-inner lowercase"
+                                            className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm shadow-inner lowercase"
                                             placeholder="seu_id_unico"
                                         />
                                     </div>
@@ -402,7 +419,7 @@ const Profile: React.FC = () => {
                             
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between ml-1 mb-1">
-                                    <label className="text-[10px] font-black tracking-[0.2em] text-white/40 uppercase">
+                                    <label className="text-[10px] font-normal tracking-[0.2em] text-white/40 uppercase">
                                         Sobre Mim
                                     </label>
                                     <span className="text-[10px] font-bold text-white/20">
@@ -412,7 +429,7 @@ const Profile: React.FC = () => {
                                 <textarea
                                     value={bio}
                                     onChange={(e) => setBio(e.target.value.slice(0, 160))}
-                                    className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-medium text-sm resize-none shadow-inner leading-relaxed min-h-[120px]"
+                                    className="w-full bg-white/5 border border-white/10 focus:border-white/30 focus:bg-white/10 rounded-2xl py-4 px-5 focus:outline-none transition-all text-white placeholder:text-white/10 font-normal font-sans text-sm resize-none shadow-inner leading-relaxed min-h-[120px]"
                                     placeholder="Escreva algo sobre você..."
                                 />
                             </div>

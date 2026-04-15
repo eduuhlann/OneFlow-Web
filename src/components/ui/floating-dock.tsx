@@ -19,7 +19,7 @@ export const FloatingDock = ({
   desktopClassName,
   mobileClassName,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void }[];
+  items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void; full?: boolean }[];
   desktopClassName?: string;
   mobileClassName?: string;
 }) => {
@@ -35,7 +35,7 @@ const FloatingDockMobile = ({
   items,
   className,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void }[];
+  items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void; full?: boolean }[];
   className?: string;
 }) => {
   const [open, setOpen] = useState(false);
@@ -70,9 +70,9 @@ const FloatingDockMobile = ({
                     else window.location.href = item.href;
                   }}
                   key={item.title}
-                  className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center cursor-pointer"
+                  className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center cursor-pointer relative"
                 >
-                  <div className="h-4 w-4">{item.icon}</div>
+                  <div className={item.full ? "h-full w-full" : "h-4 w-4"}>{item.icon}</div>
                 </div>
               </motion.div>
             ))}
@@ -93,7 +93,7 @@ export const FloatingDockDesktop = ({
   items,
   className,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void }[];
+  items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void; full?: boolean }[];
   className?: string;
 }) => {
   let mouseX = useMotionValue(Infinity);
@@ -119,12 +119,14 @@ function IconContainer({
   icon,
   href,
   onClick,
+  full,
 }: {
   mouseX: MotionValue;
   title: string;
   icon: React.ReactNode;
   href: string;
   onClick?: () => void;
+  full?: boolean;
 }) {
   let ref = useRef<HTMLDivElement>(null);
 
@@ -181,8 +183,8 @@ function IconContainer({
       >
 
         <motion.div
-          style={{ width: widthIcon, height: heightIcon }}
-          className="flex items-center justify-center"
+          style={{ width: full ? width : widthIcon, height: full ? height : heightIcon }}
+          className={cn("flex items-center justify-center", full && "overflow-hidden rounded-full")}
         >
           {icon}
         </motion.div>
