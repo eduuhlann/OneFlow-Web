@@ -91,6 +91,7 @@ const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ forceParticles 
             "fixed inset-0 pointer-events-none z-[-1] transition-colors duration-1000 bg-black",
             preferences.wallpaper === 'mesh' && "bg-wallpaper-mesh",
             preferences.wallpaper === 'aurora' && "bg-wallpaper-aurora",
+            preferences.wallpaper === 'gradient' && "bg-wallpaper-gradient",
             preferences.wallpaper === 'none' && "bg-wallpaper-none"
         )}>
             {(forceParticles || preferences.wallpaper === 'particles') && (

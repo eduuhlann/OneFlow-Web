@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type ThemeType = 'classic-dark' | 'royal-purple' | 'midnight-blue' | 'pure-monochrome';
-export type WallpaperType = 'particles' | 'mesh' | 'aurora' | 'none' | 'custom';
+export type WallpaperType = 'particles' | 'mesh' | 'aurora' | 'gradient' | 'none' | 'custom';
 export type DashboardLayoutItem = 'nav';
 
 export interface CustomWallpaper {

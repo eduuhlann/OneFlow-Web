@@ -141,6 +141,34 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                     )}
                                 </section>
 
+                                {/* System Backgrounds Section */}
+                                <section className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Fundo do Sistema</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { id: 'particles', label: 'Partículas' },
+                                            { id: 'mesh', label: 'Mesh Flow' },
+                                            { id: 'aurora', label: 'Aurora Boreal' },
+                                            { id: 'gradient', label: 'Degradê Premium' }
+                                        ].map((wp) => (
+                                            <button
+                                                key={wp.id}
+                                                onClick={() => updatePreference('wallpaper', wp.id as WallpaperType)}
+                                                className={cn(
+                                                    "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
+                                                    preferences.wallpaper === wp.id
+                                                        ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
+                                                        : "border-transparent bg-white/[0.03] text-white/40 hover:bg-white/5 hover:text-white/80"
+                                                )}
+                                            >
+                                                {wp.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </section>
+
                                 {/* Dashboard Style Section */}
                                 <section className="space-y-4">
                                     <div className="flex items-center justify-between">

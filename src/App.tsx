@@ -8,6 +8,7 @@ import { AnimatePresence } from 'motion/react';
 import { DiscipleshipListener } from './components/DiscipleshipListener';
 
 // Pages
+import Home from './pages/Home';
 import Auth from './pages/Auth';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
@@ -31,7 +32,7 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Home />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/auth" element={<Auth />} />

@@ -229,16 +229,15 @@ const Profile: React.FC = () => {
         <PageTransition>
         <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans selection:bg-white/20">
 
-            <div className="max-w-4xl mx-auto p-4 md:p-8 md:pt-12 mb-20 relative z-10">
+            <div className="max-w-4xl mx-auto px-0 py-4 md:py-8 md:pt-12 mb-20 relative z-10">
                 <header className="flex items-center gap-6 mb-10">
                     <button 
                         onClick={() => navigate('/settings')} 
-                        className="group p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-2xl transition-all text-white/50 hover:text-white"
+                        className="group ml-0 md:ml-0 p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-2xl transition-all text-white/50 hover:text-white"
                     >
                         <ArrowLeft size={22} className="group-hover:-translate-x-1 transition-transform" />
                     </button>
                     <div>
-                        <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase mb-1 block">Ajustes OneFlow</span>
                         <h1 className="text-3xl sm:text-4xl font-serif font-black italic -rotate-1 tracking-tighter">Editar Perfil</h1>
                     </div>
                 </header>
