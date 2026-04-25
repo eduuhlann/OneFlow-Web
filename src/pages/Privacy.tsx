@@ -2,11 +2,13 @@ import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
 
 export default function Privacy() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -21,7 +23,7 @@ export default function Privacy() {
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <motion.button
             whileHover={{ x: -5 }}
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(user ? '/dashboard' : '/')}
             className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/40 hover:text-white transition-colors"
           >
             <ArrowLeft size={14} /> Voltar para o App

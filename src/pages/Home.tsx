@@ -1,18 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'motion/react';
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import logo from '../assets/logo.png';
 import ParticleBackground from '../components/ParticleBackground';
 
 export default function Home() {
-    const mouseX = useMotionValue(0);
-    const mouseY = useMotionValue(0);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    const springConfig = { damping: 25, stiffness: 200 };
-    const cursorX = useSpring(mouseX, springConfig);
-    const cursorY = useSpring(mouseY, springConfig);
 
     const { scrollYProgress } = useScroll({
         target: containerRef,
@@ -23,39 +17,14 @@ export default function Home() {
     const heroY = useTransform(scrollYProgress, [0, 1], [0, 300]);
     const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            mouseX.set(e.clientX);
-            mouseY.set(e.clientY);
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [mouseX, mouseY]);
+
 
     return (
         <div ref={containerRef} className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-serif selection:bg-white selection:text-black relative">
             
             <ParticleBackground forceParticles={true} />
 
-            {/* Custom Cursor */}
-            <motion.div 
-                className="fixed top-0 left-0 w-8 h-8 rounded-full border border-white/30 pointer-events-none z-50 mix-blend-difference hidden md:block"
-                style={{
-                    x: cursorX,
-                    y: cursorY,
-                    translateX: '-50%',
-                    translateY: '-50%',
-                }}
-            />
-            <motion.div 
-                className="fixed top-0 left-0 w-1 h-1 bg-white rounded-full pointer-events-none z-50 hidden md:block"
-                style={{
-                    x: mouseX,
-                    y: mouseY,
-                    translateX: '-50%',
-                    translateY: '-50%',
-                }}
-            />
+
 
             {/* Grain Overlay */}
             <div className="fixed inset-0 pointer-events-none opacity-[0.04] z-40 mix-blend-overlay bg-[url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Dissolve_Noise_Texture.png')] bg-repeat" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
     AlertCircle,
@@ -9,8 +9,77 @@ import { supabase } from '../services/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
-import ParticleBackground from '../components/ParticleBackground';
 import { translateAuthError } from '../services/authErrors';
+
+function AuthParticles() {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        let animId: number;
+        let particles: { x: number; y: number; size: number; vx: number; vy: number; opacity: number }[] = [];
+
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+
+        const init = () => {
+            particles = [];
+            const count = Math.floor((canvas.width * canvas.height) / 8000);
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 0.5,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    opacity: Math.random() * 0.6 + 0.2,
+                });
+            }
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const p of particles) {
+                ctx.globalAlpha = p.opacity;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+            }
+            animId = requestAnimationFrame(draw);
+        };
+
+        window.addEventListener('resize', () => { resize(); init(); });
+        resize();
+        init();
+        draw();
+
+        return () => {
+            cancelAnimationFrame(animId);
+            window.removeEventListener('resize', resize);
+        };
+    }, []);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            className="fixed inset-0 w-full h-full pointer-events-none z-0"
+            style={{ background: '#000' }}
+        />
+    );
+}
 
 export default function Auth() {
     const navigate = useNavigate();
@@ -46,8 +115,8 @@ export default function Auth() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden font-sans selection:bg-white selection:text-black">
-            <ParticleBackground forceParticles={true} />
+        <div className="min-h-screen text-white relative overflow-hidden font-sans selection:bg-white selection:text-black">
+            <AuthParticles />
 
             <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-4 md:p-6 overflow-y-auto">
                 {/* Left Side: Logo - Hidden on mobile */}
