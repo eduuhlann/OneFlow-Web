@@ -214,7 +214,7 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
                    }
                 }}
                 className={cn(
-                    "p-6 border rounded-3xl text-left group transition-all h-full shadow-2xl shadow-black/20",
+                    "p-7 lg:p-6 border rounded-3xl text-left group transition-all h-full shadow-2xl shadow-black/20",
                     getGlassClasses()
                 )}
             >
@@ -223,25 +223,25 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
                     style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
                 >
                     <div 
-                        className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 relative"
+                        className="w-12 h-12 lg:w-10 lg:h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 relative"
                         style={{ transform: "translateZ(30px)" }}
                     >
                         <AnimatedIcon 
                             src={item.lordIconSrc} 
                             fallback={item.icon} 
                             size={20} 
-                            className="text-white transition-all duration-300 group-hover:scale-[1.2]" 
+                            className="text-white transition-all duration-300 group-hover:scale-[1.2] w-[58%] h-[58%] lg:w-[50%] lg:h-[50%]" 
                         />
                     </div>
 
                     <h3 
-                        className="text-base font-bold mb-1 tracking-tight"
+                        className="text-lg lg:text-base font-bold mb-1 tracking-tight"
                         style={{ transform: "translateZ(40px)" }}
                     >
                         {item.label}
                     </h3>
                     <p 
-                        className="text-white font-normal italic leading-relaxed text-[11px]"
+                        className="text-white font-normal italic leading-relaxed text-[13px] lg:text-[11px]"
                         style={{ transform: "translateZ(35px)" }}
                     >
                         {item.description}
@@ -434,27 +434,27 @@ export default function Dashboard() {
                                 </h1>
                             </div>
 
-                            <div className="md:hidden flex items-center gap-2.5 shrink-0">
-                                <div className="relative h-11 w-11 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center">
+                            <div className="md:hidden flex items-center gap-3 shrink-0">
+                                <div className="relative h-12 w-12 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center">
                                     <NotificationBell dockMode />
                                 </div>
                                 <Link
                                     to="/profile"
-                                    className="h-11 w-11 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center"
+                                    className="h-12 w-12 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center"
                                 >
                                     <DockAvatar profile={profile} user={user} />
                                 </Link>
                                 <button
                                     onClick={() => navigate('/settings')}
-                                    className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:bg-white/10 transition-all active:scale-95"
+                                    className="h-12 w-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:bg-white/10 transition-all active:scale-95"
                                 >
-                                    <Settings size={20} />
+                                    <Settings size={22} />
                                 </button>
                                 <button
                                     onClick={handleSignOut}
-                                    className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-red-400/80 hover:bg-red-500/10 transition-all active:scale-95"
+                                    className="h-12 w-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-red-400/80 hover:bg-red-500/10 transition-all active:scale-95"
                                 >
-                                    <LogOut size={20} />
+                                    <LogOut size={22} />
                                 </button>
                             </div>
                         </div>
@@ -490,8 +490,7 @@ export default function Dashboard() {
                         />
                     </header>
 
-                    {preferences.dashboardStyle === 'cards' ? (
-                        <div className="space-y-8">
+                    <div className={cn('space-y-8', preferences.dashboardStyle !== 'cards' && 'hidden md:block')}>
                             <DndContext
                                 sensors={sensors}
                                 collisionDetection={closestCenter}
@@ -501,7 +500,7 @@ export default function Dashboard() {
                                     items={menuItems.map(i => i.id)}
                                     strategy={rectSortingStrategy}
                                 >
-                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-12 relative">
+                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-4 mb-12 relative">
                                         {menuItems.map((item) => (
                                             <SortableCard 
                                                 key={item.id} 
@@ -515,8 +514,9 @@ export default function Dashboard() {
                                 </SortableContext>
                             </DndContext>
                         </div>
-                    ) : (
-                        <div className="fixed bottom-0 left-0 right-0 flex justify-center z-[100] pointer-events-none" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+
+                    {preferences.dashboardStyle === 'dock' && (
+                        <div className="hidden md:flex fixed bottom-0 left-0 right-0 justify-center z-[100] pointer-events-none" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
                             <div className="pointer-events-auto">
                                 <FloatingDock
                                     mobileClassName=""
