@@ -60,6 +60,8 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+const IS_TOUCH_DEVICE = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
 // Wrapper for LordIcon. When a valid JSON src is provided, it renders the animated icon.
 // Fallbacks to the default Lucide/Tabler icon if src is empty or placeholder.
 const AnimatedIcon = ({ 
@@ -188,9 +190,11 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
         <div 
             ref={setNodeRef} 
             style={style} 
-            {...attributes} 
-            {...listeners} 
-            className="touch-none h-full relative cursor-grab active:cursor-grabbing"
+            {...(IS_TOUCH_DEVICE ? {} : { ...attributes, ...listeners })}
+            className={cn(
+                "h-full relative",
+                IS_TOUCH_DEVICE ? "cursor-pointer active:cursor-pointer touch-manipulation" : "touch-none cursor-grab active:cursor-grabbing"
+            )}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
@@ -422,18 +426,41 @@ export default function Dashboard() {
 
                     {/* Header */}
                     <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 md:mb-16">
-                        <div className="flex items-center gap-3 md:gap-6">
-
-                            <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-4 w-full md:w-auto">
+                            <div className="space-y-1 min-w-0">
                                 <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Bem-vindo</span>
-                                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter">
+                                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter truncate">
                                     {displayName}
                                 </h1>
+                            </div>
+
+                            <div className="md:hidden flex items-center gap-2.5 shrink-0">
+                                <div className="relative h-11 w-11 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center">
+                                    <NotificationBell dockMode />
+                                </div>
+                                <Link
+                                    to="/profile"
+                                    className="h-11 w-11 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center"
+                                >
+                                    <DockAvatar profile={profile} user={user} />
+                                </Link>
+                                <button
+                                    onClick={() => navigate('/settings')}
+                                    className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:bg-white/10 transition-all active:scale-95"
+                                >
+                                    <Settings size={20} />
+                                </button>
+                                <button
+                                    onClick={handleSignOut}
+                                    className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-red-400/80 hover:bg-red-500/10 transition-all active:scale-95"
+                                >
+                                    <LogOut size={20} />
+                                </button>
                             </div>
                         </div>
 
                         <FloatingDockDesktop
-                            className="!flex mx-0 h-[72px] pb-2 px-4 bg-gray-50 dark:bg-neutral-900 rounded-full shadow-lg items-end gap-3 translate-y-2 md:translate-y-0"
+                            className="mx-0 h-[72px] pb-2 px-4 bg-gray-50 dark:bg-neutral-900 rounded-full shadow-lg items-end gap-3 translate-y-2 md:translate-y-0"
                             items={[
                                 {
                                     title: "Notificações",
@@ -444,12 +471,14 @@ export default function Dashboard() {
                                     title: "Perfil",
                                     icon: <DockAvatar profile={profile} user={user} />,
                                     href: "/profile",
+                                    onClick: () => navigate('/profile'),
                                     full: true
                                 },
                                 {
                                     title: "Configurações",
                                     icon: <AnimatedIcon fallback={Settings} src="COLOQUE_O_LINK_AQUI_PARA_CONFIGURACOES.json" className="w-[85%] h-[85%] text-white/80 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />,
-                                    href: "/settings"
+                                    href: "/settings",
+                                    onClick: () => navigate('/settings')
                                 },
                                 {
                                     title: "Sair",
@@ -487,15 +516,15 @@ export default function Dashboard() {
                             </DndContext>
                         </div>
                     ) : (
-                        <div className="fixed bottom-0 left-0 right-0 pb-8 flex justify-center z-[100] pointer-events-none">
+                        <div className="fixed bottom-0 left-0 right-0 flex justify-center z-[100] pointer-events-none" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
                             <div className="pointer-events-auto">
                                 <FloatingDock
-                                    mobileClassName="translate-y-20"
+                                    mobileClassName=""
                                     items={menuItems.map(item => ({
                                         title: item.label,
                                         icon: <AnimatedIcon src={item.lordIconSrc} fallback={item.icon} className="h-full w-full text-neutral-500 dark:text-neutral-300" />,
                                         href: item.path || '#',
-                                        onClick: item.action
+                                        onClick: item.action ? item.action : (item.path ? () => navigate(item.path!) : undefined)
                                     }))}
                                 />
                             </div>
