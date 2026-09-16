@@ -914,7 +914,7 @@ const Discipleship: React.FC = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Chat Privado"><MessageSquarePlus className="w-5 h-5 text-white/60" /></button>
-                                    <button onClick={() => setIsGroupModalOpen(true)} className="relative p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title={isPro ? "Novo Grupo" : "OneFlow Pro"}><Users className="w-5 h-5 text-white/60" />{!isPro && <Lock className="w-3 h-3 text-yellow-400 absolute top-1 right-1" />}</button>
+                                    <button onClick={() => setIsGroupModalOpen(true)} className="relative p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title={isPro ? "Novo Grupo" : "OneFlow Pro"}><Users className="w-5 h-5 text-white/60" />{!isPro && <Lock className="w-3 h-3 text-white/60 absolute top-1 right-1" />}</button>
                                     <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
                                 </div>
                             </div>

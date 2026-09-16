@@ -240,7 +240,7 @@ const Profile: React.FC = () => {
                                     {isPro ? (
                                         <Upload size={32} className="mb-2" />
                                     ) : (
-                                        <Lock size={28} className="mb-2 text-yellow-400/70" />
+                                        <Lock size={28} className="mb-2 text-white/50" />
                                     )}
                                     <span className="text-[10px] uppercase tracking-[0.2em] font-bold">
                                         {isPro ? 'Adicionar Banner' : 'OneFlow Pro'}
@@ -249,8 +249,8 @@ const Profile: React.FC = () => {
                             )}
                             {!isPro && (
                                 <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover/banner:opacity-100 transition-all">
-                                    <Lock size={24} className="text-yellow-400/80 mb-2" />
-                                    <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-yellow-300/80">Desbloquear com Pro</span>
+                                    <Lock size={24} className="text-white/70 mb-2" />
+                                    <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80">Desbloquear com Pro</span>
                                 </div>
                             )}
                             {isPro && (
