@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion, useMotionValue, useTransform, useSpring } from 'motion/react';
-import { FloatingDock, FloatingDockDesktop } from '../components/ui/floating-dock';
+import { FloatingDockDesktop } from '../components/ui/floating-dock';
 import {
   DndContext,
   closestCenter,
@@ -214,7 +214,7 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
                    }
                 }}
                 className={cn(
-                    "p-7 lg:p-6 border rounded-3xl text-left group transition-all h-full shadow-2xl shadow-black/20",
+                    "p-8 lg:p-6 border rounded-[2rem] lg:rounded-3xl text-left group transition-all h-full shadow-2xl shadow-black/20",
                     getGlassClasses()
                 )}
             >
@@ -223,34 +223,34 @@ function SortableCard({ id, item, navigate, glassStyle }: { id: string, item: an
                     style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}
                 >
                     <div 
-                        className="w-12 h-12 lg:w-10 lg:h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 group-hover:bg-white/20 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 relative"
+                        className="w-16 h-16 lg:w-10 lg:h-10 rounded-2xl lg:rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-6 lg:mb-5 group-hover:bg-white/20 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 relative"
                         style={{ transform: "translateZ(30px)" }}
                     >
                         <AnimatedIcon 
                             src={item.lordIconSrc} 
                             fallback={item.icon} 
-                            size={20} 
-                            className="text-white transition-all duration-300 group-hover:scale-[1.2] w-[58%] h-[58%] lg:w-[50%] lg:h-[50%]" 
+                            size={22} 
+                            className="text-white transition-all duration-300 group-hover:scale-[1.2] w-[56%] h-[56%] lg:w-[50%] lg:h-[50%]" 
                         />
                     </div>
 
                     <h3 
-                        className="text-lg lg:text-base font-bold mb-1 tracking-tight"
+                        className="text-2xl lg:text-base font-bold mb-1.5 tracking-tight"
                         style={{ transform: "translateZ(40px)" }}
                     >
                         {item.label}
                     </h3>
                     <p 
-                        className="text-white font-normal italic leading-relaxed text-[13px] lg:text-[11px]"
+                        className="text-white font-normal italic leading-relaxed text-sm lg:text-[11px]"
                         style={{ transform: "translateZ(35px)" }}
                     >
                         {item.description}
                     </p>
                     <div 
-                        className="mt-5 flex items-center gap-1.5 text-[9px] font-bold tracking-[0.2em] text-white transition-colors uppercase"
+                        className="mt-6 lg:mt-5 flex items-center gap-2 text-[10px] lg:text-[9px] font-bold tracking-[0.2em] text-white transition-colors uppercase"
                         style={{ transform: "translateZ(20px)" }}
                     >
-                        {item.action ? 'Abrir' : 'Acessar'} <ChevronRight size={10} />
+                        {item.action ? 'Abrir' : 'Acessar'} <ChevronRight size={14} className="lg:w-[10px] lg:h-[10px]" />
                     </div>
                 </div>
             </motion.div>
@@ -429,7 +429,7 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between gap-4 w-full md:w-auto">
                             <div className="space-y-1 min-w-0">
                                 <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Bem-vindo</span>
-                                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter truncate">
+                                <h1 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter truncate">
                                     {displayName}
                                 </h1>
                             </div>
@@ -500,7 +500,7 @@ export default function Dashboard() {
                                     items={menuItems.map(i => i.id)}
                                     strategy={rectSortingStrategy}
                                 >
-                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-4 mb-12 relative">
+                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 lg:gap-4 mb-20 lg:mb-12 relative">
                                         {menuItems.map((item) => (
                                             <SortableCard 
                                                 key={item.id} 
@@ -516,10 +516,9 @@ export default function Dashboard() {
                         </div>
 
                     {preferences.dashboardStyle === 'dock' && (
-                        <div className="hidden md:flex fixed bottom-0 left-0 right-0 justify-center z-[100] pointer-events-none" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+                        <div className="hidden md:block fixed bottom-0 left-0 right-0 z-[100] flex justify-center pointer-events-none" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
                             <div className="pointer-events-auto">
-                                <FloatingDock
-                                    mobileClassName=""
+                                <FloatingDockDesktop
                                     items={menuItems.map(item => ({
                                         title: item.label,
                                         icon: <AnimatedIcon src={item.lordIconSrc} fallback={item.icon} className="h-full w-full text-neutral-500 dark:text-neutral-300" />,
