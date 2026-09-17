@@ -22,7 +22,7 @@ export default function Dashboard() {
   return (
     <PageTransition>
       <div className="min-h-screen text-white selection:bg-white selection:text-black">
-        <div className="mx-auto w-full max-w-md px-4 pb-32 pt-[max(1rem,env(safe-area-inset-top))] md:px-5">
+        <div className="mx-auto w-full max-w-md px-4 pb-32 pt-[max(1rem,env(safe-area-inset-top))] md:hidden md:px-5">
           <Header profile={profile} user={user} />
 
           <section className="mt-7">
