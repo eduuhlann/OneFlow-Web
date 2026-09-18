@@ -25,8 +25,6 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-const isGifUrl = (url: string) => /\.gif([?#]|$)/i.test(url);
-
 const Profile: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -280,7 +278,7 @@ const Profile: React.FC = () => {
                             style={bannerPreviewUrl && bannerPreviewUrl.startsWith('#') ? { backgroundColor: bannerPreviewUrl } : {}}
                         >
                             {bannerPreviewUrl && !bannerPreviewUrl.startsWith('#') ? (
-                                <img src={bannerPreviewUrl} alt="Banner" className={cn("w-full h-full", isGifUrl(bannerPreviewUrl) ? "object-contain" : "object-cover")} />
+                                <img src={bannerPreviewUrl} alt="Banner" className="w-full h-full object-cover" />
                             ) : !bannerPreviewUrl && (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-white/20 bg-[#0d0d0d]">
                                     {isPro ? (
