@@ -25,6 +25,8 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+const isGifUrl = (url: string) => /\.gif([?#]|$)/i.test(url);
+
 const Profile: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -85,6 +87,12 @@ const Profile: React.FC = () => {
             return;
         }
 
+        const isGif = file.type === 'image/gif' || /\.gif$/i.test(file.name);
+        if (isGif) {
+            handleUploadOriginal(file, type);
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
             setImageToCrop(reader.result as string);
@@ -93,6 +101,44 @@ const Profile: React.FC = () => {
             setCropModalOpen(true);
         };
         reader.readAsDataURL(file);
+    };
+
+    const handleUploadOriginal = async (file: File, type: 'avatar' | 'banner') => {
+        if (!user) return;
+        if (type === 'banner' && !isPro) {
+            navigate('/pro');
+            return;
+        }
+
+        setUploading(true);
+        setError('');
+        try {
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'gif';
+            const filePath = `${user.id}/${type}.${ext}`;
+            const bucket = type === 'avatar' ? 'avatars' : 'banners';
+
+            const { error: uploadErr } = await supabase.storage
+                .from(bucket)
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadErr) throw uploadErr;
+
+            const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+            const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+            if (type === 'avatar') {
+                setAvatarUrl(publicUrl);
+                setPreviewUrl(publicUrl);
+            } else {
+                setBannerUrl(publicUrl);
+                setBannerPreviewUrl(publicUrl);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Erro ao enviar imagem.');
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            if (bannerInputRef.current) bannerInputRef.current.value = '';
+        }
     };
 
     const onCropComplete = async (croppedAreaPixels: any) => {
@@ -234,7 +280,7 @@ const Profile: React.FC = () => {
                             style={bannerPreviewUrl && bannerPreviewUrl.startsWith('#') ? { backgroundColor: bannerPreviewUrl } : {}}
                         >
                             {bannerPreviewUrl && !bannerPreviewUrl.startsWith('#') ? (
-                                <img src={bannerPreviewUrl} alt="Banner" className="w-full h-full object-cover" />
+                                <img src={bannerPreviewUrl} alt="Banner" className={cn("w-full h-full", isGifUrl(bannerPreviewUrl) ? "object-contain" : "object-cover")} />
                             ) : !bannerPreviewUrl && (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-white/20 bg-[#0d0d0d]">
                                     {isPro ? (
