@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, CheckCircle2, Circle, BookOpen, Clock, Calendar } from 'lucide-react';
-import { plansService, STATIC_PLANS, Plan, UserPlan } from '../services/features/plansService';
+import { plansService, Plan, UserPlan } from '../services/features/plansService';
 import ParticleBackground from '../components/ParticleBackground';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -30,7 +30,7 @@ export default function PlanDetails() {
         const active = activePlans.find(p => p.planId === id);
         
         const customPlans = plansService.getCustomPlans();
-        const targetPlan = STATIC_PLANS.find(p => p.id === id) || customPlans.find(p => p.id === id);
+        const targetPlan = customPlans.find(p => p.id === id);
         
         if (targetPlan && active) {
             setPlan(targetPlan);

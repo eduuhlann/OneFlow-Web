@@ -39,7 +39,7 @@ export default function Dashboard() {
           <Header profile={profile} user={user} />
 
           <section className="mt-7">
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.3em] text-white/45">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white theme-glow">
               Bem-vindo
             </p>
             <h1 className="mt-1.5 font-serif text-2xl font-bold leading-none tracking-tight text-white">
@@ -52,10 +52,10 @@ export default function Dashboard() {
 
         {/* Desktop layout */}
         <div className="hidden md:block">
-          <div className="mx-auto w-full max-w-6xl px-10 pt-12 lg:px-14">
-            <header className="flex items-center justify-between gap-6">
+          <div className="w-full px-5 pt-5 sm:px-8 sm:pt-7 lg:px-10">
+            <header className="flex items-start justify-between gap-6">
               <div className="min-w-0 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/20">
+                <span className="text-xs font-bold uppercase tracking-[0.5em] text-white theme-glow">
                   Bem-vindo
                 </span>
                 <h1 className="truncate text-4xl font-bold tracking-tighter lg:text-5xl">
@@ -64,7 +64,8 @@ export default function Dashboard() {
               </div>
 
               <FloatingDockDesktop
-                className="mx-0 h-[72px] items-end gap-3 rounded-full bg-gray-50 px-4 pb-2 shadow-lg dark:bg-neutral-900"
+                className="mx-0 h-[88px] items-end gap-3.5 rounded-full bg-gray-50 px-5 pb-3 shadow-lg dark:bg-neutral-900"
+                scale={1.1}
                 items={[
                   {
                     title: 'Notificações',
@@ -110,7 +111,8 @@ export default function Dashboard() {
         >
           <div className="pointer-events-auto">
             <FloatingDockDesktop
-              className="border border-white/10 bg-neutral-900/70 shadow-2xl shadow-black/50 backdrop-blur-xl"
+              className="h-[104px] items-end gap-4 border border-white/10 bg-neutral-900/70 px-6 pb-5 shadow-2xl shadow-black/50 backdrop-blur-xl"
+              scale={1.15}
               items={DASHBOARD_MODULES.map((module) => ({
                 title: module.label,
                 icon: (

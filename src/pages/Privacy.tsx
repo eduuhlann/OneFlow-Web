@@ -15,7 +15,7 @@ export default function Privacy() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black overflow-x-hidden">
       <ParticleBackground />
       
       {/* Simple Header */}

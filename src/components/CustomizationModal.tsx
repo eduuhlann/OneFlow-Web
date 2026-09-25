@@ -192,29 +192,6 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                     </div>
                                 </section>
 
-                                {/* Glass Intensity Section */}
-                                <section className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Intensidade do Vidro</h4>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(['crystal', 'frosted', 'solid'] as const).map((style) => (
-                                            <button
-                                                key={style}
-                                                onClick={() => updatePreference('glassStyle', style)}
-                                                className={cn(
-                                                    "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
-                                                    (preferences.glassStyle || 'frosted') === style
-                                                        ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
-                                                        : "border-transparent bg-white/[0.03] text-white/40 hover:bg-white/5 hover:text-white/80"
-                                                )}
-                                            >
-                                                {style === 'crystal' ? 'Cristalino' : style === 'frosted' ? 'Fosco' : 'Sólido'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
-
                                 {/* Reset */}
                                 <div className="pt-6 border-t border-white/10">
                                     <button

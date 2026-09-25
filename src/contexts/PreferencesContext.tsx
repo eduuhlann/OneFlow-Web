@@ -16,7 +16,6 @@ export interface UserPreferences {
     dashboardLayout: DashboardLayoutItem[];
     menuOrder?: string[]; // IDs of the cards
     uploadedWallpapers?: CustomWallpaper[];
-    glassStyle?: 'crystal' | 'frosted' | 'solid';
     dashboardStyle?: 'cards' | 'dock';
 }
 
@@ -26,7 +25,6 @@ const defaultPreferences: UserPreferences = {
     dashboardLayout: ['nav'],
     menuOrder: ['bible', 'plans', 'prayer', 'customize'],
     uploadedWallpapers: [],
-    glassStyle: 'frosted',
     dashboardStyle: 'dock'
 };
 

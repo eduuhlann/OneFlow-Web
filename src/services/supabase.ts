@@ -12,6 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false, // AuthCallback faz o exchange explicitamente via exchangeCodeForSession
+        detectSessionInUrl: false,
+        flowType: 'pkce',
     },
 });

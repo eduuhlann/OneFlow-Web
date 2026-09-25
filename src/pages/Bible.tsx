@@ -192,7 +192,7 @@ const Bible: React.FC = () => {
     // 1. Book Selection
     if (!bookAbbrev) {
         return (
-            <div className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black">
+            <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black">
                 <Header>
                     <div className="flex items-center gap-4">
                         <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -249,7 +249,7 @@ const Bible: React.FC = () => {
     // 2. Chapter Selection
     if (bookAbbrev && !chapterNum) {
         return (
-            <div className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black">
+            <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black">
                 <Header>
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate('/bible')} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -298,7 +298,7 @@ const Bible: React.FC = () => {
 
     // 3. Reader View
     return (
-        <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20 selection:text-white">
+        <div className="min-h-screen bg-black text-white selection:bg-white/20 selection:text-white">
             <Header>
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(`/bible/${bookAbbrev}`)} className="p-2 hover:bg-white/5 rounded-full transition-colors">

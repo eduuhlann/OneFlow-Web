@@ -97,14 +97,8 @@ export default function Auth() {
         setError('');
         try {
             const options: any = {
-                redirectTo: `${import.meta.env.VITE_SITE_URL || window.location.origin}/auth/callback`,
+                redirectTo: new URL('/auth/callback', window.location.origin).toString(),
             };
-            if (provider === 'discord') {
-                options.queryParams = {
-                    access_type: 'offline',
-                    prompt: 'consent',
-                };
-            }
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options,
@@ -117,7 +111,7 @@ export default function Auth() {
     };
 
     return (
-        <div className="min-h-screen text-white relative overflow-hidden font-sans selection:bg-white selection:text-black">
+        <div className="min-h-screen text-white relative overflow-hidden selection:bg-white selection:text-black">
             <AuthParticles />
 
             <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-4 md:p-6 overflow-y-auto">

@@ -28,7 +28,8 @@ import {
     Loader2,
     LogOut,
     MessageSquarePlus,
-    Lock
+    Lock,
+    Compass
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,6 +37,8 @@ import { useProfile } from '../contexts/ProfileContext';
 import { usePro } from '../contexts/ProContext';
 import { discipleshipService, DiscipleshipTask, DiscipleshipNote } from '../services/features/discipleshipService';
 import { statsService, BibleStats } from '../services/features/statsService';
+import { UserProfileModal } from '../components/discipleship/UserProfileModal';
+import { ExplorePanel } from '../components/discipleship/ExplorePanel';
 import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -52,6 +55,8 @@ const Discipleship: React.FC = () => {
     const { isPro } = usePro();
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<'list' | 'chat'>('list');
+    const [sidebarTab, setSidebarTab] = useState<'chats' | 'explore'>('chats');
+    const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
     // UI States
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -791,7 +796,7 @@ const Discipleship: React.FC = () => {
 
     return (
         <PageTransition>
-            <div className="h-screen bg-[#0d0d0d] text-white flex flex-col font-sans overflow-hidden">
+            <div className="h-screen bg-[#0d0d0d] text-white flex flex-col overflow-hidden">
                 {/* Modals handled same as before... (Search, Group Creation) */}
                 <AnimatePresence>
                     {isSearchOpen && (
@@ -918,14 +923,45 @@ const Discipleship: React.FC = () => {
                                     <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
                                 </div>
                             </div>
+
+                            <div className="flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10">
+                                {([
+                                    { id: 'chats' as const, label: 'Conversas', icon: MessageSquare },
+                                    { id: 'explore' as const, label: 'Explorar', icon: Compass },
+                                ]).map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setSidebarTab(tab.id)}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
+                                            sidebarTab === tab.id ? "bg-white text-black" : "text-white/40 hover:text-white/80"
+                                        )}
+                                    >
+                                        <tab.icon size={12} /> {tab.label}
+                                    </button>
+                                ))}
+                            </div>
                         </header>
 
+                        {sidebarTab === 'chats' ? (
                         <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar pb-24">
                             {connections.map(conn => {
                                 const isPending = (conn.status === 'pending') || (conn.member_status === 'pending');
                                 return (
                                     <button key={`${conn.type}-${conn.id}`} onClick={() => !isPending && handleSelectConnection(conn)} className={cn("w-full p-4 rounded-[28px] flex items-center gap-4 transition-all group", selectedConnection?.id === conn.id ? "bg-white/10 border border-white/10 shadow-lg" : "hover:bg-white/5 border border-transparent", isPending && "cursor-default opacity-80")}>
-                                        <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                        <span
+                                            role="button"
+                                            tabIndex={-1}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const targetId = conn.type === 'leader' ? conn.leader_id : conn.disciple_id;
+                                                if (conn.type !== 'group' && conn.type !== 'self' && targetId) setProfileUserId(targetId);
+                                            }}
+                                            className={cn(
+                                                "w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 transition-transform",
+                                                conn.type !== 'group' && conn.type !== 'self' && "hover:scale-105 active:scale-95 cursor-pointer"
+                                            )}
+                                        >
                                             {conn.type === 'group' ? (
                                                 conn.avatar_url ? <img src={conn.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-6 h-6 text-white/40" />
                                             ) : conn.profile?.avatar_url ? (
@@ -933,7 +969,7 @@ const Discipleship: React.FC = () => {
                                             ) : (
                                                 <User className="w-6 h-6 text-white/20" />
                                             )}
-                                        </div>
+                                        </span>
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="font-bold text-sm">{conn.type === 'group' ? conn.name : (conn.profile?.display_name || conn.profile?.username || 'Usuário')}</span>
@@ -973,6 +1009,16 @@ const Discipleship: React.FC = () => {
                                 );
                             })}
                         </div>
+                        ) : (
+                            <ExplorePanel
+                                onOpenProfile={setProfileUserId}
+                                onMessage={(id) => {
+                                    setProfileUserId(null);
+                                    setSidebarTab('chats');
+                                    handleStartPrivateChat(id);
+                                }}
+                            />
+                        )}
                     </aside>
 
                     {/* Chat Area */}
@@ -993,6 +1039,18 @@ const Discipleship: React.FC = () => {
                                                         <User className="w-5 h-5 md:w-6 md:h-6 text-white/20" />
                                                     )}
                                                 </div>
+                                                {selectedConnection.type !== 'group' && selectedConnection.type !== 'self' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const targetId = selectedConnection.type === 'leader' ? selectedConnection.leader_id : selectedConnection.disciple_id;
+                                                            if (targetId) setProfileUserId(targetId);
+                                                        }}
+                                                        title="Ver perfil"
+                                                        className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center rounded-full"
+                                                    >
+                                                        <User size={14} className="text-white" />
+                                                    </button>
+                                                )}
                                                 {selectedConnection.type === 'group' && selectedConnection.leader_id === user?.id && (
                                                     <button
                                                         onClick={() => {
@@ -1429,6 +1487,16 @@ const Discipleship: React.FC = () => {
                         </div>
                     )}
                 </AnimatePresence>
+
+                <UserProfileModal
+                    userId={profileUserId}
+                    onClose={() => setProfileUserId(null)}
+                    onMessage={(id) => {
+                        setProfileUserId(null);
+                        setSidebarTab('chats');
+                        handleStartPrivateChat(id);
+                    }}
+                />
 
                 <AnimatePresence>
                     {alertBanner.isOpen && (

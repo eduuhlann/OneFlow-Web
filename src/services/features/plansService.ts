@@ -23,30 +23,6 @@ export interface UserPlan {
 const ACTIVE_PLANS_KEY = 'oneflow_active_plans';
 const CUSTOM_PLANS_KEY = 'oneflow_custom_plans';
 
-export const STATIC_PLANS: Plan[] = [
-    {
-        id: 'bible-365',
-        title: 'Bíblia em 1 Ano',
-        description: 'Leia a bíblia inteira de forma cronológica em 365 dias.',
-        durationDays: 365,
-        category: 'standard'
-    },
-    {
-        id: 'nt-90',
-        title: 'Novo Testamento em 90 Dias',
-        description: 'Uma jornada intensiva pelos ensinamentos de Jesus e dos apóstolos.',
-        durationDays: 90,
-        category: 'standard'
-    },
-    {
-        id: 'psalms-30',
-        title: '30 Dias com Salmos',
-        description: 'Encontre conforto e louvor através dos 150 salmos.',
-        durationDays: 30,
-        category: 'thematic'
-    }
-];
-
 export const plansService = {
     getCustomPlans(): Plan[] {
         try {
@@ -119,12 +95,7 @@ export const plansService = {
         const plan = active.find(p => p.planId === planId);
         if (!plan) return 0;
 
-        let targetPlan = STATIC_PLANS.find(p => p.id === planId);
-        if (!targetPlan) {
-            const customPlans = this.getCustomPlans();
-            targetPlan = customPlans.find(p => p.id === planId);
-        }
-
+        const targetPlan = this.getCustomPlans().find(p => p.id === planId);
         if (!targetPlan) return 0;
 
         return Math.round((plan.completedDays.length / targetPlan.durationDays) * 100);

@@ -78,7 +78,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
           >
             {/* Header */}
             <div className="px-8 py-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold tracking-tight text-[#f1f1f1] font-sans">
+              <h2 className="text-xl font-bold tracking-tight text-[#f1f1f1]">
                 {title}
               </h2>
             </div>

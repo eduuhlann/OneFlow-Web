@@ -1,6 +1,6 @@
 import { useState, Fragment } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Crown, Sparkles, Users, Image as ImageIcon, Brain, Check, ShieldCheck, RefreshCw, ExternalLink, ChevronDown, X, HeartHandshake } from 'lucide-react';
+import { ArrowLeft, Crown, Users, Image as ImageIcon, Brain, Check, ShieldCheck, RefreshCw, ExternalLink, ChevronDown, X, HeartHandshake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePro } from '../contexts/ProContext';
 import PageTransition from '../components/PageTransition';
@@ -86,10 +86,10 @@ export default function Pro() {
 
     return (
         <PageTransition>
-            <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans selection:bg-white/20">
+            <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden selection:bg-white/20">
                 {/* Background glow */}
                 <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-                    <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-amber-200/[0.06] rounded-full blur-[140px]" />
+                    <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-white/[0.06] rounded-full blur-[140px]" />
                     <div className="absolute bottom-0 right-0 w-[500px] h-[400px] bg-white/[0.03] rounded-full blur-[120px]" />
                 </div>
 
@@ -103,7 +103,7 @@ export default function Pro() {
                         </button>
                         <div className="flex items-center gap-4">
                             <h1 className="text-3xl sm:text-4xl font-serif font-black italic -rotate-1 tracking-tighter">OneFlow Pro</h1>
-                            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-200/10 border border-amber-200/20 rounded-full text-[9px] font-black tracking-[0.2em] text-amber-200/90 uppercase">
+                            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full text-[9px] font-black tracking-[0.2em] text-white/90 uppercase">
                                 <Crown size={11} /> Premium
                             </span>
                         </div>
@@ -115,27 +115,27 @@ export default function Pro() {
                         animate={{ opacity: 1, y: 0 }}
                         className={cn(
                             'bg-[#0a0a0a] rounded-[2.5rem] overflow-hidden border mb-8 p-8 md:p-12 relative',
-                            isPro ? 'border-amber-200/20' : 'border-white/10'
+                            isPro ? 'border-white/20' : 'border-white/10'
                         )}
                     >
                         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                         <div className={cn(
                             'absolute -top-32 left-1/2 -translate-x-1/2 w-[520px] h-[320px] rounded-full blur-[120px] pointer-events-none',
-                            isPro ? 'bg-amber-200/[0.10]' : 'bg-white/[0.05]'
+                            isPro ? 'bg-white/[0.10]' : 'bg-white/[0.05]'
                         )} />
 
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative">
                             <div className="flex items-center gap-6">
                                 <div className={cn(
                                     'w-20 h-20 rounded-[2rem] flex items-center justify-center border transition-all',
-                                    isPro ? 'bg-amber-200/10 border-amber-200/30 text-amber-200 shadow-[0_0_60px_rgba(253,230,138,0.15)]' : 'bg-white/5 border-white/10 text-white/30'
+                                    isPro ? 'bg-white/10 border-white/30 text-white shadow-[0_0_60px_rgba(255,255,255,0.15)]' : 'bg-white/5 border-white/10 text-white/30'
                                 )}>
                                     <Crown size={36} strokeWidth={1.5} />
                                 </div>
                                 <div>
                                     <span className={cn(
                                         'text-[10px] font-black tracking-widest uppercase block mb-1',
-                                        isPro ? 'text-amber-200/70' : 'text-white/20'
+                                        isPro ? 'text-white/70' : 'text-white/20'
                                     )}>
                                         {loading ? 'Verificando' : isPro ? 'Assinatura ativa' : 'Status'}
                                     </span>
@@ -189,19 +189,18 @@ export default function Pro() {
                         animate={{ opacity: 1, y: 0 }}
                         className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-[#0a0a0a] px-8 py-14 md:px-16 md:py-20 mb-8 text-center"
                     >
-                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/50 to-transparent" />
-                        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[300px] bg-amber-200/[0.08] rounded-full blur-[130px] pointer-events-none" />
+                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[560px] h-[300px] bg-white/[0.08] rounded-full blur-[130px] pointer-events-none" />
 
                         <div className="relative">
                             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] font-black tracking-[0.3em] text-white/40 uppercase mb-8">
-                                <Sparkles size={12} className="text-amber-200" />
                                 O plano completo do OneFlow
                             </span>
 
                             <h2 className="font-serif font-black italic tracking-tighter text-4xl sm:text-6xl leading-[0.95] mb-6">
                                 Desbloqueie a versão
                                 <br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-amber-200 to-amber-100">
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white">
                                     completa do OneFlow
                                 </span>
                             </h2>
@@ -232,9 +231,9 @@ export default function Pro() {
                             </div>
 
                             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] font-black tracking-widest text-white/25 uppercase">
-                                <span className="inline-flex items-center gap-2"><Check size={12} className="text-amber-200" /> Cancelamento livre</span>
-                                <span className="inline-flex items-center gap-2"><Check size={12} className="text-amber-200" /> Pagamento via Lastlink</span>
-                                <span className="inline-flex items-center gap-2"><Check size={12} className="text-amber-200" /> Sem anúncios</span>
+                                <span className="inline-flex items-center gap-2"><Check size={12} className="text-white" /> Cancelamento livre</span>
+                                <span className="inline-flex items-center gap-2"><Check size={12} className="text-white" /> Pagamento via Lastlink</span>
+                                <span className="inline-flex items-center gap-2"><Check size={12} className="text-white" /> Sem anúncios</span>
                             </div>
                         </div>
                     </motion.div>
@@ -247,10 +246,10 @@ export default function Pro() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.08 }}
-                                className="bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-7 group hover:border-amber-200/20 hover:bg-white/[0.03] transition-all relative overflow-hidden"
+                                className="bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-7 group hover:border-white/20 hover:bg-white/[0.03] transition-all relative overflow-hidden"
                             >
-                                <div className="absolute -top-16 -right-16 w-40 h-40 bg-amber-200/[0.04] rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:text-amber-200 group-hover:border-amber-200/30 transition-all mb-5">
+                                <div className="absolute -top-16 -right-16 w-40 h-40 bg-white/[0.04] rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:text-white group-hover:border-white/30 transition-all mb-5">
                                     <f.icon size={24} strokeWidth={1.75} />
                                 </div>
                                 <h3 className="font-black italic tracking-tighter text-lg mb-1.5">{f.title}</h3>
@@ -276,7 +275,7 @@ export default function Pro() {
                         <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-px bg-white/10 border border-white/10 rounded-3xl overflow-hidden mb-10">
                             <div className="bg-[#0f0f0f] px-5 py-4 text-[10px] font-black tracking-widest text-white/40 uppercase">Recurso</div>
                             <div className="bg-[#0f0f0f] px-5 py-4 text-center text-[10px] font-black tracking-widest text-white/40 uppercase">Grátis</div>
-                            <div className="bg-amber-200/10 px-5 py-4 text-center text-[10px] font-black tracking-widest text-amber-200 uppercase inline-flex items-center justify-center gap-1.5">
+                            <div className="bg-white/10 px-5 py-4 text-center text-[10px] font-black tracking-widest text-white uppercase inline-flex items-center justify-center gap-1.5">
                                 <Crown size={11} /> Pro
                             </div>
                             {PRO_FEATURES.map(([label, free], i) => {
@@ -291,8 +290,8 @@ export default function Pro() {
                                                 <X size={16} className="text-white/15" />
                                             )}
                                         </div>
-                                        <div className="bg-amber-200/[0.03] px-5 py-4 flex items-center justify-center">
-                                            <Check size={16} className={i < FREE_FEATURES.length ? 'text-amber-200/80' : 'text-amber-200'} />
+                                        <div className="bg-white/[0.03] px-5 py-4 flex items-center justify-center">
+                                            <Check size={16} className={i < FREE_FEATURES.length ? 'text-white/80' : 'text-white'} />
                                         </div>
                                     </Fragment>
                                 );
@@ -341,7 +340,7 @@ export default function Pro() {
                                                 size={18}
                                                 className={cn(
                                                     'shrink-0 text-white/40 transition-transform duration-300',
-                                                    openFaq === i && 'rotate-180 text-amber-200'
+                                                    openFaq === i && 'rotate-180 text-white'
                                                 )}
                                             />
                                         </button>
@@ -372,9 +371,9 @@ export default function Pro() {
                         transition={{ delay: 0.35 }}
                         className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden"
                     >
-                        <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-amber-200/[0.05] rounded-full blur-[100px] pointer-events-none" />
+                        <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-white/[0.05] rounded-full blur-[100px] pointer-events-none" />
                         <div className="flex items-center gap-4 mb-6 relative">
-                            <div className="w-12 h-12 bg-white/5 border border-white/15 rounded-2xl flex items-center justify-center text-amber-200">
+                            <div className="w-12 h-12 bg-white/5 border border-white/15 rounded-2xl flex items-center justify-center text-white">
                                 <HeartHandshake size={22} strokeWidth={1.75} />
                             </div>
                             <h3 className="font-black italic tracking-tighter text-xl">Você sustenta um projeto independente</h3>

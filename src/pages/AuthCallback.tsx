@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 
@@ -11,69 +11,60 @@ export default function AuthCallback() {
         if (handled.current) return;
         handled.current = true;
 
-        const handleCallback = async () => {
-            // 1. Tenta pegar parâmetros tanto da interrogação (?) quanto do hash (#)
-            // O Supabase v2 pode usar ?code= (PKCE) ou #access_token= (Implicit)
-            const searchParams = new URLSearchParams(window.location.search);
-            const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
-            
-            const code = searchParams.get('code');
-            const errorParam = searchParams.get('error') || hashParams.get('error');
-            const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
-            
-            const hasAccessToken = hashParams.get('access_token');
-
-            // Erro vindo do provider
-            if (errorParam) {
-                console.error('[AuthCallback] Provider error:', errorParam, errorDescription);
-                setErrorMsg(errorDescription || errorParam);
-                setTimeout(() => navigate('/auth', { replace: true }), 3000);
-                return;
-            }
-
-            // Fluxo PKCE (código explícito na URL)
-            if (code) {
-                const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-                if (error) {
-                    setErrorMsg("Falha ao trocar código: " + error.message);
-                    setTimeout(() => navigate('/auth', { replace: true }), 3000);
-                    return;
-                }
-                if (data.session) {
-                    navigate('/dashboard', { replace: true });
-                    return;
-                }
-            }
-
-            // Fluxo Implícito (Supabase client não pegou porque detectSessionInUrl = false)
-            if (hasAccessToken) {
-               const refreshToken = hashParams.get('refresh_token');
-               if (refreshToken) {
-                   const { data, error } = await supabase.auth.setSession({
-                       access_token: hasAccessToken,
-                       refresh_token: refreshToken
-                   });
-                   if (!error && data.session) {
-                       navigate('/dashboard', { replace: true });
-                       return;
-                   }
-               }
-            }
-
-            // Tenta pegar a sessão ativa (fallback geral)
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                navigate('/dashboard', { replace: true });
-                return;
-            }
-
-            // Nada funcionou
-            setErrorMsg("Nenhuma credencial de login encontrada na URL. Tente novamente.");
-            setTimeout(() => navigate('/auth', { replace: true }), 3000);
-            return;
+        const cleanCallbackUrl = () => {
+            const url = new URL(window.location.href);
+            url.search = '';
+            url.hash = '';
+            window.history.replaceState({}, document.title, url.toString());
         };
 
-        handleCallback();
+        const redirectIfAuthenticated = async () => {
+            const { data, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            if (!data.session) return false;
+
+            cleanCallbackUrl();
+            window.location.replace('http://localhost:3000/dashboard');
+            return true;
+        };
+
+        const handleCallback = async () => {
+            try {
+                const searchParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+                const code = searchParams.get('code') || hashParams.get('code');
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+                const errorCode = searchParams.get('error') || hashParams.get('error');
+                const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
+
+                if (errorCode) {
+                    throw new Error(errorDescription || errorCode);
+                }
+
+                if (code) {
+                    const { error } = await supabase.auth.exchangeCodeForSession(code);
+                    if (error) throw error;
+                } else if (accessToken && refreshToken) {
+                    const { error } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken,
+                    });
+                    if (error) throw error;
+                }
+
+                if (await redirectIfAuthenticated()) return;
+
+                throw new Error('A sessão do Discord não foi concluída. Tente novamente.');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Não foi possível concluir o login.';
+                console.error('[AuthCallback]', error);
+                setErrorMsg(message);
+                window.setTimeout(() => navigate('/auth', { replace: true }), 3000);
+            }
+        };
+
+        void handleCallback();
     }, [navigate]);
 
     return (

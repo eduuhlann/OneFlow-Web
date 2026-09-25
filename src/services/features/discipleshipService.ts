@@ -37,6 +37,34 @@ export interface DiscipleshipNote {
     is_read?: boolean;
 }
 
+export interface SocialUser {
+    id: string;
+    username: string | null;
+    display_name?: string | null;
+    avatar_url: string | null;
+    banner_url?: string | null;
+    bio?: string | null;
+    is_following: boolean;
+}
+
+export interface SocialProfile {
+    id: string;
+    username: string | null;
+    display_name?: string | null;
+    avatar_url: string | null;
+    banner_url?: string | null;
+    bio?: string | null;
+    discord_decoration_url?: string | null;
+    followers: number;
+    following: number;
+    chaptersRead: number;
+    groups: number;
+    connections: number;
+    mutuals: number;
+    isFollowing: boolean;
+    isFollowedBy: boolean;
+}
+
 export const discipleshipService = {
     // Connection Management
     async createInviteCode(leaderId: string): Promise<string> {
@@ -347,6 +375,171 @@ export const discipleshipService = {
         
         if (error) return [];
         return data || [];
+    },
+
+    // Social: Seguir / Seguidores (estilo Instagram)
+    async followUser(followerId: string, followingId: string): Promise<void> {
+        if (followerId === followingId) return;
+        const { error } = await supabase
+            .from('discipleship_follows')
+            .upsert(
+                { follower_id: followerId, following_id: followingId },
+                { onConflict: 'follower_id,following_id', ignoreDuplicates: true }
+            );
+        if (error) throw error;
+    },
+
+    async unfollowUser(followerId: string, followingId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_follows')
+            .delete()
+            .eq('follower_id', followerId)
+            .eq('following_id', followingId);
+        if (error) throw error;
+    },
+
+    async getFollowCounts(userId: string): Promise<{ followers: number; following: number }> {
+        const [followers, following] = await Promise.all([
+            supabase.from('discipleship_follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+            supabase.from('discipleship_follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
+        ]);
+        return {
+            followers: followers.count || 0,
+            following: following.count || 0,
+        };
+    },
+
+    async getFollowState(viewerId: string, targetId: string): Promise<{ isFollowing: boolean; isFollowedBy: boolean }> {
+        if (viewerId === targetId) return { isFollowing: false, isFollowedBy: false };
+        const [mine, theirs] = await Promise.all([
+            supabase.from('discipleship_follows').select('id').eq('follower_id', viewerId).eq('following_id', targetId).maybeSingle(),
+            supabase.from('discipleship_follows').select('id').eq('follower_id', targetId).eq('following_id', viewerId).maybeSingle(),
+        ]);
+        return { isFollowing: !!mine.data, isFollowedBy: !!theirs.data };
+    },
+
+    async getMutualCount(viewerId: string, targetId: string): Promise<number> {
+        const [mine, theirs] = await Promise.all([
+            supabase.from('discipleship_follows').select('following_id').eq('follower_id', viewerId),
+            supabase.from('discipleship_follows').select('follower_id').eq('follower_id', targetId),
+        ]);
+        const targetFollows = new Set((theirs.data || []).map(r => r.follower_id));
+        return (mine.data || []).filter(r => targetFollows.has(r.following_id)).length;
+    },
+
+    async getSocialProfile(targetId: string, viewerId: string): Promise<SocialProfile | null> {
+        const [profileRes, counts, state, mutuals, connections, chapters, groups] = await Promise.all([
+            supabase.from('profiles').select('*').eq('id', targetId).maybeSingle(),
+            this.getFollowCounts(targetId),
+            this.getFollowState(viewerId, targetId),
+            this.getMutualCount(viewerId, targetId),
+            supabase.from('discipleship_connections').select('id', { count: 'exact', head: true })
+                .or(`and(leader_id.eq.${viewerId},disciple_id.eq.${targetId}),and(leader_id.eq.${targetId},disciple_id.eq.${viewerId})`),
+            supabase.from('reading_progress').select('*', { count: 'exact', head: true }).eq('user_id', targetId),
+            supabase.from('discipleship_group_members').select('*', { count: 'exact', head: true }).eq('user_id', targetId).eq('status', 'active'),
+        ]);
+
+        if (!profileRes.data) return null;
+
+        return {
+            id: profileRes.data.id,
+            username: profileRes.data.username,
+            display_name: profileRes.data.display_name,
+            avatar_url: profileRes.data.avatar_url,
+            banner_url: profileRes.data.banner_url,
+            bio: profileRes.data.bio,
+            discord_decoration_url: profileRes.data.discord_decoration_url,
+            followers: counts.followers,
+            following: counts.following,
+            chaptersRead: chapters.count || 0,
+            groups: groups.count || 0,
+            connections: connections.count || 0,
+            mutuals,
+            isFollowing: state.isFollowing,
+            isFollowedBy: state.isFollowedBy,
+        };
+    },
+
+    async searchUsersByUsername(query: string, viewerId: string): Promise<SocialUser[]> {
+        const clean = query.replace(/^@+/, '').trim();
+        if (clean.length < 2) return [];
+
+        const { data: people, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .ilike('username', `%${clean}%`)
+            .neq('id', viewerId)
+            .not('username', 'is', null)
+            .limit(25);
+
+        if (error || !people || people.length === 0) return [];
+
+        const { data: myFollows } = await supabase
+            .from('discipleship_follows')
+            .select('following_id')
+            .eq('follower_id', viewerId);
+
+        const followingIds = new Set((myFollows || []).map(f => f.following_id));
+        const lower = clean.toLowerCase();
+
+        return people
+            .map(p => ({ ...p, is_following: followingIds.has(p.id) }))
+            .sort((a, b) => {
+                const aStarts = (a.username || '').toLowerCase().startsWith(lower) ? 0 : 1;
+                const bStarts = (b.username || '').toLowerCase().startsWith(lower) ? 0 : 1;
+                if (aStarts !== bStarts) return aStarts - bStarts;
+                return (a.username || '').localeCompare(b.username || '');
+            });
+    },
+
+    async getSuggestedUsers(viewerId: string, limit = 6): Promise<SocialUser[]> {
+        const [memberships, follows, connections] = await Promise.all([
+            supabase.from('discipleship_group_members').select('group_id').eq('user_id', viewerId).eq('status', 'active'),
+            supabase.from('discipleship_follows').select('following_id').eq('follower_id', viewerId),
+            supabase.from('discipleship_connections').select('leader_id, disciple_id')
+                .or(`leader_id.eq.${viewerId},disciple_id.eq.${viewerId}`),
+        ]);
+
+        const groupIds = (memberships.data || []).map(m => m.group_id);
+        let groupMates: string[] = [];
+        if (groupIds.length > 0) {
+            const { data } = await supabase
+                .from('discipleship_group_members')
+                .select('user_id')
+                .in('group_id', groupIds)
+                .eq('status', 'active')
+                .neq('user_id', viewerId);
+            groupMates = [...new Set((data || []).map(m => m.user_id))];
+        }
+
+        const alreadyFollowing = new Set((follows.data || []).map(f => f.following_id));
+        const connectedIds = new Set(
+            (connections.data || []).flatMap(c => [c.leader_id, c.disciple_id]).filter(id => id !== viewerId)
+        );
+
+        const ordered = [...groupMates, ...connectedIds] as string[];
+        const uniqueOrdered = [...new Set(ordered)].filter(id => !alreadyFollowing.has(id));
+
+        const { data: recent } = await supabase
+            .from('profiles')
+            .select('*')
+            .neq('id', viewerId)
+            .not('username', 'is', null)
+            .order('updated_at', { ascending: false })
+            .limit(limit * 3);
+
+        const candidates = [...uniqueOrdered, ...(recent || []).map(p => p.id)]
+            .filter(id => !alreadyFollowing.has(id));
+        const finalIds = [...new Set(candidates)].slice(0, limit);
+
+        if (finalIds.length === 0) return [];
+
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', finalIds);
+
+        return (profiles || []).map(p => ({ ...p, is_following: false }));
     },
 
     async sendDirectInvite(leaderId: string, discipleId: string): Promise<void> {

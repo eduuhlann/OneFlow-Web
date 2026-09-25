@@ -92,9 +92,11 @@ const FloatingDockMobile = ({
 export const FloatingDockDesktop = ({
   items,
   className,
+  scale = 1,
 }: {
   items: { title: string; icon: React.ReactNode; href: string; onClick?: () => void; full?: boolean }[];
   className?: string;
+  scale?: number;
 }) => {
   let mouseX = useMotionValue(Infinity);
   return (
@@ -107,7 +109,7 @@ export const FloatingDockDesktop = ({
       )}
     >
       {items.map((item) => (
-        <IconContainer mouseX={mouseX} key={item.title} {...item} />
+        <IconContainer mouseX={mouseX} key={item.title} scale={scale} {...item} />
       ))}
     </motion.div>
   );
@@ -120,6 +122,7 @@ function IconContainer({
   href,
   onClick,
   full,
+  scale = 1,
 }: {
   mouseX: MotionValue;
   title: string;
@@ -127,6 +130,7 @@ function IconContainer({
   href: string;
   onClick?: () => void;
   full?: boolean;
+  scale?: number;
 }) {
   let ref = useRef<HTMLDivElement>(null);
 
@@ -136,11 +140,11 @@ function IconContainer({
     return val - bounds.x - bounds.width / 2;
   });
 
-  let widthTransform = useTransform(distance, [-150, 0, 150], [56, 100, 56]);
-  let heightTransform = useTransform(distance, [-150, 0, 150], [56, 100, 56]);
+  let widthTransform = useTransform(distance, [-150, 0, 150], [56 * scale, 100 * scale, 56 * scale]);
+  let heightTransform = useTransform(distance, [-150, 0, 150], [56 * scale, 100 * scale, 56 * scale]);
 
-  let widthIconTransform = useTransform(distance, [-150, 0, 150], [34, 60, 34]);
-  let heightIconTransform = useTransform(distance, [-150, 0, 150], [34, 60, 34]);
+  let widthIconTransform = useTransform(distance, [-150, 0, 150], [34 * scale, 60 * scale, 34 * scale]);
+  let heightIconTransform = useTransform(distance, [-150, 0, 150], [34 * scale, 60 * scale, 34 * scale]);
 
   let width = useSpring(widthTransform, {
     mass: 0.1,

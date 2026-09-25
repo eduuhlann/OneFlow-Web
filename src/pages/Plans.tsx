@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     ArrowLeft,
-    Sparkles,
     BookOpen,
     ChevronRight,
     Plus,
@@ -10,11 +9,15 @@ import {
     Timer,
     Calendar,
     Info,
-    Trash2
+    Trash2,
+    Users,
+    LogIn
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePro } from '../contexts/ProContext';
-import { plansService, STATIC_PLANS, Plan, UserPlan } from '../services/features/plansService';
+import { useAuth } from '../contexts/AuthContext';
+import { plansService, Plan, UserPlan } from '../services/features/plansService';
+import { aiPlansService, type AiPlan } from '../services/features/aiPlansService';
 import logo from '../assets/logo.png';
 import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
@@ -27,24 +30,62 @@ function cn(...inputs: ClassValue[]) {
 const Plans: React.FC = () => {
     const navigate = useNavigate();
     const { isPro } = usePro();
+    const { user } = useAuth();
     const [activePlans, setActivePlans] = useState<UserPlan[]>([]);
     const [customPlans, setCustomPlans] = useState<Plan[]>([]);
     const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [aiPlans, setAiPlans] = useState<(AiPlan & { progress: number; memberCount: number })[]>([]);
+    const [aiLoading, setAiLoading] = useState(true);
+    const [inviteCode, setInviteCode] = useState('');
+    const [joiningCode, setJoiningCode] = useState(false);
 
     const refreshData = () => {
         setActivePlans(plansService.getActivePlans());
         setCustomPlans(plansService.getCustomPlans());
     };
 
+    const refreshAiPlans = async () => {
+        if (!user) {
+            setAiPlans([]);
+            setAiLoading(false);
+            return;
+        }
+        setAiLoading(true);
+        const plans = await aiPlansService.getMyPlans(user.id);
+        setAiPlans(plans);
+        setAiLoading(false);
+    };
+
     useEffect(() => {
         refreshData();
-    }, []);
+        refreshAiPlans();
+    }, [user]);
+
+    const handleJoinCode = async () => {
+        if (!user || !inviteCode.trim()) return;
+        setJoiningCode(true);
+        const planId = await aiPlansService.joinByCode(user.id, inviteCode);
+        setJoiningCode(false);
+        if (planId) {
+            setInviteCode('');
+            navigate(`/plano/${planId}`);
+        } else {
+            setSuccessMessage('Código inválido ou plano fechado para novos membros.');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        }
+    };
+
+    const handleDeleteAiPlan = async (planId: string) => {
+        await aiPlansService.deletePlan(planId);
+        await refreshAiPlans();
+        setShowConfirmDelete(null);
+    };
 
     const handleJoin = (planId: string) => {
         plansService.joinPlan(planId);
         refreshData();
-        const plan = [...STATIC_PLANS, ...customPlans].find(p => p.id === planId);
+        const plan = customPlans.find(p => p.id === planId);
         setSuccessMessage(`Você iniciou o plano: ${plan?.title}`);
         setTimeout(() => setSuccessMessage(null), 3000);
     };
@@ -114,6 +155,96 @@ const Plans: React.FC = () => {
                 <div className="space-y-12">
                     <section>
                         <h3 className="text-xs font-black tracking-[0.3em] text-white/30 uppercase mb-8 flex items-center gap-4">
+                            Meus Planos com IA
+                            <div className="flex-1 h-px bg-white/5" />
+                        </h3>
+
+                        <div className="mb-6 flex flex-col sm:flex-row gap-3">
+                            <input
+                                value={inviteCode}
+                                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                placeholder="CÓDIGO DE CONVITE"
+                                maxLength={8}
+                                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs tracking-[0.3em] font-serif text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors"
+                            />
+                            <button
+                                onClick={handleJoinCode}
+                                disabled={joiningCode || !inviteCode.trim()}
+                                className="px-8 py-4 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.2em] uppercase text-white/60 hover:text-white hover:border-white/40 transition-colors disabled:opacity-30 flex items-center gap-2 justify-center"
+                            >
+                                <LogIn size={14} /> Entrar
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            {aiLoading ? (
+                                <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
+                                    <p className="text-white/40 font-medium">Carregando seus planos...</p>
+                                </div>
+                            ) : aiPlans.length === 0 ? (
+                                <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
+                                    <BookOpen className="mx-auto text-white/10 mb-4" size={48} />
+                                    <p className="text-white/40 font-medium">Você ainda não criou nenhum plano com IA.</p>
+                                </div>
+                            ) : (
+                                aiPlans.map(plan => (
+                                    <motion.div
+                                        key={plan.id}
+                                        layout
+                                        className="p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] group cursor-pointer hover:bg-white/[0.08] transition-all duration-300 hover:-translate-y-1"
+                                        onClick={() => navigate(`/plano/${plan.id}`)}
+                                    >
+                                        <div className="flex items-center gap-6">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2 gap-4">
+                                                    <h4 className="text-xl font-serif">{plan.title}</h4>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        {plan.mode === 'grupo' && (
+                                                            <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-white/30">
+                                                                <Users size={12} /> {plan.memberCount}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-[10px] font-black tracking-widest text-white/20 uppercase">
+                                                            {plan.progress}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${Math.max(plan.progress, 2)}%` }}
+                                                        className="h-full bg-white"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] uppercase tracking-widest text-white/25 mt-2">
+                                                    {plan.duration_days} dias
+                                                    {plan.objective ? ` · ${plan.objective}` : ''}
+                                                    {plan.privacy === 'link' ? ' · link público' : ''}
+                                                </p>
+                                            </div>
+                                            {plan.user_id === user?.id && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowConfirmDelete(plan.id);
+                                                    }}
+                                                    className="p-3 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                            <div className="p-3 bg-white text-black rounded-xl hover:scale-110 active:scale-95 transition-all">
+                                                <ChevronRight size={18} />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))
+                            )}
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 className="text-xs font-black tracking-[0.3em] text-white/30 uppercase mb-8 flex items-center gap-4">
                             Planos Ativos
                             <div className="flex-1 h-px bg-white/5" />
                         </h3>
@@ -127,7 +258,7 @@ const Plans: React.FC = () => {
                             ) : (
                                 activePlans.map(up => {
                                     const customPlans = plansService.getCustomPlans();
-                                    const plan = STATIC_PLANS.find(p => p.id === up.planId) || customPlans.find(p => p.id === up.planId);
+                                    const plan = customPlans.find(p => p.id === up.planId);
                                     if (!plan) return null;
                                     const progress = plansService.getPlanProgress(plan.id);
 
@@ -175,12 +306,24 @@ const Plans: React.FC = () => {
 
                     <section>
                         <h3 className="text-xs font-black tracking-[0.3em] text-white/30 uppercase mb-8 flex items-center gap-4">
-                            Descobrir Planos
+                            Planos salvos neste dispositivo
                             <div className="flex-1 h-px bg-white/5" />
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {[...STATIC_PLANS, ...customPlans].filter(p => !isPlanActive(p.id)).map(plan => (
+                        {customPlans.filter(p => !isPlanActive(p.id)).length === 0 ? (
+                            <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
+                                <BookOpen className="mx-auto text-white/10 mb-4" size={48} />
+                                <p className="text-white/40 font-medium">Nenhum plano antigo por aqui.</p>
+                                <button
+                                    onClick={() => navigate(isPro ? '/plans/ai-generator' : '/pro')}
+                                    className="mt-6 px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all uppercase"
+                                >
+                                    {isPro ? 'CRIAR COM IA' : 'LIBERAR COM PRO'}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {customPlans.filter(p => !isPlanActive(p.id)).map(plan => (
                                 <motion.div
                                     key={plan.id}
                                     whileHover={{ y: -5 }}
@@ -217,7 +360,8 @@ const Plans: React.FC = () => {
                                     </div>
                                 </motion.div>
                             ))}
-                        </div>
+                            </div>
+                        )}
                     </section>
                 </div>
             </div>
@@ -252,7 +396,13 @@ const Plans: React.FC = () => {
                                     CANCELAR
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(showConfirmDelete)}
+                                    onClick={() => {
+                                        if (aiPlans.some(p => p.id === showConfirmDelete)) {
+                                            handleDeleteAiPlan(showConfirmDelete);
+                                        } else {
+                                            handleDelete(showConfirmDelete);
+                                        }
+                                    }}
                                     className="py-4 bg-red-600 rounded-2xl font-bold text-sm"
                                 >
                                     REMOVER

@@ -1,13 +1,22 @@
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || '';
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-export const callGroqAPI = async (prompt: string, model: string = 'llama-3.3-70b-versatile'): Promise<string> => {
-    const url = 'https://api.groq.com/openai/v1/chat/completions';
+export const GROQ_MODELS = {
+    primary: 'openai/gpt-oss-120b',
+    fallback: 'qwen/qwen3.8-27b',
+} as const;
 
-    if (!GROQ_API_KEY) {
-        throw new Error('GROQ API Key is missing.');
-    }
+export type GroqMessage = { role: 'user' | 'assistant' | 'system'; content: string };
 
-    const response = await fetch(url, {
+export interface GroqOptions {
+    model?: string;
+    json?: boolean;
+    temperature?: number;
+    maxTokens?: number;
+}
+
+const postToGroq = async (model: string, messages: GroqMessage[], opts: GroqOptions): Promise<string> => {
+    const response = await fetch(GROQ_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -15,19 +24,80 @@ export const callGroqAPI = async (prompt: string, model: string = 'llama-3.3-70b
         },
         body: JSON.stringify({
             model,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.7,
-            max_tokens: 2048,
+            messages,
+            temperature: opts.temperature ?? 0.7,
+            max_tokens: opts.maxTokens ?? 2048,
+            ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
         }),
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `Erro na chamada da API Groq (${response.status})`);
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.error?.message || `Erro na chamada da API Groq (${response.status})`;
+        const err = new Error(message) as Error & { status?: number };
+        err.status = response.status;
+        throw err;
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const content = data?.choices?.[0]?.message?.content;
+
+    if (!content) {
+        const reason = data?.choices?.[0]?.finish_reason;
+        const err = new Error(
+            reason === 'length'
+                ? 'A resposta da IA ficou incompleta. Tente um plano mais curto.'
+                : 'A IA retornou uma resposta vazia.'
+        ) as Error & { status?: number };
+        err.status = 500;
+        throw err;
+    }
+
+    return content;
+};
+
+const requestGroq = async (messages: GroqMessage[], opts: GroqOptions = {}): Promise<string> => {
+    if (!GROQ_API_KEY) {
+        throw new Error('Chave da Groq não configurada (VITE_GROQ_API_KEY).');
+    }
+
+    const models = [opts.model ?? GROQ_MODELS.primary, GROQ_MODELS.fallback]
+        .filter((model, index, list) => list.indexOf(model) === index);
+
+    let lastError: Error | null = null;
+
+    for (const model of models) {
+        try {
+            return await postToGroq(model, messages, opts);
+        } catch (error: any) {
+            lastError = error;
+            // Chave inválida ou erro do prompt: não adianta trocar de modelo.
+            if (error?.status === 401 || error?.status === 403 || error?.status === 400) {
+                throw error;
+            }
+            console.warn(`Groq falhou com ${model}:`, error?.message);
+        }
+    }
+
+    throw lastError || new Error('Erro desconhecido na chamada à API Groq.');
+};
+
+const extractJson = (text: string): any => {
+    try {
+        return JSON.parse(text);
+    } catch {
+        const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[1] || match[0]);
+        throw new Error('Não foi possível ler o JSON retornado pela IA.');
+    }
+};
+
+export const callGroqAPI = async (prompt: string, model?: string, opts: GroqOptions = {}): Promise<string> => {
+    return requestGroq([{ role: 'user', content: prompt }], { ...opts, model });
+};
+
+export const callGroqChat = async (messages: GroqMessage[], model?: string, opts: GroqOptions = {}): Promise<string> => {
+    return requestGroq(messages, { ...opts, model });
 };
 
 export const generateChapterLesson = async (book: string, chapter: number, version: string = 'nvi') => {
@@ -61,64 +131,9 @@ export const generateChapterLesson = async (book: string, chapter: number, versi
         ]
       }`;
 
-        const text = await callGroqAPI(prompt);
-        
-        let jsonData = null;
-        try {
-            // Priority 1: Clean JSON parse
-            jsonData = JSON.parse(text);
-        } catch (e) {
-            try {
-                // Priority 2: Extract JSON from markdown blocks or generic {} matches
-                const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    jsonData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-                }
-            } catch (innerE) {
-                console.error('Inner parsing error:', innerE);
-            }
-        }
-
-        if (!jsonData) {
-            throw new Error('Could not parse valid JSON from AI response');
-        }
-
-        return jsonData;
+        return extractJson(await callGroqAPI(prompt, undefined, { json: true, temperature: 0.6, maxTokens: 4096 }));
     } catch (error) {
         console.error('Error generating chapter lesson:', error);
         return null;
     }
-};
-
-export const callGroqChat = async (
-    messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
-    model: string = 'llama-3.3-70b-versatile'
-): Promise<string> => {
-    const url = 'https://api.groq.com/openai/v1/chat/completions';
-
-    if (!GROQ_API_KEY) {
-        throw new Error('GROQ API Key is missing.');
-    }
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-            model,
-            messages,
-            temperature: 0.7,
-            max_tokens: 2048,
-        }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `Erro na chamada da API Groq (${response.status})`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
 };
