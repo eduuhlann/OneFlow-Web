@@ -48,10 +48,10 @@ const OneFlowLogo = () => (
 );
 
 const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode }[] = [
-  { id: 'profile', label: 'Perfil', icon: <User size={19} /> },
-  { id: 'avatar', label: 'Avatar', icon: <Camera size={19} /> },
-  { id: 'banner', label: 'Banner', icon: <Image size={19} /> },
-  { id: 'privacy', label: 'Privacidade', icon: <Lock size={19} /> },
+  { id: 'profile', label: 'Perfil', icon: <User size={21} /> },
+  { id: 'avatar', label: 'Avatar', icon: <Camera size={21} /> },
+  { id: 'banner', label: 'Banner', icon: <Image size={21} /> },
+  { id: 'privacy', label: 'Privacidade', icon: <Lock size={21} /> },
 ];
 
 // ─── Main Component ────────────────────────────────────────────────────────────
@@ -337,15 +337,15 @@ const EditProfile: React.FC = () => {
                             <User size={32} className="ep-avatar-placeholder" />
                           )}
                           {uploading && <div className="ep-avatar-loading"><div className="ep-spinner" /></div>}
-                          <div className="ep-avatar-overlay"><Camera size={20} /></div>
+                          <div className="ep-avatar-overlay"><Camera size={26} /></div>
                         </div>
                         <button className="ep-avatar-edit-btn" onClick={() => fileInputRef.current?.click()} aria-label="Editar avatar">
-                          <Camera size={11} />
+                          <Camera size={14} />
                         </button>
                       </div>
                       <div className="ep-avatar-actions">
                         <button className="ep-btn-secondary" onClick={() => fileInputRef.current?.click()}>
-                          <Upload size={14} /> Alterar Avatar
+                          <Upload size={15} /> Alterar Avatar
                         </button>
                         <div className="ep-avatar-hints">
                           <span>Recomendado: 512×512</span>
@@ -404,7 +404,7 @@ const EditProfile: React.FC = () => {
                         id="ep-bio"
                         value={bio}
                         maxLength={160}
-                        rows={4}
+                        rows={6}
                         onChange={(e) => setBio(e.target.value)}
                         className="ep-textarea"
                         placeholder="Escreva algo sobre você..."
@@ -657,14 +657,14 @@ const EP_STYLES = `
   .ep-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     user-select: none;
-    margin-bottom: 28px;
+    margin-bottom: 34px;
   }
   .ep-logo-mark {
     position: relative;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
   }
   .ep-logo-ring {
@@ -678,13 +678,13 @@ const EP_STYLES = `
     top: 50%;
     left: 50%;
     transform: translate(-50%,-50%);
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     background: #fff;
     border-radius: 50%;
   }
   .ep-logo-text {
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: #fff;
@@ -692,11 +692,11 @@ const EP_STYLES = `
 
   /* ── Sidebar ── */
   .ep-sidebar {
-    width: 220px;
+    width: 288px;
     flex-shrink: 0;
     background: #0d0d0d;
     border-right: 1px solid #1a1a1a;
-    padding: 32px 16px 32px 20px;
+    padding: 40px 22px 40px 26px;
     display: flex;
     flex-direction: column;
     position: sticky;
@@ -705,37 +705,37 @@ const EP_STYLES = `
     overflow-y: auto;
   }
   .ep-sidebar-top {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
   .ep-sidebar-heading {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     color: #555;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    margin-bottom: 12px;
-    padding-left: 10px;
+    margin-bottom: 16px;
+    padding-left: 12px;
   }
 
   /* ── Nav ── */
   .ep-nav {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
   }
   .ep-nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     width: 100%;
-    padding: 13px 12px;
-    border-radius: 11px;
+    padding: 16px 14px;
+    border-radius: 13px;
     background: transparent;
     border: none;
     cursor: pointer;
     color: #666;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     text-align: left;
     transition: background 0.15s, color 0.15s;
@@ -760,8 +760,8 @@ const EP_STYLES = `
   .ep-nav-chevron {
     opacity: 0.4;
     flex-shrink: 0;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   /* ── Main ── */
@@ -916,7 +916,7 @@ const EP_STYLES = `
 
   /* ── Block ── */
   .ep-block {
-    padding: 28px 0;
+    padding: 32px 0;
   }
   .ep-divider {
     height: 1px;
@@ -927,18 +927,18 @@ const EP_STYLES = `
   /* ── Labels ── */
   .ep-field-label {
     display: block;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: #888;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
-  .ep-field-label--sm { font-size: 11px; }
+  .ep-field-label--sm { font-size: 12px; }
   .ep-field-desc {
     font-size: 13px;
     color: #4a4a4a;
-    margin: 0 0 16px;
+    margin: 0 0 18px;
     font-weight: 400;
     line-height: 1.5;
   }
@@ -953,15 +953,15 @@ const EP_STYLES = `
   .ep-avatar-row {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 34px;
   }
   .ep-avatar-wrap {
     position: relative;
     flex-shrink: 0;
   }
   .ep-avatar-circle {
-    width: 112px;
-    height: 112px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background: #111;
     border: 3px solid #1e1e1e;
@@ -1006,10 +1006,10 @@ const EP_STYLES = `
   .ep-avatar-circle:hover .ep-avatar-overlay { opacity: 1; }
   .ep-avatar-edit-btn {
     position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 30px;
-    height: 30px;
+    bottom: 2px;
+    right: 2px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background: #222;
     border: 2px solid #111;
@@ -1046,7 +1046,7 @@ const EP_STYLES = `
   }
   .ep-input-prefix {
     position: absolute;
-    left: 14px;
+    left: 16px;
     color: #444;
     display: flex;
     align-items: center;
@@ -1058,10 +1058,10 @@ const EP_STYLES = `
     background: #111;
     border: 1px solid #222;
     border-radius: 12px;
-    padding: 14px 46px 14px 16px;
+    padding: 16px 48px 16px 18px;
     color: #fff;
     font-family: inherit;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 400;
     outline: none;
     transition: border-color 0.15s, background 0.15s;
@@ -1070,15 +1070,15 @@ const EP_STYLES = `
   .ep-input::placeholder { color: #333; }
   .ep-input:hover { border-color: #2a2a2a; }
   .ep-input:focus { border-color: #3a3a3a; background: #131313; }
-  .ep-input--with-prefix { padding-left: 36px; }
+  .ep-input--with-prefix { padding-left: 42px; }
   .ep-input--readonly { color: #444; cursor: default; }
   .ep-input--readonly:focus { border-color: #222; background: #111; }
   .ep-counter {
     position: absolute;
-    right: 12px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 11px;
+    font-size: 12px;
     color: #3a3a3a;
     font-weight: 500;
     pointer-events: none;
@@ -1093,10 +1093,10 @@ const EP_STYLES = `
     background: #111;
     border: 1px solid #222;
     border-radius: 12px;
-    padding: 16px 16px 34px;
+    padding: 18px 18px 36px;
     color: #fff;
     font-family: inherit;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 400;
     outline: none;
     resize: none;
@@ -1119,7 +1119,7 @@ const EP_STYLES = `
   .ep-additional-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    gap: 28px;
   }
   .ep-additional-field {}
 
@@ -1507,13 +1507,13 @@ const EP_STYLES = `
   /* ── Responsive ── */
   @media (max-width: 1400px) {
     .ep-preview-panel { display: none; }
-    .ep-sidebar { width: 60px; padding: 24px 8px; }
+    .ep-sidebar { width: 76px; padding: 30px 10px; }
     .ep-sidebar-top { display: flex; flex-direction: column; align-items: center; }
     .ep-logo-text { display: none; }
     .ep-sidebar-heading { display: none; }
     .ep-nav-label { display: none; }
     .ep-nav-chevron { display: none; }
-    .ep-nav-item { justify-content: center; padding: 10px; }
+    .ep-nav-item { justify-content: center; padding: 14px 10px; }
   }
   @media (max-width: 640px) {
     .ep-sidebar { display: none; }

@@ -219,3 +219,38 @@
   0% { transform: translate(0, 0); }
   100% { transform: translate(24px, 0); }
 }
+
+/* =========================================
+   MICROINTERAÇÃO GLOBAL DE ÍCONES
+   Aplica-se a todo ícone (lucide) dentro de elementos interativos:
+   cresce ao passar o mouse e afunda ao clicar.
+   Usa a propriedade `scale` — independente de `transform` — para não
+   sobrescrever rotações/traduções que os ícones já tenham.
+   ========================================= */
+:where(button, a, [role='button'], [role='tab'], [role='menuitem'], label, summary, .cursor-pointer) svg {
+  scale: 1;
+  transition: scale 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:where(button, a, [role='button'], [role='tab'], [role='menuitem'], label, summary, .cursor-pointer):hover svg {
+  scale: 1.15;
+}
+
+:where(button, a, [role='button'], [role='tab'], [role='menuitem'], label, summary, .cursor-pointer):active svg {
+  scale: 0.88;
+  transition-duration: 0.08s;
+}
+
+/* ícones que não estão em elemento clicável: só reagem ao hover do container */
+:where(.group):hover svg {
+  scale: 1.08;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role='button'], [role='tab'], [role='menuitem'], label, summary, .cursor-pointer) svg,
+  :where(.group) svg {
+    scale: 1 !important;
+    transition: none !important;
+  }
+}
+
