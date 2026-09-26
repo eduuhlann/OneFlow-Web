@@ -23,8 +23,10 @@ import Settings from './pages/Settings';
 import Discipleship from '@/src/pages/Discipleship';
 import Profile from './pages/Profile';
 import Pro from './pages/Pro';
+import EditProfile from './pages/EditProfile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import PublicProfile from './pages/PublicProfile';
 import ParticleBackground from './components/ParticleBackground';
 // import Journey from './pages/Journey';
 
@@ -39,6 +41,7 @@ function AnimatedRoutes() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/u/:username" element={<PublicProfile />} />
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
@@ -99,6 +102,11 @@ function AnimatedRoutes() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile/edit" element={
+          <ProtectedRoute>
+            <EditProfile />
           </ProtectedRoute>
         } />
         <Route path="/pro" element={

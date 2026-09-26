@@ -31,7 +31,7 @@ import {
     Lock,
     Compass
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { usePro } from '../contexts/ProContext';
@@ -50,6 +50,7 @@ function cn(...inputs: ClassValue[]) {
 
 const Discipleship: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const { profile } = useProfile();
     const { isPro } = usePro();
@@ -581,6 +582,29 @@ const Discipleship: React.FC = () => {
             setAlertBanner({ isOpen: true, message: 'Erro ao iniciar chat privado.', type: 'error' });
         }
     };
+
+    // Deep link: /discipleship?chat=<userId> abre a conversa direto
+    useEffect(() => {
+        const targetId = searchParams.get('chat');
+        if (!user || !targetId || targetId === user.id) return;
+        let cancelled = false;
+        (async () => {
+            setSidebarTab('chats');
+            try {
+                const conn = await discipleshipService.getOrCreateConnection(user.id, targetId);
+                if (cancelled) return;
+                handleSelectConnection({
+                    ...conn,
+                    type: conn.leader_id === user.id ? 'disciple' : 'leader',
+                    profile: conn.profiles
+                });
+                setView('chat');
+            } catch (error) {
+                if (!cancelled) setAlertBanner({ isOpen: true, message: 'Erro ao iniciar chat privado.', type: 'error' });
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [user, searchParams]);
 
     const handleRespondInvite = async (conn: any, accept: boolean) => {
         try {

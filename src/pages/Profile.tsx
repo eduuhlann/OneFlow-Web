@@ -8,22 +8,18 @@ import {
     Upload,
     Lock,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Pencil
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { usePro } from '../contexts/ProContext';
 import { supabase } from '../services/supabase';
-import { twMerge } from 'tailwind-merge';
-import { clsx, type ClassValue } from 'clsx';
+import { cn } from '../lib/cn';
 import PageTransition from '../components/PageTransition';
 import ImageCropModal from '../components/ImageCropModal';
 import getCroppedImg from '../utils/imageUtils';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
 
 const Profile: React.FC = () => {
     const navigate = useNavigate();
@@ -353,9 +349,9 @@ const Profile: React.FC = () => {
                                 </div>
                                 {discordDecorationUrl && !decoError && (
                                     <div className="absolute inset-[-18.5%] w-[137%] h-[137%] pointer-events-none z-20">
-                                        <img 
-                                            src={discordDecorationUrl} 
-                                            alt="Decoração" 
+                                        <img
+                                            src={discordDecorationUrl}
+                                            alt="Decoração"
                                             className="w-full h-full object-contain"
                                             crossOrigin="anonymous"
                                             onError={() => setDecoError(true)}
@@ -378,20 +374,31 @@ const Profile: React.FC = () => {
                         </div>
 
                         <div className="flex flex-col items-end gap-3">
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={handleSave}
-                                disabled={isSaving || uploading}
-                                className="px-8 py-3.5 bg-white text-black hover:bg-white/90 rounded-2xl font-black text-xs tracking-[0.1em] uppercase transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                            >
-                                {isSaving ? (
-                                    <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                                ) : (
-                                    <Save size={16} />
-                                )}
-                                Salvar Perfil
-                            </motion.button>
+                            <div className="flex items-center gap-2">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => navigate('/profile/edit')}
+                                    title="Editar Perfil"
+                                    className="w-11 h-11 flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/15 rounded-2xl text-white/50 hover:text-white transition-all"
+                                >
+                                    <Pencil size={16} />
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={handleSave}
+                                    disabled={isSaving || uploading}
+                                    className="px-8 py-3.5 bg-white text-black hover:bg-white/90 rounded-2xl font-black text-xs tracking-[0.1em] uppercase transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                                >
+                                    {isSaving ? (
+                                        <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                                    ) : (
+                                        <Save size={16} />
+                                    )}
+                                    Salvar Perfil
+                                </motion.button>
+                            </div>
                             <AnimatePresence>
                                 {showSaveWarning && (
                                     <motion.p 
