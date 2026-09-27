@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { discipleshipService } from '../services/features/discipleshipService';
+import { discipleshipService, type ConnectionRequest } from '../services/features/discipleshipService';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle, Users, UserPlus, Bell, BellDot } from 'lucide-react';
 
@@ -49,6 +49,9 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [open, setOpen] = useState(false);
     const [loadingNotifs, setLoadingNotifs] = useState(false);
+    const [requests, setRequests] = useState<ConnectionRequest[]>([]);
+    const [resolvingId, setResolvingId] = useState<string | null>(null);
+    const [alert, setAlert] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
 
     const loadCount = useCallback(async () => {
@@ -57,30 +60,66 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
         setCount(c);
     }, [user]);
 
+    const loadRequests = useCallback(async () => {
+        if (!user) return;
+        try {
+            const pending = await discipleshipService.getConnectionRequests(user.id);
+            setRequests(pending);
+            setCount((prev) => Math.max(prev, pending.length));
+        } catch (e) {
+            console.error('Erro ao carregar solicitações:', e);
+        }
+    }, [user]);
+
+    const handleRespondRequest = async (requestId: string, accept: boolean) => {
+        if (!user) return;
+        setResolvingId(requestId);
+        try {
+            await discipleshipService.respondToConnectionRequest(requestId, accept);
+            setRequests(prev => prev.filter((r) => r.id !== requestId));
+            if (accept) {
+                setCount(prev => Math.max(0, prev - 1));
+                setAlert(`${(requests.find((r) => r.id === requestId)?.from?.display_name || requests.find((r) => r.id === requestId)?.from?.username || 'Novo irmão')} agora está na sua lista de conexões!`);
+            }
+        } catch (e) {
+            console.error('Erro ao responder solicitação:', e);
+        } finally {
+            setResolvingId(null);
+        }
+    };
+
     const loadNotifications = useCallback(async () => {
         if (!user) return;
         setLoadingNotifs(true);
         try {
             const notifs = await discipleshipService.getRecentNotifications(user.id);
             setNotifications(notifs);
+            await loadRequests();
         } finally {
             setLoadingNotifs(false);
         }
-    }, [user]);
+    }, [user, loadRequests]);
 
     useEffect(() => {
         if (!user) return;
         loadCount();
+        loadRequests();
 
         const channel = supabase
             .channel('notification-sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_notes' }, () => loadCount())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_connections', filter: `disciple_id=eq.${user.id}` }, () => loadCount())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_connections', filter: `disciple_id=eq.${user.id}` }, () => { loadCount(); loadRequests(); })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'discipleship_group_members', filter: `user_id=eq.${user.id}` }, () => loadCount())
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [user, loadCount]);
+    }, [user, loadCount, loadRequests]);
+
+    useEffect(() => {
+        if (!alert) return;
+        const t = setTimeout(() => setAlert(''), 4000);
+        return () => clearTimeout(t);
+    }, [alert]);
 
     // Close on outside click
     useEffect(() => {
@@ -118,7 +157,6 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
             >
                 <motion.div
                     className={dockMode ? "w-full h-full flex items-center justify-center" : ""}
-                    whileHover={{ rotate: [0, 10, -10, 5, -5, 2, 0], transition: { duration: 0.9, ease: 'easeInOut' } }}
                 >
                     {count > 0 ? (
                         <BellDot className={`fill-white text-white ${dockMode ? 'w-[85%] h-[85%]' : 'w-[22px] h-[22px]'}`} />
@@ -156,13 +194,63 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
                         <div className="bg-black/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
                             {/* Header */}
                             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-                                <span className="text-[11px] font-black tracking-[0.2em] text-white/50 uppercase">Notificações</span>
+                                <span className="text-[11px] font-black tracking-[0.2em] text-white/ uppercase">Notificações</span>
                                 {count > 0 && (
                                     <span className="text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5">
                                         {count} nova{count > 1 ? 's' : ''}
                                     </span>
                                 )}
                             </div>
+
+                            {/* Solicitações de conexão (#17) */}
+                            {requests.length > 0 && (
+                                <div className="border-b border-white/5 bg-amber-300/[0.03]">
+                                    <div className="flex items-center gap-2 px-5 py-3">
+                                        <UserPlus size={12} className="text-amber-300/70" />
+                                        <span className="text-[10px] font-black tracking-[0.2em] text-amber-200/80 uppercase">
+                                            Solicitações de conexão
+                                        </span>
+                                    </div>
+                                    <div className="divide-y divide-white/5">
+                                        {requests.map((req) => {
+                                            const name = req.from?.display_name || req.from?.username || 'Novo irmão';
+                                            return (
+                                                <div key={req.id} className="flex items-center gap-3 px-5 py-3.5">
+                                                    <div className="flex-shrink-0 w-9 h-9 rounded-xl overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center">
+                                                        {req.from?.avatar_url ? (
+                                                            <img src={req.from.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <UserPlus size={14} className="text-amber-200/50" />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[12px] font-bold text-white truncate">{name}</p>
+                                                        <p className="text-[10px] text-white/ truncate">
+                                                            {req.from?.username ? `@${req.from.username}` : 'quer conectar com você'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <button
+                                                            onClick={() => handleRespondRequest(req.id, true)}
+                                                            disabled={resolvingId === req.id}
+                                                            className="px-3 py-1.5 rounded-lg bg-white text-black text-[9px] font-black uppercase tracking-widest hover:bg-white/85 transition-colors disabled:opacity-50"
+                                                        >
+                                                            Aceitar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRespondRequest(req.id, false)}
+                                                            disabled={resolvingId === req.id}
+                                                            className="px-3 py-1.5 rounded-lg bg-white/5 text-white/ text-[9px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+                                                        >
+                                                            Recusar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* List */}
                             <div className="overflow-y-auto" style={{ maxHeight: '380px' }}>
@@ -176,13 +264,12 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
                                     </div>
                                 ) : notifications.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-10 gap-3">
-                                        <Bell size={28} className="text-white/10" />
-                                        <p className="text-[11px] font-bold text-white/20 tracking-widest uppercase">
+                                        <Bell size={28} className="text-white/80" />
+                                        <p className="text-[11px] font-bold text-white/ tracking-widest uppercase">
                                             Sem notificações
                                         </p>
                                     </div>
-                                ) : (
-                                    <div className="divide-y divide-white/5">
+                                ) : (                                    <div className="divide-y divide-white/5">
                                         {notifications.map((notif, i) => (
                                             <motion.button
                                                 key={notif.id}
@@ -197,7 +284,7 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
                                                     {notif.avatar_url ? (
                                                         <img src={notif.avatar_url} alt="" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="text-sm font-bold text-white/30">
+                                                        <span className="text-sm font-bold text-white/">
                                                             {notif.title.charAt(0).toUpperCase()}
                                                         </span>
                                                     )}
@@ -214,11 +301,11 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
                                                             {typeLabel[notif.type]}
                                                         </span>
                                                     </div>
-                                                    <p className="text-[11px] text-white/40 truncate">{notif.body}</p>
+                                                    <p className="text-[11px] text-white/ truncate">{notif.body}</p>
                                                 </div>
 
                                                 {/* Time */}
-                                                <span className="flex-shrink-0 text-[10px] text-white/20 font-bold pt-0.5">
+                                                <span className="flex-shrink-0 text-[10px] text-white/ font-bold pt-0.5">
                                                     {timeAgo(notif.created_at)}
                                                 </span>
                                             </motion.button>
@@ -232,7 +319,7 @@ export const NotificationBell: React.FC<{ dockMode?: boolean }> = ({ dockMode })
                                 <div className="border-t border-white/5 px-5 py-3">
                                     <button
                                         onClick={() => { setOpen(false); navigate('/discipleship'); }}
-                                        className="w-full text-[10px] font-black tracking-[0.2em] text-white/30 hover:text-white uppercase transition-colors"
+                                        className="w-full text-[10px] font-black tracking-[0.2em] text-white/ hover:text-white uppercase transition-colors"
                                     >
                                         Ver tudo no Discipulado →
                                     </button>

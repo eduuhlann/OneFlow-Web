@@ -50,14 +50,14 @@ export const DayEditor = ({ day, onSave, onCancel, saving }: {
         onSave(patch as Patch);
     };
 
-    const inputClass = 'w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-serif text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors resize-none';
+    const inputClass = 'w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-serif text-white placeholder:text-white/ focus:outline-none focus:border-white/30 transition-colors resize-none';
 
     return (
         <div className="space-y-8">
             <div className="space-y-5">
                 {FIELDS.map(f => (
                     <label key={f.key as string} className="block space-y-2">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">{f.label}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/">{f.label}</span>
                         <textarea
                             rows={f.rows}
                             value={values[f.key as string] || ''}
@@ -70,7 +70,7 @@ export const DayEditor = ({ day, onSave, onCancel, saving }: {
             </div>
 
             <div className="space-y-3">
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Perguntas</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/">Perguntas</span>
                 {questions.map((q, i) => (
                     <div key={i} className="flex gap-2">
                         <input
@@ -81,7 +81,7 @@ export const DayEditor = ({ day, onSave, onCancel, saving }: {
                         />
                         <button
                             onClick={() => setQuestions(prev => prev.filter((_, idx) => idx !== i))}
-                            className="px-3 border border-white/10 rounded-2xl text-white/40 hover:text-white hover:border-white/30 transition-colors shrink-0"
+                            className="px-3 border border-white/10 rounded-2xl text-white/ hover:text-white hover:border-white/30 transition-colors shrink-0"
                         >
                             <Trash2 size={16} />
                         </button>
@@ -89,7 +89,7 @@ export const DayEditor = ({ day, onSave, onCancel, saving }: {
                 ))}
                 <button
                     onClick={() => setQuestions(prev => [...prev, ''])}
-                    className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-white/ hover:text-white transition-colors"
                 >
                     <Plus size={14} /> Adicionar pergunta
                 </button>
@@ -108,7 +108,7 @@ export const DayEditor = ({ day, onSave, onCancel, saving }: {
                 </button>
                 <button
                     onClick={onCancel}
-                    className="flex-1 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                    className="flex-1 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/ hover:text-white hover:bg-white/5 transition-colors"
                 >
                     <span className="flex items-center justify-center gap-2"><Check size={14} /> Cancelar</span>
                 </button>

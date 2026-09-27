@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Users, BookOpen, MessageSquare, UserCheck, UserPlus, Check } from 'lucide-react';
+import { X, User, Users, BookOpen, MessageSquare, UserCheck, UserPlus, Check, Hourglass, Quote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { discipleshipService, SocialProfile } from '../../services/features/discipleshipService';
@@ -17,6 +17,25 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
     const [data, setData] = useState<SocialProfile | null>(null);
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [requestState, setRequestState] = useState<'none' | 'sent' | 'received'>('none');
+
+    useEffect(() => {
+        if (!userId || !user || userId === user.id) { setRequestState('none'); return; }
+        let active = true;
+        (async () => {
+            try {
+                const sent = await discipleshipService.getSentConnectionRequests(user.id);
+                if (!active) return;
+                if (sent.includes(userId)) { setRequestState('sent'); return; }
+                const received = await discipleshipService.getConnectionRequests(user.id);
+                if (!active) return;
+                setRequestState(received.some((r) => r.from_id === userId) ? 'received' : 'none');
+            } catch {
+                if (active) setRequestState('none');
+            }
+        })();
+        return () => { active = false; };
+    }, [userId, user?.id]);
 
     useEffect(() => {
         if (!userId || !user) return;
@@ -57,6 +76,24 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
         }
     };
 
+    const handleConnect = async () => {
+        if (!user || !data || busy || requestState === 'received') return;
+        setBusy(true);
+        try {
+            if (requestState === 'sent') {
+                await discipleshipService.cancelConnectionRequest(user.id, data.id);
+                setRequestState('none');
+            } else {
+                await discipleshipService.requestConnection(user.id, data.id);
+                setRequestState('sent');
+            }
+        } catch (err) {
+            console.error('Erro ao enviar solicitação de conexão:', err);
+        } finally {
+            setBusy(false);
+        }
+    };
+
     return (
         <AnimatePresence>
             {userId && (
@@ -79,7 +116,7 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
                         <button
                             onClick={onClose}
                             aria-label="Fechar"
-                            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white/60 hover:text-white hover:bg-black/70 transition-all active:scale-90"
+                            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white/ hover:text-white hover:bg-black/70 transition-all active:scale-90"
                         >
                             <X size={16} />
                         </button>
@@ -90,8 +127,8 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
                             </div>
                         ) : !data ? (
                             <div className="h-72 flex flex-col items-center justify-center gap-3 px-8 text-center">
-                                <User size={28} className="text-white/20" />
-                                <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">Perfil não encontrado</p>
+                                <User size={28} className="text-white/" />
+                                <p className="text-[10px] font-bold tracking-widest uppercase text-white/">Perfil não encontrado</p>
                             </div>
                         ) : (
                             <>
@@ -110,7 +147,7 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
                                             {data.avatar_url ? (
                                                 <img src={data.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" crossOrigin="anonymous" />
                                             ) : (
-                                                <User size={44} className="text-white/25" />
+                                                <User size={44} className="text-white/" />
                                             )}
                                         </div>
 
@@ -125,6 +162,26 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
                                                     }`}
                                                 >
                                                     {data.isFollowing ? <><UserCheck size={14} /> Seguindo</> : <><UserPlus size={14} /> Seguir</>}
+                                                </button>
+                                                <button
+                                                    onClick={handleConnect}
+                                                    disabled={busy || requestState === 'received'}
+                                                    title={requestState === 'sent' ? 'Cancelar solicitação' : 'Solicitar conexão'}
+                                                    className={`px-4 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 border disabled:opacity-60 ${
+                                                        requestState === 'sent'
+                                                            ? 'border-amber-300/30 bg-amber-300/10 text-amber-200'
+                                                            : requestState === 'received'
+                                                                ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200'
+                                                                : 'border-white/15 text-white/80 hover:border-white/40 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {requestState === 'sent' ? (
+                                                        <><Hourglass size={14} /> Pedido</>
+                                                    ) : requestState === 'received' ? (
+                                                        <><UserCheck size={14} /> Recebido</>
+                                                    ) : (
+                                                        <><UserPlus size={14} /> Conectar</>
+                                                    )}
                                                 </button>
                                                 <button
                                                     onClick={() => onMessage(data.id)}
@@ -142,11 +199,23 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
                                         <h3 className="text-3xl font-bold tracking-tight leading-none">
                                             {data.display_name || data.username || 'Usuário'}
                                         </h3>
-                                        <p className="text-base text-white/40">@{data.username || 'sem_username'}</p>
+                                        <p className="text-base text-white/">@{data.username || 'sem_username'}</p>
                                     </div>
 
+                                    {data.short_bio && (
+                                        <p className="mt-4 font-serif text-base italic leading-snug text-white/75">
+                                            {data.short_bio}
+                                        </p>
+                                    )}
+
+                                    {data.featured_verse && (
+                                        <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.05] p-3.5 font-serif text-[13px] leading-relaxed text-amber-50/80">
+                                            {data.featured_verse}
+                                        </p>
+                                    )}
+
                                     {data.bio && (
-                                        <p className="mt-5 text-sm leading-relaxed text-white/60">{data.bio}</p>
+                                        <p className="mt-5 text-sm leading-relaxed text-white/">{data.bio}</p>
                                     )}
 
                                     <div className="mt-6 grid grid-cols-3 gap-3">
@@ -155,7 +224,7 @@ export function UserProfileModal({ userId, onClose, onMessage }: Props) {
                                         <Stat icon={<BookOpen size={14} />} value={data.chaptersRead} label="Capítulos" />
                                     </div>
 
-                                    <div className="mt-4 flex flex-wrap items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-white/30">
+                                    <div className="mt-4 flex flex-wrap items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-white/">
                                         {data.isFollowedBy && !isSelf && (
                                             <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5">
                                                 <Check size={11} /> Te segue de volta
@@ -194,7 +263,7 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; la
     return (
         <div className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
             <span className="flex items-center gap-1.5 text-white/70">{icon}<span className="text-lg font-bold">{value}</span></span>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-white/30">{label}</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-white/">{label}</span>
         </div>
     );
 }

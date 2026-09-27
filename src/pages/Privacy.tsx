@@ -24,7 +24,7 @@ export default function Privacy() {
           <motion.button
             whileHover={{ x: -5 }}
             onClick={() => navigate(user ? '/dashboard' : '/')}
-            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/40 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/ hover:text-white transition-colors"
           >
             <ArrowLeft size={14} /> Voltar para o App
           </motion.button>
@@ -40,10 +40,10 @@ export default function Privacy() {
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-4 mb-6"
             >
-              <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/40">
+              <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/">
                 <Shield size={24} />
               </div>
-              <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/20">Legal & Transparência</span>
+              <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/">Legal & Transparência</span>
             </motion.div>
             
             <motion.h1
@@ -53,14 +53,14 @@ export default function Privacy() {
               className="text-5xl md:text-7xl font-serif font-bold leading-tight tracking-tighter mb-4"
             >
               Política de <br />
-              <span className="italic font-normal text-white/30">Privacidade.</span>
+              <span className="italic font-normal text-white/">Privacidade.</span>
             </motion.h1>
             
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-white/40 font-light italic"
+              className="text-white/ font-light italic"
             >
               Última atualização: 12 de Março de 2026
             </motion.p>
@@ -70,7 +70,7 @@ export default function Privacy() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="prose prose-invert prose-white prose-lg max-w-none space-y-8 text-white/60 font-light leading-relaxed"
+            className="prose prose-invert prose-white prose-lg max-w-none space-y-8 text-white/ font-light leading-relaxed"
           >
             <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-12 space-y-8">
               <p>
@@ -132,7 +132,7 @@ export default function Privacy() {
                     "C) Não causar danos aos sistemas físicos (hardwares) e lógicos (softwares) do OneFlow, de seus fornecedores ou terceiros, para introduzir ou disseminar vírus informáticos ou quaisquer outros sistemas de hardware ou software que sejam capazes de causar danos anteriormente mencionados."
                   ].map((item, i) => (
                     <li key={i} className="flex gap-4">
-                      <span className="text-white/20 font-serif italic text-xl">0{i+1}</span>
+                      <span className="text-white/ font-serif italic text-xl">0{i+1}</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -151,7 +151,7 @@ export default function Privacy() {
       </main>
 
       <footer className="py-12 px-6 border-t border-white/5 text-center">
-        <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase">© 2026 OneFlow Todos os direitos reservados.</p>
+        <p className="text-white/ text-[10px] tracking-[0.3em] uppercase">© 2026 OneFlow Todos os direitos reservados.</p>
       </footer>
     </div>
   );

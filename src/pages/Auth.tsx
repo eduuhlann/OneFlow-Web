@@ -166,9 +166,9 @@ export default function Auth() {
                             <div className="mb-10">
                                 <h1 className="text-5xl md:text-6xl font-outfit font-extrabold tracking-[-0.05em] mb-4 leading-[0.9] uppercase group">
                                     BEM-VINDO AO <br/>
-                                    <span className="text-white/30 group-hover:text-white transition-colors duration-700">ONEFLOW</span>
+                                    <span className="text-white/ group-hover:text-white transition-colors duration-700">ONEFLOW</span>
                                 </h1>
-                                <p className="text-[9px] font-bold tracking-[0.5em] text-white/20 uppercase">
+                                <p className="text-[9px] font-bold tracking-[0.5em] text-white/ uppercase">
                                     Escolha como se conectar
                                 </p>
                             </div>
@@ -180,7 +180,7 @@ export default function Auth() {
                                     className="w-full bg-[#5865F2] text-white py-6 rounded-2xl font-outfit font-black text-[12px] tracking-widest flex items-center justify-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-[0_20px_50px_-20px_rgba(88,101,242,0.5)] uppercase group relative overflow-hidden"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-discord group-hover:scale-110 transition-transform" viewBox="0 0 16 16">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-discord" viewBox="0 0 16 16">
                                         <path d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"/>
                                     </svg>
                                     Continuar com Discord
@@ -189,7 +189,7 @@ export default function Auth() {
 
                                 <div className="flex items-center justify-center gap-3 my-2">
                                     <div className="h-px flex-1 bg-white/10" />
-                                    <span className="text-[9px] font-black tracking-[0.3em] text-white/20 uppercase">ou</span>
+                                    <span className="text-[9px] font-black tracking-[0.3em] text-white/ uppercase">ou</span>
                                     <div className="h-px flex-1 bg-white/10" />
                                 </div>
 
@@ -199,7 +199,7 @@ export default function Auth() {
                                     className="w-full bg-white text-gray-800 py-6 rounded-2xl font-outfit font-black text-[12px] tracking-widest flex items-center justify-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-[0_20px_50px_-20px_rgba(255,255,255,0.4)] uppercase group relative overflow-hidden"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48" className="group-hover:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48" >
                                         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                                         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
                                         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
@@ -222,16 +222,16 @@ export default function Auth() {
                             )}
 
                             <div className="mt-12 pt-8 border-t border-white/5">
-                                <p className="text-[9px] font-black tracking-[0.3em] text-white/10 uppercase leading-relaxed">
+                                <p className="text-[9px] font-black tracking-[0.3em] text-white/80 uppercase leading-relaxed">
                                     Acesso seguro via Supabase Auth.<br/>
                                     Seus dados estão protegidos.
                                 </p>
                             </div>
                         </div>
 
-                        <p className="mt-12 text-center text-[9px] font-black tracking-[0.4em] text-white/10 leading-relaxed uppercase">
+                        <p className="mt-12 text-center text-[9px] font-black tracking-[0.4em] text-white/80 leading-relaxed uppercase">
                             AO CONTINUAR VOCÊ CONCORDA COM OS<br />
-                            <span className="text-white/20 underline decoration-white/10 underline-offset-8 text-[8px]">
+                            <span className="text-white/ underline decoration-white/10 underline-offset-8 text-[8px]">
                                 <Link to="/terms" className="hover:text-white transition-colors">TERMOS</Link> E <Link to="/privacy" className="hover:text-white transition-colors">PRIVACIDADE</Link>
                             </span>
                         </p>

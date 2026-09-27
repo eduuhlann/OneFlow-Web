@@ -86,7 +86,7 @@ Esperemos que esteja esclarecido e, como mencionado anteriormente, se houver alg
                         className="space-y-12"
                     >
                         <div>
-                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase block mb-2">Legal & Transparência</span>
+                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/ uppercase block mb-2">Legal & Transparência</span>
                             <h2 className="text-3xl font-black italic -rotate-1 tracking-tighter">Termos e Privacidade</h2>
                         </div>
 
@@ -98,25 +98,25 @@ Esperemos que esteja esclarecido e, como mencionado anteriormente, se houver alg
                                     className="p-10 bg-white/5 border border-white/10 rounded-[3rem] flex items-center justify-between group hover:bg-white/10 transition-all text-left"
                                 >
                                     <div className="flex items-center gap-8">
-                                        <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
+                                        <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white/ group-hover:text-white transition-colors">
                                             <section.icon size={28} />
                                         </div>
                                         <div>
                                             <h4 className="font-black italic tracking-tighter text-2xl mb-1">{section.title}</h4>
-                                            <p className="text-white/30 text-xs font-medium tracking-wide italic">Última atualização: {section.updatedAt}</p>
+                                            <p className="text-white/ text-xs font-medium tracking-wide italic">Última atualização: {section.updatedAt}</p>
                                         </div>
                                     </div>
-                                    <ChevronRight size={24} className="text-white/10 group-hover:text-white transition-colors" />
+                                    <ChevronRight size={24} className="text-white/80 group-hover:text-white transition-colors" />
                                 </button>
                             ))}
 
                             <div className="p-10 bg-white/[0.02] border border-white/5 rounded-[3rem] flex items-center gap-8">
-                                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white/20">
+                                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white/">
                                     <Scale size={28} />
                                 </div>
                                 <div className="flex-1">
-                                    <span className="text-[8px] font-bold tracking-[0.3em] text-white/20 uppercase block mb-1">Conformidade Global</span>
-                                    <p className="text-white/40 text-[10px] font-medium leading-relaxed italic">
+                                    <span className="text-[8px] font-bold tracking-[0.3em] text-white/ uppercase block mb-1">Conformidade Global</span>
+                                    <p className="text-white/ text-[10px] font-medium leading-relaxed italic">
                                         O OneFlow opera em conformidade com as principais regulamentações de proteção de dados (LGPD e GDPR).
                                     </p>
                                 </div>
@@ -133,7 +133,7 @@ Esperemos que esteja esclarecido e, como mencionado anteriormente, se houver alg
                     >
                         <button 
                             onClick={() => setActiveSection('main')}
-                            className="flex items-center gap-2 text-[10px] font-black tracking-widest text-white/40 uppercase hover:text-white transition-colors"
+                            className="flex items-center gap-2 text-[10px] font-black tracking-widest text-white/ uppercase hover:text-white transition-colors"
                         >
                             <ChevronRight size={14} className="rotate-180" /> VOLTAR PARA LEGAL
                         </button>
@@ -144,7 +144,7 @@ Esperemos que esteja esclarecido e, como mencionado anteriormente, se houver alg
                             </h2>
                             
                             <div className="p-10 bg-white/5 border border-white/10 rounded-[3rem] prose prose-invert max-w-none">
-                                <p className="text-white/60 font-medium text-lg leading-relaxed whitespace-pre-wrap italic">
+                                <p className="text-white/ font-medium text-lg leading-relaxed whitespace-pre-wrap italic">
                                     {sections.find(s => s.id === activeSection)?.content}
                                 </p>
                             </div>

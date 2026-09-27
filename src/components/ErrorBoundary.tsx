@@ -31,7 +31,7 @@ class ErrorBoundary extends Component<Props, State> {
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Ops! Algo deu errado.</h1>
-          <p className="text-white/60 mb-8 max-w-md">
+          <p className="text-white/ mb-8 max-w-md">
             Pedimos desculpas pelo inconveniente. Um erro inesperado ocorreu.
           </p>
           <button

@@ -22,7 +22,7 @@ export function Avatar({ profile, user, size = 'md' }: AvatarProps) {
   return (
     <span
       className={`${sizeClass} inline-flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/[0.05] ${
-        !url || imgError ? 'text-white/40' : ''
+        !url || imgError ? 'text-white/' : ''
       }`}
     >
       {url && !imgError ? (

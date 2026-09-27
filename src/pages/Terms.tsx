@@ -24,7 +24,7 @@ export default function Terms() {
           <motion.button
             whileHover={{ x: -5 }}
             onClick={() => navigate(user ? '/dashboard' : '/')}
-            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/40 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-white/ hover:text-white transition-colors"
           >
             <ArrowLeft size={14} /> Voltar para o App
           </motion.button>
@@ -40,10 +40,10 @@ export default function Terms() {
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-4 mb-6"
             >
-              <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/40">
+              <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/">
                 <Scale size={24} />
               </div>
-              <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/20">Legal & Transparência</span>
+              <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-white/">Legal & Transparência</span>
             </motion.div>
             
             <motion.h1
@@ -53,14 +53,14 @@ export default function Terms() {
               className="text-5xl md:text-7xl font-serif font-bold leading-tight tracking-tighter mb-4"
             >
               Termos de <br />
-              <span className="italic font-normal text-white/30">Serviço.</span>
+              <span className="italic font-normal text-white/">Serviço.</span>
             </motion.h1>
             
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-white/40 font-light italic"
+              className="text-white/ font-light italic"
             >
               Última atualização: 12 de Março de 2026
             </motion.p>
@@ -70,13 +70,13 @@ export default function Terms() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="prose prose-invert prose-white prose-lg max-w-none space-y-8 text-white/60 font-light leading-relaxed"
+            className="prose prose-invert prose-white prose-lg max-w-none space-y-8 text-white/ font-light leading-relaxed"
           >
             <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-12 space-y-12">
               
               <section className="space-y-4">
                 <h2 className="text-3xl font-serif font-bold text-white tracking-tight italic flex items-center gap-4">
-                  <span className="text-white/10 not-italic">01</span> 1. Termos
+                  <span className="text-white/80 not-italic">01</span> 1. Termos
                 </h2>
                 <div className="pl-14">
                   <p>
@@ -87,7 +87,7 @@ export default function Terms() {
 
               <section className="space-y-4">
                 <h2 className="text-3xl font-serif font-bold text-white tracking-tight italic flex items-center gap-4">
-                  <span className="text-white/10 not-italic">02</span> 2. Uso de Licença
+                  <span className="text-white/80 not-italic">02</span> 2. Uso de Licença
                 </h2>
                 <div className="pl-14 space-y-4">
                   <p>
@@ -108,7 +108,7 @@ export default function Terms() {
 
               <section className="space-y-4">
                 <h2 className="text-3xl font-serif font-bold text-white tracking-tight italic flex items-center gap-4">
-                  <span className="text-white/10 not-italic">03</span> 3. Isenção de responsabilidade
+                  <span className="text-white/80 not-italic">03</span> 3. Isenção de responsabilidade
                 </h2>
                 <div className="pl-14">
                   <p>
@@ -122,7 +122,7 @@ export default function Terms() {
 
               <section className="space-y-4">
                 <h2 className="text-3xl font-serif font-bold text-white tracking-tight italic flex items-center gap-4">
-                  <span className="text-white/10 not-italic">04</span> 4. Limitações
+                  <span className="text-white/80 not-italic">04</span> 4. Limitações
                 </h2>
                 <div className="pl-14">
                   <p>
@@ -133,7 +133,7 @@ export default function Terms() {
 
               <section className="space-y-4">
                 <h2 className="text-3xl font-serif font-bold text-white tracking-tight italic flex items-center gap-4">
-                  <span className="text-white/10 not-italic">05</span> 5. Precisão dos materiais
+                  <span className="text-white/80 not-italic">05</span> 5. Precisão dos materiais
                 </h2>
                 <div className="pl-14">
                   <p>
@@ -144,7 +144,7 @@ export default function Terms() {
 
               <section className="space-y-4">
                 <h2 className="text-3xl font-serif font-bold text-white tracking-tight italic flex items-center gap-4">
-                  <span className="text-white/10 not-italic">06</span> 6. Links
+                  <span className="text-white/80 not-italic">06</span> 6. Links
                 </h2>
                 <div className="pl-14">
                   <p>
@@ -169,7 +169,7 @@ export default function Terms() {
       </main>
 
       <footer className="py-12 px-6 border-t border-white/5 text-center">
-        <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase">© 2026 OneFlow Todos os direitos reservados.</p>
+        <p className="text-white/ text-[10px] tracking-[0.3em] uppercase">© 2026 OneFlow Todos os direitos reservados.</p>
       </footer>
     </div>
   );

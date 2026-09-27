@@ -35,7 +35,7 @@ export function MobileDock({ onCustomize }: MobileDockProps) {
               className={`flex h-11 min-w-0 flex-1 items-center justify-center rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                 active
                   ? 'bg-white/10 text-white'
-                  : 'text-white/45 hover:bg-white/[0.03] hover:text-white/80 active:scale-90'
+                  : 'text-white/ hover:bg-white/[0.03] hover:text-white/80 active:scale-90'
               }`}
             >
               <Icon size={21} strokeWidth={active ? 2.2 : 1.75} />

@@ -81,7 +81,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/40 hover:text-white"
+                                    className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/ hover:text-white"
                                 >
                                     <X size={20} />
                                 </button>
@@ -91,14 +91,14 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                 {/* Upload & Gallery Section */}
                                 <section className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Sua Galeria</h4>
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/ uppercase">Sua Galeria</h4>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">
                                         {/* Upload Button */}
                                         <label className="flex flex-col items-center justify-center gap-2 h-24 rounded-2xl bg-white/[0.03] border border-white/10 border-dashed hover:bg-white/10 transition-all cursor-pointer group">
-                                            <Upload size={20} className="text-white/40 group-hover:text-white group-hover:scale-110 transition-all" />
-                                            <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">Novo Upload</span>
+                                            <Upload size={20} className="text-white/ group-hover:text-white transition-colors" />
+                                            <span className="text-[10px] font-bold tracking-widest text-white/ uppercase">Novo Upload</span>
                                             <input type="file" className="hidden" accept="video/mp4,image/*" onChange={handleFileUpload} />
                                         </label>
 
@@ -125,7 +125,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteWallpaper(p.url)}
-                                                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                                                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white/ hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
                                                     title="Remover da galeria"
                                                 >
                                                     <Trash2 size={12} />
@@ -135,7 +135,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                     </div>
 
                                     {(!preferences.uploadedWallpapers || preferences.uploadedWallpapers.length === 0) && (
-                                        <p className="text-[10px] text-white/20 italic text-center py-4 uppercase tracking-widest">
+                                        <p className="text-[10px] text-white/ italic text-center py-4 uppercase tracking-widest">
                                             Nenhum upload ainda
                                         </p>
                                     )}
@@ -144,7 +144,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                 {/* System Backgrounds Section */}
                                 <section className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Fundo do Sistema</h4>
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/ uppercase">Fundo do Sistema</h4>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
@@ -160,7 +160,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                                     "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
                                                     preferences.wallpaper === wp.id
                                                         ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
-                                                        : "border-transparent bg-white/[0.03] text-white/40 hover:bg-white/5 hover:text-white/80"
+                                                        : "border-transparent bg-white/[0.03] text-white/ hover:bg-white/5 hover:text-white/80"
                                                 )}
                                             >
                                                 {wp.label}
@@ -172,7 +172,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                 {/* Dashboard Style Section */}
                                 <section className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase">Estilo de Navegação</h4>
+                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/ uppercase">Estilo de Navegação</h4>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {(['cards', 'dock'] as const).map((style) => (
@@ -183,7 +183,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                                     "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
                                                     (preferences.dashboardStyle || 'dock') === style
                                                         ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
-                                                        : "border-transparent bg-white/[0.03] text-white/40 hover:bg-white/5 hover:text-white/80"
+                                                        : "border-transparent bg-white/[0.03] text-white/ hover:bg-white/5 hover:text-white/80"
                                                 )}
                                             >
                                                 {style === 'cards' ? 'Cards (Grid)' : 'Floating Dock'}
@@ -196,7 +196,7 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                 <div className="pt-6 border-t border-white/10">
                                     <button
                                         onClick={resetPreferences}
-                                        className="w-full p-4 rounded-2xl text-xs font-bold tracking-[0.2em] uppercase text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                                        className="w-full p-4 rounded-2xl text-xs font-bold tracking-[0.2em] uppercase text-white/ hover:text-white hover:bg-white/5 transition-colors"
                                     >
                                         Restaurar Padrões
                                     </button>

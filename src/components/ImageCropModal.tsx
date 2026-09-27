@@ -135,7 +135,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
             <div className="px-8 py-8 bg-[#0f0f0f] flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-center gap-6 flex-1 max-w-xs">
                 <div className="flex items-center gap-4 flex-1">
-                  <ZoomOut size={16} className="text-white/40" />
+                  <ZoomOut size={16} className="text-white/" />
                   <input
                     type="range"
                     value={zoom}
@@ -146,11 +146,11 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                     onChange={(e) => setZoom(Number(e.target.value))}
                     className="flex-1 accent-sky-400"
                   />
-                  <ZoomIn size={16} className="text-white/40" />
+                  <ZoomIn size={16} className="text-white/" />
                 </div>
                 
                 <div className="flex items-center gap-4 flex-1">
-                  <RotateCw size={16} className="text-white/40" />
+                  <RotateCw size={16} className="text-white/" />
                   <input
                     type="range"
                     value={rotation}

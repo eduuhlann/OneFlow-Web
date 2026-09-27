@@ -63,14 +63,14 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
     return (
         <section className="space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/">
                     Conversa do grupo · dia {day.day}
                 </h3>
                 {canInteract && humanComments.length >= 2 && (
                     <button
                         onClick={handleSynthesize}
                         disabled={synthesizing}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-white hover:border-white/40 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 text-[10px] font-bold uppercase tracking-[0.2em] text-white/ hover:text-white hover:border-white/40 transition-colors disabled:opacity-50"
                     >
                         <Bot size={14} />
                         {synthesizing ? 'Sintetizando...' : 'IA resume o grupo'}
@@ -82,7 +82,7 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
                 <div className="space-y-3 p-5 rounded-3xl border border-white/10 bg-white/5">
                     {aiComments.map(c => (
                         <div key={c.id} className="flex gap-3">
-                            <Bot size={16} className="text-white/30 shrink-0 mt-1" />
+                            <Bot size={16} className="text-white/ shrink-0 mt-1" />
                             <p className="text-sm leading-relaxed text-white/70 font-serif italic">{c.content}</p>
                         </div>
                     ))}
@@ -90,9 +90,9 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
             )}
 
             {loading ? (
-                <p className="text-sm text-white/30 font-serif italic">Carregando conversa...</p>
+                <p className="text-sm text-white/ font-serif italic">Carregando conversa...</p>
             ) : humanComments.length === 0 ? (
-                <p className="text-sm text-white/30 font-serif italic">
+                <p className="text-sm text-white/ font-serif italic">
                     Ninguém comentou ainda. {canInteract ? 'Comece a conversa.' : 'Entre no plano para comentar.'}
                 </p>
             ) : (
@@ -102,12 +102,12 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
                             {c.profiles?.avatar_url ? (
                                 <img src={c.profiles.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
                             ) : (
-                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/60 shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/ shrink-0">
                                     {(c.profiles?.username || '?').charAt(0).toUpperCase()}
                                 </div>
                             )}
                             <div className="flex-1 space-y-1">
-                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/">
                                     {c.profiles?.username || 'Membro'}
                                 </span>
                                 <p className="text-sm leading-relaxed text-white/75 font-serif">{c.content}</p>
@@ -118,7 +118,7 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
                                         await aiPlansService.deleteComment(c.id);
                                         load();
                                     }}
-                                    className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-white transition-opacity self-start"
+                                    className="opacity-0 group-hover:opacity-100 text-white/ hover:text-white transition-opacity self-start"
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -128,7 +128,7 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
                 </div>
             )}
 
-            {error && <p className="text-xs text-white/40 font-serif italic">{error}</p>}
+            {error && <p className="text-xs text-white/ font-serif italic">{error}</p>}
 
             {canInteract && (
                 <div className="flex gap-2">
@@ -139,7 +139,7 @@ export const CommentsSection = ({ plan, day, userId, canInteract }: {
                         placeholder="O que Deus falou com você hoje?"
                         className={cn(
                             'flex-1 bg-white/5 border border-white/10 rounded-full px-5 py-3 text-sm font-serif',
-                            'text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors'
+                            'text-white placeholder:text-white/ focus:outline-none focus:border-white/30 transition-colors'
                         )}
                     />
                     <button

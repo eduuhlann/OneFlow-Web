@@ -5,7 +5,7 @@ import {
   Camera,
   User,
   Image,
-  Lock,
+  Shield,
   Check,
   Copy,
   MoreHorizontal,
@@ -19,10 +19,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { usePro } from '../contexts/ProContext';
 import { supabase } from '../services/supabase';
 import PageTransition from '../components/PageTransition';
 import ImageCropModal from '../components/ImageCropModal';
+import FeaturedVersePicker from '../components/FeaturedVersePicker';
 import getCroppedImg from '../utils/imageUtils';
 import { profileUrl as buildProfileUrl } from '../lib/site';
 
@@ -51,7 +51,7 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode }[] = [
   { id: 'profile', label: 'Perfil', icon: <User size={21} /> },
   { id: 'avatar', label: 'Avatar', icon: <Camera size={21} /> },
   { id: 'banner', label: 'Banner', icon: <Image size={21} /> },
-  { id: 'privacy', label: 'Privacidade', icon: <Lock size={21} /> },
+   { id: 'privacy', label: 'Privacidade', icon: <Shield size={21} /> },
 ];
 
 // ─── Main Component ────────────────────────────────────────────────────────────
@@ -59,7 +59,6 @@ const EditProfile: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
-  const { isPro } = usePro();
 
   // ── State ──
   const [activeSection, setActiveSection] = useState<NavSection>('profile');
@@ -78,6 +77,8 @@ const EditProfile: React.FC = () => {
   const [displayName, setDisplayName] = useState(profile?.display_name || profile?.username || meta.username || '');
   const [username, setUsername] = useState(profile?.username || meta.username || '');
   const [bio, setBio] = useState(profile?.bio || '');
+  const [shortBio, setShortBio] = useState(profile?.short_bio || '');
+  const [featuredVerse, setFeaturedVerse] = useState(profile?.featured_verse || '');
   const [email] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(getBestAvatarUrl());
@@ -91,6 +92,8 @@ const EditProfile: React.FC = () => {
     displayName: profile?.display_name || profile?.username || meta.username || '',
     username: profile?.username || meta.username || '',
     bio: profile?.bio || '',
+    shortBio: profile?.short_bio || '',
+    featuredVerse: profile?.featured_verse || '',
     avatarUrl: getBestAvatarUrl(),
     bannerUrl: profile?.banner_url || '',
   });
@@ -110,6 +113,8 @@ const EditProfile: React.FC = () => {
       setDisplayName(profile.display_name || profile.username || '');
       setUsername(profile.username || '');
       setBio(profile.bio || '');
+      setShortBio(profile.short_bio || '');
+      setFeaturedVerse(profile.featured_verse || '');
       const best = profile.avatar_url || meta.avatar_url || meta.picture || '';
       setAvatarUrl(best);
       setPreviewAvatarUrl(best);
@@ -124,10 +129,12 @@ const EditProfile: React.FC = () => {
       displayName !== origValues.displayName ||
       username !== origValues.username ||
       bio !== origValues.bio ||
+      shortBio !== origValues.shortBio ||
+      featuredVerse !== origValues.featuredVerse ||
       avatarUrl !== origValues.avatarUrl ||
       bannerUrl !== origValues.bannerUrl;
     setHasChanges(changed);
-  }, [displayName, username, bio, avatarUrl, bannerUrl]);
+  }, [displayName, username, bio, shortBio, featuredVerse, avatarUrl, bannerUrl]);
 
   // ── Handlers ──
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
@@ -148,7 +155,6 @@ const EditProfile: React.FC = () => {
 
   const handleUploadOriginal = async (file: File, type: 'avatar' | 'banner') => {
     if (!user) return;
-    if (type === 'banner' && !isPro) { navigate('/pro'); return; }
     setUploading(true); setError('');
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'gif';
@@ -165,9 +171,8 @@ const EditProfile: React.FC = () => {
   };
 
   const onCropComplete = async (croppedAreaPixels: any) => {
-    if (!imageToCrop || !user) return;
-    if (cropType === 'banner' && !isPro) { navigate('/pro'); return; }
-    setCropOpen(false); setUploading(true); setError('');
+     if (!imageToCrop || !user) return;
+     setCropOpen(false); setUploading(true); setError('');
     try {
       const blob = await getCroppedImg(imageToCrop, croppedAreaPixels);
       if (!blob) throw new Error('Falha ao processar imagem');
@@ -207,7 +212,7 @@ const EditProfile: React.FC = () => {
         const { data: existing } = await supabase.from('profiles').select('id').eq('username', cleanUsername).single();
         if (existing && existing.id !== user?.id) { setError('Este nome de usuário já está em uso.'); setIsSaving(false); return; }
       }
-      await updateProfile({ display_name: displayName, username: cleanUsername, bio, avatar_url: avatarUrl || null, banner_url: isPro ? (bannerUrl || null) : profile?.banner_url || null });
+       await updateProfile({ display_name: displayName, username: cleanUsername, bio, short_bio: shortBio.trim() || null, featured_verse: featuredVerse || null, avatar_url: avatarUrl || null, banner_url: bannerUrl || null });
       setHasChanges(false); setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) { setError(err.message || 'Erro ao salvar.'); }
     finally { setIsSaving(false); }
@@ -413,6 +418,31 @@ const EditProfile: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* ── Bio curta (#3) ── */}
+                  <div className="ep-block">
+                    <label className="ep-field-label" htmlFor="ep-short-bio">Bio Curta</label>
+                    <p className="ep-field-desc">Aparece no card de compartilhamento e no topo do seu perfil público.</p>
+                    <div className="ep-textarea-wrap">
+                      <input
+                        id="ep-short-bio"
+                        type="text"
+                        value={shortBio}
+                        maxLength={60}
+                        onChange={(e) => setShortBio(e.target.value)}
+                        className="ep-input"
+                        placeholder="Ex: Servindo em São Paulo · Buscando profundidade"
+                      />
+                      <span className="ep-counter">{shortBio.length}/60</span>
+                    </div>
+                  </div>
+
+                  {/* ── Versículo do perfil (#4) ── */}
+                  <div className="ep-block">
+                    <p className="ep-field-label">Versículo do Perfil</p>
+                    <p className="ep-field-desc">Fica fixado no seu perfil e no card de compartilhamento.</p>
+                    <FeaturedVersePicker value={featuredVerse} onChange={setFeaturedVerse} />
+                  </div>
+
                   <div className="ep-divider" />
 
                   {/* ── Additional Info ── */}
@@ -507,22 +537,21 @@ const EditProfile: React.FC = () => {
                     <p className="ep-section-desc">Personalize a imagem de capa do seu perfil.</p>
                   </div>
                   <div className="ep-banner-preview-area">
-                    <div className="ep-banner-preview-box" onClick={() => isPro ? bannerInputRef.current?.click() : navigate('/pro')}>
-                      {previewBannerUrl ? (
-                        <img src={previewBannerUrl} alt="Banner" className="ep-banner-img" />
-                      ) : (
-                        <div className="ep-banner-empty">
-                          {isPro ? <><Upload size={24} /><span>Enviar Banner</span></> : <><Lock size={22} /><span>OneFlow Pro</span></>}
-                        </div>
-                      )}
-                      <div className="ep-banner-overlay">
-                        {isPro ? <><Camera size={22} /><span>Alterar Banner</span></> : <><Lock size={20} /><span>Desbloquear Com Pro</span></>}
-                      </div>
-                    </div>
-                    <p className="ep-field-desc" style={{ marginTop: '12px' }}>
-                      Recomendado: 1500×500px · JPG, PNG, GIF · Máximo 20MB
-                      {!isPro && ' · Exclusivo para membros Pro'}
-                    </p>
+                     <div className="ep-banner-preview-box" onClick={() => bannerInputRef.current?.click()}>
+                       {previewBannerUrl ? (
+                         <img src={previewBannerUrl} alt="Banner" className="ep-banner-img" />
+                       ) : (
+                         <div className="ep-banner-empty">
+                           <><Upload size={24} /><span>Enviar Banner</span></>
+                         </div>
+                       )}
+                       <div className="ep-banner-overlay">
+                         <><Camera size={22} /><span>Alterar Banner</span></>
+                       </div>
+                     </div>
+                     <p className="ep-field-desc" style={{ marginTop: '12px' }}>
+                       Recomendado: 1500×500px · JPG, PNG, GIF · Máximo 20MB
+                     </p>
                   </div>
                 </motion.div>
               )}
@@ -710,7 +739,7 @@ const EP_STYLES = `
   .ep-sidebar-heading {
     font-size: 11px;
     font-weight: 600;
-    color: #555;
+    color: #b8b8b8;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 16px;
@@ -733,7 +762,7 @@ const EP_STYLES = `
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #666;
+    color: #b8b8b8;
     font-family: inherit;
     font-size: 15px;
     font-weight: 500;
@@ -799,7 +828,7 @@ const EP_STYLES = `
     border-radius: 10px;
     border: 1px solid #1e1e1e;
     background: #111;
-    color: #666;
+    color: #b8b8b8;
     cursor: pointer;
     transition: background 0.15s, color 0.15s, border-color 0.15s;
     flex-shrink: 0;
@@ -827,7 +856,7 @@ const EP_STYLES = `
     gap: 5px;
     font-size: 12px;
     font-weight: 500;
-    color: #777;
+    color: #b8b8b8;
   }
   .ep-save-btn {
     display: flex;
@@ -853,7 +882,7 @@ const EP_STYLES = `
   }
   .ep-save-btn--idle {
     background: #151515;
-    color: #444;
+    color: #b8b8b8;
     border: 1px solid #1e1e1e;
     cursor: default;
   }
@@ -909,7 +938,7 @@ const EP_STYLES = `
   }
   .ep-section-desc {
     font-size: 14px;
-    color: #555;
+    color: #b8b8b8;
     margin: 0;
     font-weight: 400;
   }
@@ -929,7 +958,7 @@ const EP_STYLES = `
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #888;
+    color: #b8b8b8;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     margin-bottom: 8px;
@@ -980,7 +1009,7 @@ const EP_STYLES = `
     object-fit: cover;
   }
   .ep-avatar-placeholder {
-    color: #333;
+    color: #b8b8b8;
   }
   .ep-avatar-loading {
     position: absolute;
@@ -1013,7 +1042,7 @@ const EP_STYLES = `
     border-radius: 50%;
     background: #222;
     border: 2px solid #111;
-    color: #888;
+    color: #b8b8b8;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1033,7 +1062,7 @@ const EP_STYLES = `
   }
   .ep-avatar-hints span {
     font-size: 12px;
-    color: #444;
+    color: #b8b8b8;
   }
 
   /* ── Inputs ── */
@@ -1047,7 +1076,7 @@ const EP_STYLES = `
   .ep-input-prefix {
     position: absolute;
     left: 16px;
-    color: #444;
+    color: #b8b8b8;
     display: flex;
     align-items: center;
     pointer-events: none;
@@ -1067,11 +1096,11 @@ const EP_STYLES = `
     transition: border-color 0.15s, background 0.15s;
     -webkit-appearance: none;
   }
-  .ep-input::placeholder { color: #333; }
+  .ep-input::placeholder { color: #b8b8b8; }
   .ep-input:hover { border-color: #2a2a2a; }
   .ep-input:focus { border-color: #3a3a3a; background: #131313; }
   .ep-input--with-prefix { padding-left: 42px; }
-  .ep-input--readonly { color: #444; cursor: default; }
+  .ep-input--readonly { color: #b8b8b8; cursor: default; }
   .ep-input--readonly:focus { border-color: #222; background: #111; }
   .ep-counter {
     position: absolute;
@@ -1079,7 +1108,7 @@ const EP_STYLES = `
     top: 50%;
     transform: translateY(-50%);
     font-size: 12px;
-    color: #3a3a3a;
+    color: #b8b8b8;
     font-weight: 500;
     pointer-events: none;
   }
@@ -1104,7 +1133,7 @@ const EP_STYLES = `
     transition: border-color 0.15s, background 0.15s;
     box-sizing: border-box;
   }
-  .ep-textarea::placeholder { color: #333; }
+  .ep-textarea::placeholder { color: #b8b8b8; }
   .ep-textarea:hover { border-color: #2a2a2a; }
   .ep-textarea:focus { border-color: #3a3a3a; background: #131313; }
   .ep-counter--textarea {
@@ -1163,7 +1192,7 @@ const EP_STYLES = `
     padding: 11px 20px;
     border-radius: 12px;
     background: transparent;
-    color: #555;
+    color: #b8b8b8;
     font-family: inherit;
     font-size: 14px;
     font-weight: 500;
@@ -1238,7 +1267,7 @@ const EP_STYLES = `
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #333;
+    color: #b8b8b8;
     font-size: 12px;
     font-weight: 500;
   }
@@ -1270,8 +1299,8 @@ const EP_STYLES = `
     text-align: center;
   }
   .ep-coming-icon { color: #2a2a2a; }
-  .ep-coming-title { font-size: 15px; font-weight: 600; color: #444; }
-  .ep-coming-desc { font-size: 12px; color: #333; max-width: 280px; line-height: 1.5; }
+  .ep-coming-title { font-size: 15px; font-weight: 600; color: #b8b8b8; }
+  .ep-coming-desc { font-size: 12px; color: #b8b8b8; max-width: 280px; line-height: 1.5; }
 
   /* ── Connections ── */
   .ep-connections-list { display: flex; flex-direction: column; gap: 4px; }
@@ -1284,20 +1313,20 @@ const EP_STYLES = `
     background: #0f0f0f;
     border: 1px solid #1a1a1a;
   }
-  .ep-connection-icon { color: #555; display: flex; align-items: center; flex-shrink: 0; }
+  .ep-connection-icon { color: #b8b8b8; display: flex; align-items: center; flex-shrink: 0; }
   .ep-connection-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
   .ep-connection-platform { font-size: 13px; font-weight: 500; color: #ccc; }
-  .ep-connection-handle { font-size: 11px; color: #444; }
+  .ep-connection-handle { font-size: 11px; color: #b8b8b8; }
   .ep-connection-remove {
     background: none;
     border: none;
-    color: #333;
+    color: #b8b8b8;
     cursor: pointer;
     display: flex;
     align-items: center;
     transition: color 0.15s;
   }
-  .ep-connection-remove:hover { color: #888; }
+  .ep-connection-remove:hover { color: #b8b8b8; }
 
   /* ── Privacy ── */
   .ep-privacy-list { display: flex; flex-direction: column; gap: 10px; }
@@ -1351,12 +1380,12 @@ const EP_STYLES = `
   .ep-preview-label {
     font-size: 11px;
     font-weight: 600;
-    color: #555;
+    color: #b8b8b8;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 5px;
   }
-  .ep-preview-desc { font-size: 12px; color: #3a3a3a; line-height: 1.5; }
+  .ep-preview-desc { font-size: 12px; color: #b8b8b8; line-height: 1.5; }
 
   /* ── Profile Card ── */
   .ep-profile-card {
@@ -1382,7 +1411,7 @@ const EP_STYLES = `
     border-radius: 50%;
     background: rgba(0,0,0,0.5);
     border: 1px solid rgba(255,255,255,0.06);
-    color: #888;
+    color: #b8b8b8;
     cursor: default;
     display: flex;
     align-items: center;
@@ -1420,12 +1449,12 @@ const EP_STYLES = `
   }
   .ep-card-username {
     font-size: 14px;
-    color: #444;
+    color: #b8b8b8;
     margin: 0 0 14px;
   }
   .ep-card-bio {
     font-size: 14px;
-    color: #666;
+    color: #b8b8b8;
     line-height: 1.6;
     margin: 0 0 22px;
     word-break: break-word;
@@ -1436,7 +1465,7 @@ const EP_STYLES = `
   .ep-card-connections-label {
     font-size: 11px;
     font-weight: 600;
-    color: #444;
+    color: #b8b8b8;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 12px;
@@ -1449,9 +1478,9 @@ const EP_STYLES = `
     border-bottom: 1px solid #141414;
   }
   .ep-card-connection:last-child { border-bottom: none; }
-  .ep-card-conn-icon { color: #555; display: flex; align-items: center; flex-shrink: 0; }
+  .ep-card-conn-icon { color: #b8b8b8; display: flex; align-items: center; flex-shrink: 0; }
   .ep-card-conn-platform { font-size: 13px; font-weight: 500; color: #999; margin-right: 8px; }
-  .ep-card-conn-handle { font-size: 12px; color: #444; }
+  .ep-card-conn-handle { font-size: 12px; color: #b8b8b8; }
 
   /* ── Card Link ── */
   .ep-card-link-block {
@@ -1462,7 +1491,7 @@ const EP_STYLES = `
   .ep-card-link-label {
     font-size: 11px;
     font-weight: 600;
-    color: #444;
+    color: #b8b8b8;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 10px;
@@ -1479,7 +1508,7 @@ const EP_STYLES = `
   .ep-card-link-url {
     flex: 1;
     font-size: 12px;
-    color: #555;
+    color: #b8b8b8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1494,7 +1523,7 @@ const EP_STYLES = `
     border-radius: 6px;
     background: #161616;
     border: 1px solid #1e1e1e;
-    color: #555;
+    color: #b8b8b8;
     cursor: pointer;
     display: flex;
     align-items: center;

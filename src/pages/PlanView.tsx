@@ -215,9 +215,9 @@ export default function PlanView() {
     if (notFound || !plan) {
         return (
             <div className="min-h-screen bg-black text-white font-serif flex flex-col items-center justify-center px-6 gap-6 text-center">
-                <BookOpen size={40} className="text-white/30" />
+                <BookOpen size={40} className="text-white/" />
                 <h1 className="text-2xl font-bold">Plano não encontrado</h1>
-                <p className="text-white/40 italic">Ele pode ter sido removido ou o link está incorreto.</p>
+                <p className="text-white/ italic">Ele pode ter sido removido ou o link está incorreto.</p>
                 <button onClick={() => navigate('/plans')} className="px-8 py-4 bg-white text-black rounded-2xl font-bold text-xs tracking-[0.3em] uppercase">
                     Voltar
                 </button>
@@ -234,9 +234,9 @@ export default function PlanView() {
             <header className="fixed top-0 left-0 right-0 p-5 md:p-8 z-50 flex justify-between items-center pointer-events-none">
                 <button
                     onClick={() => navigate('/plans')}
-                    className="pointer-events-auto flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
+                    className="pointer-events-auto flex items-center gap-2 text-white/ hover:text-white transition-colors group"
                 >
-                    <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    <ArrowLeft size={20}  />
                     <span className="font-bold text-[10px] tracking-[0.3em] uppercase hidden sm:inline">Voltar</span>
                 </button>
                 <div className="flex items-center gap-4">
@@ -246,7 +246,7 @@ export default function PlanView() {
                                 const url = `${window.location.origin}/plano/${plan.id}`;
                                 navigator.clipboard?.writeText(url);
                             }}
-                            className="pointer-events-auto text-white/40 hover:text-white transition-colors"
+                            className="pointer-events-auto text-white/ hover:text-white transition-colors"
                             title="Copiar link do plano"
                         >
                             <Share2 size={18} />
@@ -257,20 +257,20 @@ export default function PlanView() {
 
             <main className="relative z-10 px-5 md:px-8 pt-24 pb-32 max-w-3xl mx-auto">
                 <div className="mb-10 space-y-4">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/">
                         {plan.duration_days} dias · {STYLE_LABEL[plan.style] || plan.style}
                     </span>
                     <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight">{plan.title}</h1>
                     {plan.description && (
-                        <p className="text-white/50 italic text-lg leading-relaxed">{plan.description}</p>
+                        <p className="text-white/ italic text-lg leading-relaxed">{plan.description}</p>
                     )}
                 </div>
 
                 {publicPreview ? (
                     <div className="space-y-10">
                         <div className="p-6 rounded-3xl border border-white/10 bg-white/5 space-y-3">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Prévia do plano</p>
-                            <p className="text-sm text-white/60 font-serif leading-relaxed">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/">Prévia do plano</p>
+                            <p className="text-sm text-white/ font-serif leading-relaxed">
                                 Este é um plano compartilhado. Entre para acompanhar seu progresso, comentar com o grupo
                                 e receber as próximas etapas.
                             </p>
@@ -296,19 +296,19 @@ export default function PlanView() {
                                     value={joinCode}
                                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                                     placeholder="CÓDIGO"
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-center text-sm tracking-[0.3em] font-serif text-white placeholder:text-white/20 focus:outline-none focus:border-white/30"
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-center text-sm tracking-[0.3em] font-serif text-white placeholder:text-white/ focus:outline-none focus:border-white/30"
                                 />
                                 <button
                                     onClick={handleJoinByCode}
                                     disabled={joining || !joinCode.trim()}
-                                    className="px-6 border border-white/15 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-white hover:border-white/40 transition-colors disabled:opacity-30"
+                                    className="px-6 border border-white/15 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-white/ hover:text-white hover:border-white/40 transition-colors disabled:opacity-30"
                                 >
                                     Entrar com código
                                 </button>
                             </div>
                         </div>
 
-                        {error && <p className="text-xs text-white/40 italic">{error}</p>}
+                        {error && <p className="text-xs text-white/ italic">{error}</p>}
                     </div>
                 ) : (
                     <>
@@ -322,7 +322,7 @@ export default function PlanView() {
                                         onClick={() => setCurrentDay(d.day)}
                                         className={cn(
                                             'shrink-0 w-11 h-11 rounded-2xl border text-xs font-serif transition-all',
-                                            active ? 'bg-white text-black border-white' : done ? 'border-white/40 text-white' : 'border-white/10 text-white/40'
+                                            active ? 'bg-white text-black border-white' : done ? 'border-white/40 text-white' : 'border-white/10 text-white/'
                                         )}
                                     >
                                         {done && !active ? <Check size={14} className="mx-auto" /> : d.day}
@@ -331,7 +331,7 @@ export default function PlanView() {
                             })}
                         </div>
 
-                        <div className="flex items-center gap-5 mb-10 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                        <div className="flex items-center gap-5 mb-10 text-[10px] uppercase tracking-[0.2em] text-white/">
                             <span className="flex items-center gap-2"><Check size={12} /> {doneCount}/{plan.duration_days} concluídos</span>
                             {streak > 0 && <span className="flex items-center gap-2"><Flame size={12} /> {streak} {streak === 1 ? 'dia' : 'dias'} seguidos</span>}
                         </div>
@@ -347,7 +347,7 @@ export default function PlanView() {
                                     onClick={() => setTab(t.id)}
                                     className={cn(
                                         'flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-colors',
-                                        tab === t.id ? 'bg-white text-black' : 'text-white/40 hover:text-white'
+                                        tab === t.id ? 'bg-white text-black' : 'text-white/ hover:text-white'
                                     )}
                                 >
                                     <t.icon size={13} /> {t.label}
@@ -369,13 +369,13 @@ export default function PlanView() {
                                                     <div className="flex flex-wrap gap-3">
                                                         <button
                                                             onClick={() => setEditing(true)}
-                                                            className="px-5 py-3 border border-white/15 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-white hover:border-white/40 transition-colors flex items-center gap-2"
+                                                            className="px-5 py-3 border border-white/15 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] text-white/ hover:text-white hover:border-white/40 transition-colors flex items-center gap-2"
                                                         >
                                                             <Pencil size={13} /> Editar dia
                                                         </button>
                                                         <button
                                                             onClick={() => { setShowRegen(!showRegen); setRegenReason(''); }}
-                                                            className="px-5 py-3 border border-white/15 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-white hover:border-white/40 transition-colors flex items-center gap-2"
+                                                            className="px-5 py-3 border border-white/15 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] text-white/ hover:text-white hover:border-white/40 transition-colors flex items-center gap-2"
                                                         >
                                                             <RefreshCw size={13} /> Refazer este dia
                                                         </button>
@@ -384,12 +384,12 @@ export default function PlanView() {
 
                                                 {isOwner && showRegen && (
                                                     <div className="space-y-3 p-6 rounded-3xl border border-white/10">
-                                                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Por que refazer?</p>
+                                                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/">Por que refazer?</p>
                                                         <input
                                                             value={regenReason}
                                                             onChange={(e) => setRegenReason(e.target.value)}
                                                             placeholder="Ex: muito longo, quero algo mais prático"
-                                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-serif text-white placeholder:text-white/20 focus:outline-none focus:border-white/30"
+                                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-serif text-white placeholder:text-white/ focus:outline-none focus:border-white/30"
                                                         />
                                                         <button
                                                             onClick={handleRegenerate}
@@ -403,14 +403,14 @@ export default function PlanView() {
                                                 )}
 
                                                 <div className="space-y-3">
-                                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Sua reflexão</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/">Sua reflexão</p>
                                                     <textarea
                                                         value={note}
                                                         onChange={(e) => setNote(e.target.value)}
                                                         onBlur={handleSaveNote}
                                                         rows={3}
                                                         placeholder="O que Deus falou com você hoje?"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-serif text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-serif text-white placeholder:text-white/ focus:outline-none focus:border-white/30 transition-colors resize-none"
                                                     />
                                                 </div>
 
@@ -419,7 +419,7 @@ export default function PlanView() {
                                                         onClick={handleToggleComplete}
                                                         className={cn(
                                                             'flex-1 py-5 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase transition-colors',
-                                                            isDone ? 'border border-white/20 text-white/60 hover:bg-white/5' : 'bg-white text-black hover:bg-gray-200'
+                                                            isDone ? 'border border-white/20 text-white/ hover:bg-white/5' : 'bg-white text-black hover:bg-gray-200'
                                                         )}
                                                     >
                                                         {isDone ? 'Desmarcar dia' : 'Concluir dia'}
@@ -427,7 +427,7 @@ export default function PlanView() {
                                                     {currentDay > 1 && (
                                                         <button
                                                             onClick={() => setCurrentDay(currentDay - 1)}
-                                                            className="px-8 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                            className="px-8 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/ hover:text-white hover:bg-white/5 transition-colors"
                                                         >
                                                             Anterior
                                                         </button>
@@ -435,7 +435,7 @@ export default function PlanView() {
                                                     {currentDay < days.length && (
                                                         <button
                                                             onClick={() => setCurrentDay(currentDay + 1)}
-                                                            className="px-8 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                            className="px-8 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/ hover:text-white hover:bg-white/5 transition-colors"
                                                         >
                                                             Próximo
                                                         </button>
@@ -444,9 +444,9 @@ export default function PlanView() {
 
                                                 {doneCount >= plan.duration_days && (
                                                     <div className="space-y-4 p-6 rounded-3xl border border-white/20 bg-white/5">
-                                                        <BookOpen size={20} className="text-white/60" />
+                                                        <BookOpen size={20} className="text-white/" />
                                                         <p className="font-serif text-lg">Você terminou. E agora?</p>
-                                                        <p className="text-sm text-white/50 font-serif italic">
+                                                        <p className="text-sm text-white/ font-serif italic">
                                                             A IA pode criar a próxima etapa olhando o que você concluiu e o que escreveu nas reflexões.
                                                         </p>
                                                         <button
@@ -461,7 +461,7 @@ export default function PlanView() {
                                             </>
                                         )
                                     ) : (
-                                        <p className="text-white/30 italic">Este plano ainda não tem dias gerados.</p>
+                                        <p className="text-white/ italic">Este plano ainda não tem dias gerados.</p>
                                     )}
                                 </motion.div>
                             )}
@@ -482,7 +482,7 @@ export default function PlanView() {
                         {error && (
                             <button
                                 onClick={() => setError(null)}
-                                className="mt-8 flex items-center gap-2 text-xs text-white/40 italic hover:text-white transition-colors"
+                                className="mt-8 flex items-center gap-2 text-xs text-white/ italic hover:text-white transition-colors"
                             >
                                 <X size={12} /> {error}
                             </button>

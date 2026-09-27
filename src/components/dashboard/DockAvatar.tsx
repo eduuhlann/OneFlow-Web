@@ -56,6 +56,6 @@ export function DockAvatar({ profile, user }: DockAvatarProps) {
   }
 
   return (
-    <User className="h-[85%] w-[85%] text-white/40 transition-colors group-hover:text-white" />
+    <User className="h-[85%] w-[85%] text-white/ transition-colors group-hover:text-white" />
   );
 }

@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Clock, Crown, Palette, User, type LucideIcon } from 'lucide-react';
+import { BookOpen, Calendar, Clock, Palette, User, type LucideIcon } from 'lucide-react';
 
 export interface DashboardModule {
   id: string;
@@ -6,7 +6,6 @@ export interface DashboardModule {
   description: string;
   icon: LucideIcon;
   path?: string;
-  isPro?: boolean;
 }
 
 export const CUSTOMIZE_MODULE_ID = 'customize';
@@ -45,13 +44,5 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     label: 'Personalizar',
     description: 'Mude sua experiência de leitura',
     icon: Palette,
-  },
-  {
-    id: 'pro',
-    label: 'OneFlow Pro',
-    description: 'Recursos exclusivos',
-    icon: Crown,
-    path: '/pro',
-    isPro: true,
   },
 ];

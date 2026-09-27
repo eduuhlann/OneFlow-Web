@@ -82,7 +82,7 @@ export default function Dashboard() {
                   {
                     title: 'Configurações',
                     icon: (
-                      <Settings className="h-[85%] w-[85%] text-white/80 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
+                      <Settings className="h-[85%] w-[85%] text-white/80" />
                     ),
                     href: '/settings',
                     onClick: () => navigate('/settings'),
@@ -90,7 +90,7 @@ export default function Dashboard() {
                   {
                     title: 'Sair',
                     icon: (
-                      <LogOut className="h-[85%] w-[85%] text-red-500/80 transition-all duration-300 group-hover:-translate-x-1 group-hover:scale-110" />
+                      <LogOut className="h-[85%] w-[85%] text-red-500/80" />
                     ),
                     href: '#',
                     onClick: handleSignOut,

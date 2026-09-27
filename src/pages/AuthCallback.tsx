@@ -82,7 +82,7 @@ export default function AuthCallback() {
                     <p style={{ color: '#ef4444', fontSize: 13, fontFamily: 'sans-serif', textAlign: 'center', maxWidth: 320, padding: '0 16px' }}>
                         {errorMsg}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, fontFamily: 'sans-serif' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'sans-serif' }}>
                         Redirecionando...
                     </p>
                 </>
@@ -98,7 +98,7 @@ export default function AuthCallback() {
                     }} />
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                     <p style={{
-                        color: 'rgba(255,255,255,0.4)',
+                        color: 'rgba(255,255,255,0.75)',
                         fontSize: 12,
                         letterSpacing: '0.3em',
                         textTransform: 'uppercase',

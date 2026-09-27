@@ -3,10 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider } from './contexts/AuthContext';
 import { ProfileProvider } from './contexts/ProfileContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
-import { ProProvider } from './contexts/ProContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AnimatePresence } from 'motion/react';
 import { DiscipleshipListener } from './components/DiscipleshipListener';
+import ParticleBackground from './components/ParticleBackground';
 
 // Pages
 import Auth from './pages/Auth';
@@ -21,13 +21,11 @@ import PlanView from './pages/PlanView';
 import Prayer from './pages/Prayer';
 import Settings from './pages/Settings';
 import Discipleship from '@/src/pages/Discipleship';
-import Profile from './pages/Profile';
-import Pro from './pages/Pro';
 import EditProfile from './pages/EditProfile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import PublicProfile from './pages/PublicProfile';
-import ParticleBackground from './components/ParticleBackground';
+import Help from './pages/Help';
 // import Journey from './pages/Journey';
 
 function AnimatedRoutes() {
@@ -39,6 +37,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/ajuda" element={<Help />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/u/:username" element={<PublicProfile />} />
@@ -101,17 +100,12 @@ function AnimatedRoutes() {
         } />
         <Route path="/profile" element={
           <ProtectedRoute>
-            <Profile />
+            <PublicProfile />
           </ProtectedRoute>
         } />
         <Route path="/profile/edit" element={
           <ProtectedRoute>
             <EditProfile />
-          </ProtectedRoute>
-        } />
-        <Route path="/pro" element={
-          <ProtectedRoute>
-            <Pro />
           </ProtectedRoute>
         } />
       </Routes>
@@ -125,11 +119,9 @@ export default function App() {
       <AuthProvider>
         <ProfileProvider>
           <PreferencesProvider>
-            <ProProvider>
-              <ParticleBackground />
-              <DiscipleshipListener />
-              <AnimatedRoutes />
-            </ProProvider>
+            <ParticleBackground />
+            <DiscipleshipListener />
+            <AnimatedRoutes />
           </PreferencesProvider>
         </ProfileProvider>
       </AuthProvider>

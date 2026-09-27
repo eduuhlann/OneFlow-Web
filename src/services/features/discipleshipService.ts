@@ -1,4 +1,41 @@
 import { supabase } from '../supabase';
+import { isMissingColumnError, isMissingFunctionError } from '../../lib/supabaseErrors';
+
+export { isMissingColumnError };
+
+export function normalizeProfile(profiles: any): any {
+    if (!profiles) return null;
+    return Array.isArray(profiles) ? profiles[0] ?? null : profiles;
+}
+
+export async function hashGroupPassword(password: string): Promise<string> {
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+        const data = new TextEncoder().encode(password);
+        const digest = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(digest))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
+    }
+    // Fallback para contextos sem WebCrypto (ex.: http sem TLS)
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        hash = (hash << 5) - hash + password.charCodeAt(i);
+        hash |= 0;
+    }
+    return `fnv${Math.abs(hash)}`;
+}
+
+export interface ConnectionRequest {
+    id: string;
+    from_id: string;
+    created_at: string;
+    from: {
+        id: string;
+        username: string | null;
+        display_name?: string | null;
+        avatar_url: string | null;
+    } | null;
+}
 
 export interface DiscipleshipConnection {
     id: string;
@@ -54,6 +91,8 @@ export interface SocialProfile {
     avatar_url: string | null;
     banner_url?: string | null;
     bio?: string | null;
+    short_bio?: string | null;
+    featured_verse?: string | null;
     discord_decoration_url?: string | null;
     followers: number;
     following: number;
@@ -427,6 +466,18 @@ export const discipleshipService = {
         return (mine.data || []).filter(r => targetFollows.has(r.following_id)).length;
     },
 
+    async findProfileByUsername(username: string): Promise<{ id: string; username: string; display_name?: string | null } | null> {
+        const clean = (username || '').replace(/^@/, '').trim();
+        if (!clean) return null;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, username, display_name')
+            .eq('username', clean)
+            .maybeSingle();
+        if (error) throw error;
+        return data as { id: string; username: string; display_name?: string | null } | null;
+    },
+
     async getSocialProfile(targetId: string, viewerId: string): Promise<SocialProfile | null> {
         const [profileRes, counts, state, mutuals, connections, chapters, groups] = await Promise.all([
             supabase.from('profiles').select('*').eq('id', targetId).maybeSingle(),
@@ -448,6 +499,8 @@ export const discipleshipService = {
             avatar_url: profileRes.data.avatar_url,
             banner_url: profileRes.data.banner_url,
             bio: profileRes.data.bio,
+            short_bio: profileRes.data.short_bio,
+            featured_verse: profileRes.data.featured_verse,
             discord_decoration_url: profileRes.data.discord_decoration_url,
             followers: counts.followers,
             following: counts.following,
@@ -560,22 +613,213 @@ export const discipleshipService = {
         if (error) throw error;
     },
 
-    // Group Management
-    async createGroup(leaderId: string, name: string): Promise<string> {
+    // Solicitações de conexão (pedido antes de conectar de fato)
+    async requestConnection(fromId: string, toId: string): Promise<void> {
+        if (fromId === toId) return;
+
+        const { data: existing } = await supabase
+            .from('discipleship_connections')
+            .select('id, leader_id, disciple_id, status')
+            .or(`and(leader_id.eq.${fromId},disciple_id.eq.${toId}),and(leader_id.eq.${toId},disciple_id.eq.${fromId})`)
+            .limit(1);
+
+        const current = existing?.[0];
+        if (current) {
+            // Já existe pedido inverso esperando: conexão vira automática (mútuo)
+            if (current.status === 'pending' && current.leader_id === toId) {
+                const { error } = await supabase
+                    .from('discipleship_connections')
+                    .update({ status: 'active' })
+                    .eq('id', current.id);
+                if (error) throw error;
+                return;
+            }
+            if (current.status === 'active') return;
+            if (current.leader_id === fromId && current.status === 'pending') return;
+
+            const { error } = await supabase
+                .from('discipleship_connections')
+                .update({ status: 'pending' })
+                .eq('id', current.id);
+            if (error) throw error;
+            return;
+        }
+
+        const { error } = await supabase
+            .from('discipleship_connections')
+            .insert({ leader_id: fromId, disciple_id: toId, status: 'pending' });
+        if (error) throw error;
+    },
+
+    async getConnectionRequests(userId: string): Promise<ConnectionRequest[]> {
         const { data, error } = await supabase
-            .from('discipleship_groups')
-            .insert({ leader_id: leaderId, name })
-            .select()
-            .single();
-        
+            .from('discipleship_connections')
+            .select('id, leader_id, disciple_id, status, created_at, from:profiles!discipleship_connections_leader_id_fkey(username, display_name, avatar_url)')
+            .eq('disciple_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (error) return [];
+        return (data || []).map((row: any) => ({
+            id: row.id,
+            from_id: row.leader_id,
+            created_at: row.created_at,
+            from: normalizeProfile(row.from),
+        }));
+    },
+
+    async getSentConnectionRequests(userId: string): Promise<string[]> {
+        const { data } = await supabase
+            .from('discipleship_connections')
+            .select('disciple_id')
+            .eq('leader_id', userId)
+            .eq('status', 'pending');
+        return (data || []).map((r) => r.disciple_id);
+    },
+
+    async cancelConnectionRequest(fromId: string, toId: string): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_connections')
+            .delete()
+            .eq('leader_id', fromId)
+            .eq('disciple_id', toId)
+            .eq('status', 'pending');
+        if (error) throw error;
+    },
+
+    async respondToConnectionRequest(requestId: string, accept: boolean): Promise<void> {
+        const { error } = await supabase
+            .from('discipleship_connections')
+            .update({ status: accept ? 'active' : 'inactive' })
+            .eq('id', requestId);
+        if (error) throw error;
+    },
+
+    // Menções: quem pode ser citado numa conversa
+    async getMentionCandidates(userId: string, groupId?: string | null): Promise<SocialUser[]> {
+        const seen = new Map<string, SocialUser>();
+        const push = (id: string | null | undefined, profile: any) => {
+            if (!id || !profile || id === userId || seen.has(id)) return;
+            seen.set(id, {
+                id,
+                username: profile.username ?? null,
+                display_name: profile.display_name ?? null,
+                avatar_url: profile.avatar_url ?? null,
+                is_following: false,
+            });
+        };
+
+        const [connections, groups] = await Promise.all([
+            supabase
+                .from('discipleship_connections')
+                .select('leader_id, disciple_id, leader:profiles!discipleship_connections_leader_id_fkey(id, username, display_name, avatar_url), disciple:profiles!discipleship_connections_disciple_id_fkey(id, username, display_name, avatar_url)')
+                .or(`leader_id.eq.${userId},disciple_id.eq.${userId}`)
+                .eq('status', 'active')
+                .limit(50),
+            groupId
+                ? supabase
+                      .from('discipleship_group_members')
+                      .select('user_id, profiles!discipleship_group_members_user_id_fkey(id, username, display_name, avatar_url)')
+                      .eq('group_id', groupId)
+                      .eq('status', 'active')
+                      .limit(50)
+                : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        for (const row of connections.data || []) {
+            push(row.leader_id, normalizeProfile(row.leader));
+            push(row.disciple_id, normalizeProfile(row.disciple));
+        }
+        for (const row of groups.data || []) {
+            push(row.user_id, normalizeProfile(row.profiles?.[0] ?? row.profiles));
+        }
+
+        return Array.from(seen.values())
+            .filter((u) => !!u.username)
+            .sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    },
+
+    // Group Management
+    async createGroup(leaderId: string, name: string, password?: string): Promise<{ id: string; passwordApplied: boolean }> {
+        let joinPasswordHash: string | null = null;
+        if (password && password.trim().length > 0) {
+            joinPasswordHash = await hashGroupPassword(password.trim());
+        }
+
+        let data: any = null;
+        let error: any = null;
+
+        if (joinPasswordHash) {
+            const result = await supabase
+                .from('discipleship_groups')
+                .insert({ leader_id: leaderId, name, join_password_hash: joinPasswordHash })
+                .select()
+                .single();
+            data = result.data;
+            error = result.error;
+
+            // Coluna ainda não existe no banco: cria o grupo sem senha
+            if (error && isMissingColumnError(error)) {
+                const fallback = await supabase
+                    .from('discipleship_groups')
+                    .insert({ leader_id: leaderId, name })
+                    .select()
+                    .single();
+                data = fallback.data;
+                error = fallback.error;
+                if (!error) {
+                    await supabase
+                        .from('discipleship_group_members')
+                        .insert({ group_id: data.id, user_id: leaderId, status: 'active', role: 'admin' });
+                    return { id: data.id, passwordApplied: false };
+                }
+            }
+        } else {
+            const result = await supabase
+                .from('discipleship_groups')
+                .insert({ leader_id: leaderId, name })
+                .select()
+                .single();
+            data = result.data;
+            error = result.error;
+        }
+
         if (error) throw error;
 
         // Auto-add leader as an active member
         await supabase
             .from('discipleship_group_members')
             .insert({ group_id: data.id, user_id: leaderId, status: 'active', role: 'admin' });
-        
-        return data.id;
+
+        return { id: data.id, passwordApplied: !!joinPasswordHash && !error };
+    },
+
+    async verifyGroupPassword(groupId: string, password: string): Promise<boolean> {
+        const normalized = password.trim();
+        if (!normalized) return true;
+
+        // Preferido: RPC no banco, para o hash não sair do servidor.
+        const { data, error } = await supabase.rpc('verify_group_password', {
+            p_group_id: groupId,
+            p_password: normalized,
+        });
+        if (!error && typeof data === 'boolean') return data;
+
+        // Migration ainda não aplicada: comparação local.
+        if (isMissingFunctionError(error)) {
+            const { data: group, error: gErr } = await supabase
+                .from('discipleship_groups')
+                .select('join_password_hash')
+                .eq('id', groupId)
+                .maybeSingle();
+            if (gErr) {
+                if (isMissingColumnError(gErr)) return true; // coluna ainda não existe
+                throw gErr;
+            }
+            if (!group?.join_password_hash) return true; // grupo sem senha
+            return (await hashGroupPassword(normalized)) === group.join_password_hash;
+        }
+        throw error;
     },
 
     async inviteToGroup(groupId: string, userId: string): Promise<void> {

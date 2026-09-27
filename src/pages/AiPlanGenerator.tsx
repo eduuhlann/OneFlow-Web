@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Clock, Users, Lock, Globe2, Check, Crown } from 'lucide-react';
 import ParticleBackground from '../components/ParticleBackground';
 import { useAuth } from '../contexts/AuthContext';
-import { usePro } from '../contexts/ProContext';
 import {
     aiPlansService,
     INTENSITY_LABEL,
@@ -71,7 +70,6 @@ const GENERATING_STAGES = [
 export default function AiPlanGenerator() {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { isPro } = usePro();
 
     const [currentStep, setCurrentStep] = useState<Step>('goal');
     const [theme, setTheme] = useState('');
@@ -137,10 +135,6 @@ export default function AiPlanGenerator() {
     };
 
     const generatePlan = async () => {
-        if (!isPro) {
-            navigate('/pro');
-            return;
-        }
         if (!user) {
             navigate('/auth');
             return;
@@ -253,13 +247,13 @@ export default function AiPlanGenerator() {
             )}
         >
             {Icon && (
-                <div className="p-3 bg-white/5 rounded-2xl text-white/50 group-hover:text-white transition-colors shrink-0">
+                <div className="p-3 bg-white/5 rounded-2xl text-white/ group-hover:text-white transition-colors shrink-0">
                     <Icon size={22} />
                 </div>
             )}
             <div className="flex-1">
                 <h4 className="text-lg font-bold font-serif">{title}</h4>
-                <p className="text-white/40 text-sm font-serif italic mt-1">{desc}</p>
+                <p className="text-white/ text-sm font-serif italic mt-1">{desc}</p>
             </div>
             {selected && <Check size={20} className="text-white shrink-0" />}
         </button>
@@ -285,11 +279,11 @@ export default function AiPlanGenerator() {
                             placeholder="Ex: Quero vencer a ansiedade e voltar a dormir tranquilo..."
                             value={theme}
                             onChange={(e) => setTheme(e.target.value)}
-                            className="w-full bg-transparent border-b-2 border-white/20 pb-4 text-2xl md:text-3xl font-serif text-white focus:outline-none focus:border-white transition-colors placeholder:text-white/20 placeholder:italic"
+                            className="w-full bg-transparent border-b-2 border-white/20 pb-4 text-2xl md:text-3xl font-serif text-white focus:outline-none focus:border-white transition-colors placeholder:text-white/ placeholder:italic"
                             autoFocus
                         />
                         <div>
-                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-3">Objetivo principal</p>
+                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/ mb-3">Objetivo principal</p>
                             <div className="flex flex-wrap gap-2">
                                 {OBJECTIVES.map(o => (
                                     <button
@@ -297,7 +291,7 @@ export default function AiPlanGenerator() {
                                         onClick={() => setObjective(objective === o ? '' : o)}
                                         className={cn(
                                             'px-4 py-2 rounded-full border text-xs tracking-wide transition-colors',
-                                            objective === o ? 'bg-white text-black border-white' : 'border-white/15 text-white/60 hover:border-white/40 hover:text-white'
+                                            objective === o ? 'bg-white text-black border-white' : 'border-white/15 text-white/ hover:border-white/40 hover:text-white'
                                         )}
                                     >
                                         {o}
@@ -323,12 +317,12 @@ export default function AiPlanGenerator() {
                                     )}
                                 >
                                     <h4 className="text-2xl font-bold font-serif">{d}</h4>
-                                    <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-1">Dias</p>
+                                    <p className="text-white/ text-[9px] font-black uppercase tracking-widest mt-1">Dias</p>
                                 </button>
                             ))}
                         </div>
                         <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
-                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-3">Duração personalizada</p>
+                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/ mb-3">Duração personalizada</p>
                             <input
                                 type="number"
                                 min={1}
@@ -336,7 +330,7 @@ export default function AiPlanGenerator() {
                                 placeholder="Ex: 45"
                                 value={customDuration}
                                 onChange={(e) => setCustomDuration(e.target.value)}
-                                className="w-full bg-transparent border-b border-white/20 pb-3 text-2xl font-serif text-white focus:outline-none focus:border-white transition-colors placeholder:text-white/20"
+                                className="w-full bg-transparent border-b border-white/20 pb-3 text-2xl font-serif text-white focus:outline-none focus:border-white transition-colors placeholder:text-white/"
                             />
                         </div>
                         <PrimaryButton onClick={handleNext} disabled={finalDuration < 1}>Continuar</PrimaryButton>
@@ -372,7 +366,7 @@ export default function AiPlanGenerator() {
                                         onClick={() => toggleFormat(f)}
                                         className={cn(
                                             'px-5 py-4 rounded-2xl border text-sm tracking-wide transition-all flex items-center gap-2',
-                                            selected ? 'bg-white text-black border-white' : 'border-white/15 text-white/60 hover:border-white/40 hover:text-white'
+                                            selected ? 'bg-white text-black border-white' : 'border-white/15 text-white/ hover:border-white/40 hover:text-white'
                                         )}
                                     >
                                         {selected && <Check size={16} />}
@@ -399,12 +393,12 @@ export default function AiPlanGenerator() {
                                     )}
                                 >
                                     <h4 className="font-bold font-serif mb-1">{STYLE_LABEL[s.id]}</h4>
-                                    <p className="text-white/40 text-xs font-serif italic">{s.desc}</p>
+                                    <p className="text-white/ text-xs font-serif italic">{s.desc}</p>
                                 </button>
                             ))}
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-3">Personalidade do guia</p>
+                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/ mb-3">Personalidade do guia</p>
                             <div className="grid grid-cols-2 gap-3">
                                 {PERSONALITIES.map(p => (
                                     <button
@@ -416,7 +410,7 @@ export default function AiPlanGenerator() {
                                         )}
                                     >
                                         <h4 className="font-bold font-serif text-sm mb-1">{p.label}</h4>
-                                        <p className="text-white/40 text-xs font-serif italic">{p.desc}</p>
+                                        <p className="text-white/ text-xs font-serif italic">{p.desc}</p>
                                     </button>
                                 ))}
                             </div>
@@ -433,7 +427,7 @@ export default function AiPlanGenerator() {
                             value={situation}
                             onChange={(e) => setSituation(e.target.value)}
                             rows={5}
-                            className="w-full bg-transparent border-b-2 border-white/20 pb-4 text-xl font-serif text-white focus:outline-none focus:border-white transition-colors placeholder:text-white/20 placeholder:italic resize-none"
+                            className="w-full bg-transparent border-b-2 border-white/20 pb-4 text-xl font-serif text-white focus:outline-none focus:border-white transition-colors placeholder:text-white/ placeholder:italic resize-none"
                             autoFocus
                         />
                         <PrimaryButton onClick={handleNext}>Continuar</PrimaryButton>
@@ -460,7 +454,7 @@ export default function AiPlanGenerator() {
                             />
                         </div>
                         <div className="space-y-3">
-                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30">Quem pode ver</p>
+                            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/">Quem pode ver</p>
                             <OptionRow
                                 selected={privacy === 'private'}
                                 onClick={() => setPrivacy('private')}
@@ -483,15 +477,10 @@ export default function AiPlanGenerator() {
                                 icon={Users}
                             />
                         </div>
-                        <PrimaryButton onClick={generatePlan} disabled={isThinking}>
-                            {isPro ? 'Criar meu plano' : 'Desbloquear com OneFlow Pro'}
-                        </PrimaryButton>
-                        {!isPro && (
-                            <p className="text-center text-[10px] tracking-[0.2em] uppercase text-white/30 flex items-center justify-center gap-2">
-                                <Crown size={14} /> Recurso Pro
-                            </p>
-                        )}
-                    </motion.div>
+                         <PrimaryButton onClick={generatePlan} disabled={isThinking}>
+                             Criar meu plano
+                         </PrimaryButton>
+                     </motion.div>
                 );
 
             case 'generating':
@@ -504,7 +493,7 @@ export default function AiPlanGenerator() {
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -8 }}
-                                className="text-white/60 font-serif italic text-lg text-center"
+                                className="text-white/ font-serif italic text-lg text-center"
                             >
                                 {GENERATING_STAGES[stageIndex]}
                             </motion.p>
@@ -525,11 +514,11 @@ export default function AiPlanGenerator() {
                     return (
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-8">
                             <div className="w-24 h-24 border border-white/15 rounded-full flex items-center justify-center mx-auto">
-                                <BookOpen size={40} className="text-white/40" />
+                                <BookOpen size={40} className="text-white/" />
                             </div>
                             <div>
                                 <h2 className="text-3xl font-serif font-bold tracking-tight mb-4">A IA não respondeu agora</h2>
-                                <p className="text-white/50 font-serif italic text-base max-w-md mx-auto">{generationError}</p>
+                                <p className="text-white/ font-serif italic text-base max-w-md mx-auto">{generationError}</p>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <button
@@ -540,7 +529,7 @@ export default function AiPlanGenerator() {
                                 </button>
                                 <button
                                     onClick={() => navigate('/plans')}
-                                    className="flex-1 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                    className="flex-1 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/ hover:text-white hover:bg-white/5 transition-colors"
                                 >
                                     Voltar aos planos
                                 </button>
@@ -555,11 +544,11 @@ export default function AiPlanGenerator() {
                             <BookOpen size={40} />
                         </div>
                         <div>
-                            <span className="px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold tracking-[0.3em] uppercase border border-white/10 text-white/60 mb-6 inline-block">
+                            <span className="px-4 py-2 bg-white/10 rounded-full text-[10px] font-bold tracking-[0.3em] uppercase border border-white/10 text-white/ mb-6 inline-block">
                                 {finalDuration} Dias • {INTENSITY_LABEL[intensity]}
                             </span>
                             <h2 className="text-4xl font-serif font-bold tracking-tight mb-4">{createdTitle}</h2>
-                            <p className="text-white/60 font-serif italic text-lg max-w-md mx-auto">{createdDescription}</p>
+                            <p className="text-white/ font-serif italic text-lg max-w-md mx-auto">{createdDescription}</p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <button
@@ -570,7 +559,7 @@ export default function AiPlanGenerator() {
                             </button>
                             <button
                                 onClick={() => navigate('/plans')}
-                                className="flex-1 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                className="flex-1 py-5 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.3em] uppercase text-white/ hover:text-white hover:bg-white/5 transition-colors"
                             >
                                 Meus planos
                             </button>
@@ -586,8 +575,8 @@ export default function AiPlanGenerator() {
 
             <header className="fixed top-0 left-0 right-0 p-6 md:p-12 z-50 flex justify-between items-center pointer-events-none">
                 {isWizard ? (
-                    <button onClick={handleBack} className="pointer-events-auto flex items-center gap-2 text-white/40 hover:text-white transition-colors group">
-                        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    <button onClick={handleBack} className="pointer-events-auto flex items-center gap-2 text-white/ hover:text-white transition-colors group">
+                        <ArrowLeft size={20}  />
                         <span className="font-bold text-[10px] tracking-[0.3em] uppercase">Voltar</span>
                     </button>
                 ) : <div />}
@@ -610,14 +599,14 @@ export default function AiPlanGenerator() {
                                         animate={{ width: `${((stepIndex + 1) / WIZARD_STEPS.length) * 100}%` }}
                                     />
                                 </div>
-                                <span className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase w-12 text-right">
+                                <span className="text-[10px] font-bold tracking-[0.3em] text-white/ uppercase w-12 text-right">
                                     {stepIndex + 1}/{WIZARD_STEPS.length}
                                 </span>
                             </div>
 
                             <motion.div key={currentStepInfo.title} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{currentStepInfo.title}</h1>
-                                <p className="text-white/40 text-base md:text-lg italic opacity-80">{currentStepInfo.subtitle}</p>
+                                <p className="text-white/ text-base md:text-lg italic opacity-80">{currentStepInfo.subtitle}</p>
                             </motion.div>
                         </div>
                     )}

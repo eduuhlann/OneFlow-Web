@@ -10,7 +10,8 @@ import {
     ChevronRight,
     Info,
     ExternalLink,
-    MessageSquare
+    MessageSquare,
+    HelpCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,8 +57,8 @@ const Settings: React.FC = () => {
         >
             <div className="flex items-center gap-6">
                 <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
-                    destructive ? "bg-red-500/10 text-red-500" : "bg-white/5 text-white/40 group-hover:text-white"
+                    "w-12 h-12 rounded-2xl flex items-center justify-center",
+                    destructive ? "bg-red-500/10 text-red-500" : "bg-white/5 text-white/ group-hover:text-white"
                 )}>
                     <Icon size={22} />
                 </div>
@@ -66,7 +67,7 @@ const Settings: React.FC = () => {
                         "font-bold text-lg tracking-tight",
                         destructive ? "text-red-500" : "text-white"
                     )}>{title}</h4>
-                    {subtitle && <p className="text-white/40 text-xs font-light tracking-wide">{subtitle}</p>}
+                    {subtitle && <p className="text-white/ text-xs font-light tracking-wide">{subtitle}</p>}
                 </div>
             </div>
             <div className="flex items-center gap-4">
@@ -75,14 +76,14 @@ const Settings: React.FC = () => {
                         {badge}
                     </span>
                 )}
-                {!destructive && <ChevronRight size={18} className="text-white/10 group-hover:text-white transition-colors" />}
+                {!destructive && <ChevronRight size={18} className="text-white/80 group-hover:text-white transition-colors" />}
             </div>
         </button>
     );
 
     const SettingSection = ({ title, children }: any) => (
         <div className="mb-12">
-            <h3 className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase mb-4 px-6 italic">
+            <h3 className="text-[10px] font-black tracking-[0.4em] text-white/ uppercase mb-4 px-6 italic">
                 {title}
             </h3>
             <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden">
@@ -115,7 +116,7 @@ const Settings: React.FC = () => {
                                 icon={User}
                                 title="Editar Perfil"
                                 subtitle="Avatar, Banner e Nome"
-                                onClick={() => navigate('/profile')}
+                                onClick={() => navigate('/profile/edit')}
                             />
                             <SettingItem
                                 icon={Shield}
@@ -126,6 +127,12 @@ const Settings: React.FC = () => {
                         </SettingSection>
 
                         <SettingSection title="Apoio, Comunidade & Legal">
+                            <SettingItem
+                                icon={HelpCircle}
+                                title="Central de Ajuda"
+                                subtitle="Perguntas frequentes e busca"
+                                onClick={() => navigate('/ajuda')}
+                            />
                             <SettingItem
                                 icon={MessageSquare}
                                 title="Enviar Feedback"
@@ -144,7 +151,7 @@ const Settings: React.FC = () => {
                                 onClick={handleSignOut}
                                 className="w-full py-5 bg-white/5 border border-white/10 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-white/10 transition-all group"
                             >
-                                <LogOut size={20} className="text-white/40 group-hover:text-white transition-colors" />
+                                <LogOut size={20} className="text-white/ group-hover:text-white transition-colors" />
                                 Sair da Conta
                             </button>
                         </div>
@@ -163,7 +170,7 @@ const Settings: React.FC = () => {
                             <ArrowLeft size={24} />
                         </button>
                         <div>
-                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Ajustes OneFlow</span>
+                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/ uppercase">Ajustes OneFlow</span>
                             <h1 className="text-2xl sm:text-4xl font-black italic -rotate-1 tracking-tighter">
                                 {activeTab === 'main' ? 'Configurações' : 'Ajustes'}
                             </h1>

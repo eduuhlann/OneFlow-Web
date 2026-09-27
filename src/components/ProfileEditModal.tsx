@@ -121,7 +121,7 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                 exit={{ scale: 0.95, y: 20 }}
                 className="relative w-full max-w-md bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl"
             >
-                <button onClick={onClose} className="absolute top-6 right-6 text-white/30 hover:text-white transition-colors">
+                <button onClick={onClose} className="absolute top-6 right-6 text-white/ hover:text-white transition-colors">
                     <X size={22} />
                 </button>
 
@@ -144,7 +144,7 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                                 onError={() => setPreviewUrl('')} 
                             />
                         ) : (
-                            <User size={40} className="text-white/30" />
+                            <User size={40} className="text-white/" />
                         )}
                         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             {uploading ? (
@@ -173,46 +173,46 @@ export default function ProfileEditModal({ onClose }: ProfileEditModalProps) {
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
-                            className="w-full py-4 bg-white/5 border border-white/10 border-dashed rounded-2xl text-white/40 hover:text-white hover:border-white/30 transition-all text-xs font-bold tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="w-full py-4 bg-white/5 border border-white/10 border-dashed rounded-2xl text-white/ hover:text-white hover:border-white/30 transition-all text-xs font-bold tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                             <Upload size={16} />
                             {uploading ? 'ENVIANDO...' : 'ESCOLHER ARQUIVO (PNG, JPG, GIF)'}
                         </button>
-                        <p className="text-[10px] text-white/20 text-center mt-2">Máximo 20MB · GIFs animados suportados</p>
+                        <p className="text-[10px] text-white/ text-center mt-2">Máximo 20MB · GIFs animados suportados</p>
                     </div>
 
                     {/* Display Name */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">NOME DE EXIBIÇÃO</label>
+                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/ ml-1">NOME DE EXIBIÇÃO</label>
                         <input
                             type="text"
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
                             placeholder="Como quer ser chamado"
-                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/10 text-sm"
+                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/80 text-sm"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">USERNAME</label>
+                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/ ml-1">USERNAME</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
                             placeholder="seu_id_unico"
-                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/10 text-sm font-bold lowercase"
+                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/80 text-sm font-bold lowercase"
                         />
                     </div>
 
                     {/* Bio */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/40 ml-1">BIO</label>
+                        <label className="text-[10px] font-bold tracking-[0.2em] text-white/ ml-1">BIO</label>
                         <textarea
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
                             placeholder="Uma frase sobre você..."
                             rows={2}
-                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/10 text-sm resize-none"
+                            className="w-full bg-black/50 border border-white/10 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-white/30 transition-all text-white placeholder:text-white/80 text-sm resize-none"
                         />
                     </div>
 

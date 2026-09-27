@@ -14,7 +14,6 @@ import {
     LogIn
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePro } from '../contexts/ProContext';
 import { useAuth } from '../contexts/AuthContext';
 import { plansService, Plan, UserPlan } from '../services/features/plansService';
 import { aiPlansService, type AiPlan } from '../services/features/aiPlansService';
@@ -29,7 +28,6 @@ function cn(...inputs: ClassValue[]) {
 
 const Plans: React.FC = () => {
     const navigate = useNavigate();
-    const { isPro } = usePro();
     const { user } = useAuth();
     const [activePlans, setActivePlans] = useState<UserPlan[]>([]);
     const [customPlans, setCustomPlans] = useState<Plan[]>([]);
@@ -112,7 +110,7 @@ const Plans: React.FC = () => {
                             <ArrowLeft size={24} />
                         </button>
                         <div>
-                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/20 uppercase">Jornadas Espirituais</span>
+                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/ uppercase">Jornadas Espirituais</span>
                             <h1 className="text-3xl sm:text-5xl font-serif italic tracking-tight">Meus Planos</h1>
                         </div>
                     </div>
@@ -141,20 +139,20 @@ const Plans: React.FC = () => {
                 >
                     <div className="flex-1">
                         <h2 className="text-3xl font-serif mb-2 tracking-tight italic">Plano Personalizado com IA</h2>
-                        <p className="text-white/40 text-sm font-medium leading-relaxed">Deixe a nossa IA criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
+                        <p className="text-white/ text-sm font-medium leading-relaxed">Deixe a nossa IA criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
                     </div>
                     <button 
-                        onClick={() => navigate(isPro ? '/plans/ai-generator' : '/pro')}
+                        onClick={() => navigate('/plans/ai-generator')}
                         className="px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all whitespace-nowrap uppercase"
                     >
-                        {isPro ? 'CRIAR AGORA' : 'LIBERAR COM PRO'}
+                        CRIAR AGORA
                     </button>
                 </motion.div>
 
 
                 <div className="space-y-12">
                     <section>
-                        <h3 className="text-xs font-black tracking-[0.3em] text-white/30 uppercase mb-8 flex items-center gap-4">
+                        <h3 className="text-xs font-black tracking-[0.3em] text-white/ uppercase mb-8 flex items-center gap-4">
                             Meus Planos com IA
                             <div className="flex-1 h-px bg-white/5" />
                         </h3>
@@ -165,12 +163,12 @@ const Plans: React.FC = () => {
                                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                                 placeholder="CÓDIGO DE CONVITE"
                                 maxLength={8}
-                                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs tracking-[0.3em] font-serif text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors"
+                                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs tracking-[0.3em] font-serif text-white placeholder:text-white/ focus:outline-none focus:border-white/30 transition-colors"
                             />
                             <button
                                 onClick={handleJoinCode}
                                 disabled={joiningCode || !inviteCode.trim()}
-                                className="px-8 py-4 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.2em] uppercase text-white/60 hover:text-white hover:border-white/40 transition-colors disabled:opacity-30 flex items-center gap-2 justify-center"
+                                className="px-8 py-4 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.2em] uppercase text-white/ hover:text-white hover:border-white/40 transition-colors disabled:opacity-30 flex items-center gap-2 justify-center"
                             >
                                 <LogIn size={14} /> Entrar
                             </button>
@@ -179,12 +177,12 @@ const Plans: React.FC = () => {
                         <div className="grid grid-cols-1 gap-4">
                             {aiLoading ? (
                                 <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                    <p className="text-white/40 font-medium">Carregando seus planos...</p>
+                                    <p className="text-white/ font-medium">Carregando seus planos...</p>
                                 </div>
                             ) : aiPlans.length === 0 ? (
                                 <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                    <BookOpen className="mx-auto text-white/10 mb-4" size={48} />
-                                    <p className="text-white/40 font-medium">Você ainda não criou nenhum plano com IA.</p>
+                                    <BookOpen className="mx-auto text-white/80 mb-4" size={48} />
+                                    <p className="text-white/ font-medium">Você ainda não criou nenhum plano com IA.</p>
                                 </div>
                             ) : (
                                 aiPlans.map(plan => (
@@ -200,11 +198,11 @@ const Plans: React.FC = () => {
                                                     <h4 className="text-xl font-serif">{plan.title}</h4>
                                                     <div className="flex items-center gap-3 shrink-0">
                                                         {plan.mode === 'grupo' && (
-                                                            <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-white/30">
+                                                            <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-white/">
                                                                 <Users size={12} /> {plan.memberCount}
                                                             </span>
                                                         )}
-                                                        <span className="text-[10px] font-black tracking-widest text-white/20 uppercase">
+                                                        <span className="text-[10px] font-black tracking-widest text-white/ uppercase">
                                                             {plan.progress}%
                                                         </span>
                                                     </div>
@@ -216,7 +214,7 @@ const Plans: React.FC = () => {
                                                         className="h-full bg-white"
                                                     />
                                                 </div>
-                                                <p className="text-[10px] uppercase tracking-widest text-white/25 mt-2">
+                                                <p className="text-[10px] uppercase tracking-widest text-white/ mt-2">
                                                     {plan.duration_days} dias
                                                     {plan.objective ? ` · ${plan.objective}` : ''}
                                                     {plan.privacy === 'link' ? ' · link público' : ''}
@@ -244,7 +242,7 @@ const Plans: React.FC = () => {
                     </section>
 
                     <section>
-                        <h3 className="text-xs font-black tracking-[0.3em] text-white/30 uppercase mb-8 flex items-center gap-4">
+                        <h3 className="text-xs font-black tracking-[0.3em] text-white/ uppercase mb-8 flex items-center gap-4">
                             Planos Ativos
                             <div className="flex-1 h-px bg-white/5" />
                         </h3>
@@ -252,8 +250,8 @@ const Plans: React.FC = () => {
                         <div className="grid grid-cols-1 gap-4">
                             {activePlans.length === 0 ? (
                                 <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                    <BookOpen className="mx-auto text-white/10 mb-4" size={48} />
-                                    <p className="text-white/40 font-medium">Você ainda não iniciou nenhum plano.</p>
+                                    <BookOpen className="mx-auto text-white/80 mb-4" size={48} />
+                                    <p className="text-white/ font-medium">Você ainda não iniciou nenhum plano.</p>
                                 </div>
                             ) : (
                                 activePlans.map(up => {
@@ -274,7 +272,7 @@ const Plans: React.FC = () => {
                                                 <div className="flex-1">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <h4 className="text-xl font-serif">{plan.title}</h4>
-                                                        <span className="text-[10px] font-black tracking-widest text-white/20 uppercase">{progress}% concluído</span>
+                                                        <span className="text-[10px] font-black tracking-widest text-white/ uppercase">{progress}% concluído</span>
                                                     </div>
                                                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                                                         <motion.div
@@ -305,20 +303,20 @@ const Plans: React.FC = () => {
                     </section>
 
                     <section>
-                        <h3 className="text-xs font-black tracking-[0.3em] text-white/30 uppercase mb-8 flex items-center gap-4">
+                        <h3 className="text-xs font-black tracking-[0.3em] text-white/ uppercase mb-8 flex items-center gap-4">
                             Planos salvos neste dispositivo
                             <div className="flex-1 h-px bg-white/5" />
                         </h3>
 
                         {customPlans.filter(p => !isPlanActive(p.id)).length === 0 ? (
                             <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                <BookOpen className="mx-auto text-white/10 mb-4" size={48} />
-                                <p className="text-white/40 font-medium">Nenhum plano antigo por aqui.</p>
+                                <BookOpen className="mx-auto text-white/80 mb-4" size={48} />
+                                <p className="text-white/ font-medium">Nenhum plano antigo por aqui.</p>
                                 <button
-                                    onClick={() => navigate(isPro ? '/plans/ai-generator' : '/pro')}
+                                    onClick={() => navigate('/plans/ai-generator')}
                                     className="mt-6 px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all uppercase"
                                 >
-                                    {isPro ? 'CRIAR COM IA' : 'LIBERAR COM PRO'}
+                                    CRIAR COM IA
                                 </button>
                             </div>
                         ) : (
@@ -344,11 +342,11 @@ const Plans: React.FC = () => {
                                     <div>
                                         <div className="flex items-start justify-between gap-4 mb-3">
                                             <h4 className="text-2xl font-serif tracking-tight">{plan.title}</h4>
-                                            <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black tracking-widest uppercase border border-white/5 text-white/40 shrink-0 mt-2">
+                                            <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black tracking-widest uppercase border border-white/5 text-white/ shrink-0 mt-2">
                                                 {plan.durationDays} DIAS
                                             </span>
                                         </div>
-                                        <p className="text-white/40 text-sm italic opacity-80">{plan.description}</p>
+                                        <p className="text-white/ text-sm italic opacity-80">{plan.description}</p>
                                     </div>
                                     <div className="mt-8">
                                         <button
@@ -387,7 +385,7 @@ const Plans: React.FC = () => {
                                 <Trash2 size={28} />
                             </div>
                             <h3 className="text-2xl font-bold mb-4">Remover Plano?</h3>
-                            <p className="text-white/40 text-sm mb-8 leading-relaxed">Isso irá apagar todo o seu progresso neste plano. Esta ação não pode ser desfeita.</p>
+                            <p className="text-white/ text-sm mb-8 leading-relaxed">Isso irá apagar todo o seu progresso neste plano. Esta ação não pode ser desfeita.</p>
                             <div className="grid grid-cols-2 gap-4">
                                 <button
                                     onClick={() => setShowConfirmDelete(null)}

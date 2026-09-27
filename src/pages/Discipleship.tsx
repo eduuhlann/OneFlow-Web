@@ -34,7 +34,6 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { usePro } from '../contexts/ProContext';
 import { discipleshipService, DiscipleshipTask, DiscipleshipNote } from '../services/features/discipleshipService';
 import { statsService, BibleStats } from '../services/features/statsService';
 import { UserProfileModal } from '../components/discipleship/UserProfileModal';
@@ -43,25 +42,133 @@ import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '../services/supabase';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { getActiveMentionQuery, applyMention, splitMentions, type MentionQuery } from '../lib/mentions';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
+
+const MessageContent = ({
+    content,
+    onOpenProfile,
+    isMine,
+}: {
+    content: string;
+    onOpenProfile: (userId: string) => void;
+    isMine: boolean;
+}) => {
+    const segments = splitMentions(content);
+    return (
+        <>
+            {segments.map((seg, i) =>
+                seg.type === 'mention' ? (
+                    <MentionChip key={i} username={seg.value} isMine={isMine} onOpenProfile={onOpenProfile} />
+                ) : (
+                    <span key={i}>{seg.value}</span>
+                )
+            )}
+        </>
+    );
+};
+
+const MentionChip = ({
+    username,
+    isMine,
+    onOpenProfile,
+}: {
+    username: string;
+    isMine: boolean;
+    onOpenProfile: (userId: string) => void;
+}) => {
+    const [target, setTarget] = useState<{ id: string; display_name?: string | null } | null>(null);
+    const [show, setShow] = useState(false);
+
+    useEffect(() => {
+        if (!username) return;
+        let active = true;
+        (async () => {
+            try {
+                const found = await discipleshipService.findProfileByUsername(username);
+                if (active) setTarget(found);
+            } catch {
+                if (active) setTarget(null);
+            }
+        })();
+        return () => { active = false; };
+    }, [username]);
+
+    return (
+        <span className="relative inline-block">
+            <button
+                type="button"
+                onMouseEnter={() => setShow(true)}
+                onMouseLeave={() => setShow(false)}
+                onClick={() => target && onOpenProfile(target.id)}
+                className={`font-bold ${isMine ? 'text-black/70 hover:text-black' : 'text-amber-200/90 hover:text-amber-200'}`}
+            >
+                @{username}
+            </button>
+            {show && target && (
+                <span className="absolute bottom-full left-0 z-30 mb-1.5 block w-max max-w-[220px] rounded-xl border border-white/10 bg-[#141414] px-3 py-2 text-left shadow-2xl">
+                    <span className="block text-[11px] font-black text-white">{target.display_name || `@${username}`}</span>
+                    <span className="block text-[10px] text-white/">@{username} · clique para ver o perfil</span>
+                </span>
+            )}
+        </span>
+    );
+};
+
+const PasswordPrompt = ({
+    title,
+    message,
+    withInput,
+    inputLabel,
+    inputPlaceholder,
+    onConfirm,
+    onCancel,
+}: {
+    title: string;
+    message: string;
+    withInput?: boolean;
+    inputLabel?: string;
+    inputPlaceholder?: string;
+    onConfirm: (value: string) => void | Promise<void>;
+    onCancel: () => void;
+}) => (
+    <ConfirmDialog
+        isOpen
+        title={title}
+        message={message}
+        withInput={withInput}
+        inputLabel={inputLabel}
+        inputPlaceholder={inputPlaceholder}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+    />
+);
 
 const Discipleship: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const { profile } = useProfile();
-    const { isPro } = usePro();
-    const [loading, setLoading] = useState(true);
+        const [loading, setLoading] = useState(true);
     const [view, setView] = useState<'list' | 'chat'>('list');
     const [sidebarTab, setSidebarTab] = useState<'chats' | 'explore'>('chats');
     const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
+    // Menções (#26)
+    const [mentionCandidates, setMentionCandidates] = useState<{ id: string, username: string, display_name?: string | null, avatar_url?: string | null }[]>([]);    const [mentionQuery, setMentionQuery] = useState<MentionQuery | null>(null);
+    const [mentionIndex, setMentionIndex] = useState(0);
+    const messageInputRef = useRef<HTMLTextAreaElement>(null);
+    const mentionCandidatesRef = useRef(mentionCandidates);
+    mentionCandidatesRef.current = mentionCandidates;
+
     // UI States
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+    const [newGroupPassword, setNewGroupPassword] = useState('');
     const [newGroupName, setNewGroupName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchMode, setSearchMode] = useState<'global' | 'group'>('global');
@@ -75,7 +182,7 @@ const Discipleship: React.FC = () => {
     const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
     const [selectedMemberStats, setSelectedMemberStats] = useState<{ userId: string, stats: BibleStats | null, activity: any[] } | null>(null);
     const [challengeData, setChallengeData] = useState({ book: 'Gênesis', start: 1, end: 1 });
-    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void | Promise<void> }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: (value?: string) => void | Promise<void>, withInput?: boolean, inputLabel?: string, inputPlaceholder?: string }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const [alertBanner, setAlertBanner] = useState<{ isOpen: boolean, message: string, type: 'error' | 'success' }>({ isOpen: false, message: '', type: 'error' });
     const [isSending, setIsSending] = useState(false);
 
@@ -91,6 +198,7 @@ const Discipleship: React.FC = () => {
     const [editingContent, setEditingContent] = useState('');
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
     const [typingUsers, setTypingUsers] = useState<{ id: string, name: string }[]>([]);
+    const [isPresenceReady, setIsPresenceReady] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -291,10 +399,17 @@ const Discipleship: React.FC = () => {
             return;
         }
         
+        const myName = profile?.display_name || profile?.username || 'Usuário';
         const channelId = `presence-${selectedConnection.id}`;
         const channel = supabase.channel(channelId, {
             config: { presence: { key: user.id } }
         });
+
+        // Estado pode ser digitado antes do SUBSCRIBED: guardamos e
+        // enviamos assim que o canal ficar pronto.
+        let isTypingNow = false;
+        const isSubscribed = () => (channel.state as string) === 'SUBSCRIBED';
+        const flush = () => channel.track({ isTyping: isTypingNow, name: myName });
 
         channel
             .on('presence', { event: 'sync' }, () => {
@@ -303,28 +418,107 @@ const Discipleship: React.FC = () => {
                 for (const userId in state) {
                     if (userId === user.id) continue;
                     const presences = state[userId] as any[];
-                    if (presences.some(p => p.isTyping)) {
+                    const latest = presences[presences.length - 1];
+                    if (latest?.isTyping) {
                         activeTypers.push({
                             id: userId,
-                            name: presences[0].name || 'Alguém'
+                            name: latest.name || 'Alguém'
                         });
                     }
                 }
                 setTypingUsers(activeTypers);
             })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({ isTyping: false, name: profile?.display_name || profile?.username || 'Usuário' });
-                }
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') flush();
             });
 
-        presenceChannelRef.current = channel;
+        presenceChannelRef.current = {
+            ...channel,
+            track: (payload: any) => {
+                isTypingNow = Boolean(payload?.isTyping);
+                if (isSubscribed()) return channel.track(payload);
+                return Promise.resolve('ok');
+            },
+        };
+        setIsPresenceReady(false);
 
         return () => {
             channel.unsubscribe();
             presenceChannelRef.current = null;
+            setTypingUsers([]);
         };
     }, [selectedConnection?.id, user, profile?.display_name, profile?.username]);
+
+    // Avisa que parou de digitar quando o campo perde o foco.
+    const handleTypingBlur = () => {
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+        presenceChannelRef.current?.track({ isTyping: false, name: profile?.display_name || profile?.username || 'Usuário' });
+    };
+
+    // Carrega quem pode ser mencionado na conversa atual (#26)
+    useEffect(() => {
+        if (!user || !selectedConnection) {
+            setMentionCandidates([]);
+            return;
+        }
+        let active = true;
+        (async () => {
+            try {
+                const list = await discipleshipService.getMentionCandidates(user.id, selectedConnection.id);
+                const usable = list
+                    .filter((c) => Boolean(c.username))
+                    .map((c) => ({ id: c.id, username: c.username as string, display_name: c.display_name, avatar_url: c.avatar_url }));
+                if (active) setMentionCandidates(usable);
+            } catch {
+                if (active) setMentionCandidates([]);
+            }
+        })();
+        return () => { active = false; };
+    }, [user?.id, selectedConnection?.id]);
+
+    const updateMentionQuery = (text: string, caret: number) => {
+        const found = getActiveMentionQuery(text, caret);
+        setMentionQuery(found);
+        setMentionIndex(0);
+    };
+
+    const filteredMentionCandidates = useMemo(() => {
+        if (!mentionQuery) return [];
+        const q = mentionQuery.query.toLowerCase();
+        const pool = mentionCandidates;
+        const starts = pool.filter((c) => c.username.toLowerCase().startsWith(q));
+        const contains = pool.filter((c) => !c.username.toLowerCase().startsWith(q) && c.username.toLowerCase().includes(q));
+        return [...starts, ...contains].slice(0, 6);
+    }, [mentionCandidates, mentionQuery]);
+
+    const selectMention = (candidate: { username: string }) => {
+        if (!mentionQuery) return;
+        const caret = messageInputRef.current?.selectionStart ?? noteInput.length;
+        const { text, caret: nextCaret } = applyMention(noteInput, mentionQuery, candidate.username);
+        setNoteInput(text);
+        setMentionQuery(null);
+        handleTyping(text);
+        requestAnimationFrame(() => {
+            messageInputRef.current?.focus();
+            messageInputRef.current?.setSelectionRange(nextCaret, nextCaret);
+        });
+    };
+
+    const handleMessageKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const open = Boolean(mentionQuery) && filteredMentionCandidates.length > 0;
+        if (open) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex((i) => (i + 1) % filteredMentionCandidates.length); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex((i) => (i - 1 + filteredMentionCandidates.length) % filteredMentionCandidates.length); return; }
+            if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                e.preventDefault();
+                selectMention(filteredMentionCandidates[Math.min(mentionIndex, filteredMentionCandidates.length - 1)]);
+                return;
+            }
+            if (e.key === 'Escape') { e.preventDefault(); setMentionQuery(null); return; }
+        }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+    };
 
     const handleTyping = (text: string) => {
         setNoteInput(text);
@@ -436,20 +630,20 @@ const Discipleship: React.FC = () => {
 
     const handleCreateGroup = async () => {
         if (!user || !newGroupName.trim() || isCreatingGroup) return;
-        if (!isPro) {
-            navigate('/pro');
-            return;
-        }
         setIsCreatingGroup(true);
         try {
-            const groupId = await discipleshipService.createGroup(user.id, newGroupName);
+            const { id: groupId, passwordApplied } = await discipleshipService.createGroup(user.id, newGroupName, newGroupPassword);
             setNewGroupName('');
+            setNewGroupPassword('');
             setIsGroupModalOpen(false);
             loadConnections();
 
             // Automatically select the new group
             const newGroup = { id: groupId, name: newGroupName, leader_id: user.id, type: 'group' };
             handleSelectConnection(newGroup);
+            if (passwordApplied) {
+                setAlertBanner({ isOpen: true, message: 'Grupo criado e protegido por senha.', type: 'success' });
+            }
         } catch (error: any) {
             console.error('Error creating group:', error);
             setAlertBanner({ isOpen: true, message: `Erro ao criar grupo: ${error.message || 'Verifique sua conexão.'}`, type: 'error' });
@@ -609,6 +803,32 @@ const Discipleship: React.FC = () => {
     const handleRespondInvite = async (conn: any, accept: boolean) => {
         try {
             if (conn.member_id) {
+                // Grupo protegido: valida a senha antes de aceitar (#61)
+                if (accept && conn.join_password_hash) {
+                    setConfirmModal({
+                        isOpen: true,
+                        title: 'Senha do grupo',
+                        message: 'Este grupo é protegido. Digite a senha para entrar.',
+                        withInput: true,
+                        inputLabel: 'Senha do grupo',
+                        inputPlaceholder: 'Digite a senha',
+                        onConfirm: async (value?: string) => {
+                            try {
+                                const ok = await discipleshipService.verifyGroupPassword(conn.id, value || '');
+                                if (!ok) {
+                                    setAlertBanner({ isOpen: true, message: 'Senha incorreta.', type: 'error' });
+                                    return;
+                                }
+                                await discipleshipService.respondToGroupInvite(conn.member_id, true);
+                                loadConnections();
+                                handleSelectConnection({ ...conn, status: 'active', member_status: 'active' });
+                            } catch (error) {
+                                setAlertBanner({ isOpen: true, message: 'Erro ao entrar no grupo.', type: 'error' });
+                            }
+                        },
+                    });
+                    return;
+                }
                 await discipleshipService.respondToGroupInvite(conn.member_id, accept);
             } else {
                 await discipleshipService.respondToInvite(conn.id, accept);
@@ -820,7 +1040,7 @@ const Discipleship: React.FC = () => {
 
     return (
         <PageTransition>
-            <div className="h-screen bg-[#0d0d0d] text-white flex flex-col overflow-hidden">
+                <div className="h-screen bg-[#0d0d0d] text-white flex flex-col overflow-hidden">
                 {/* Modals handled same as before... (Search, Group Creation) */}
                 <AnimatePresence>
                     {isSearchOpen && (
@@ -834,16 +1054,16 @@ const Discipleship: React.FC = () => {
                                 </div>
                                 <div className="p-6 space-y-6">
                                     <div className="relative">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/" />
                                         <input type="text" autoFocus placeholder="Buscar por usuário..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full bg-black/40 border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
                                     </div>
                                     <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                                         {inviteSuccess ? (
                                             <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                                                <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center text-green-500 animate-bounce">
+                                                <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
                                                     <Check className="w-8 h-8" />
                                                 </div>
-                                                <p className="text-sm font-bold text-white/60">Convite enviado para <span className="text-white">{inviteSuccess}</span>!</p>
+                                                <p className="text-sm font-bold text-white/">Convite enviado para <span className="text-white">{inviteSuccess}</span>!</p>
                                             </div>
                                         ) : (
                                             searchResults.map(r => (
@@ -875,8 +1095,23 @@ const Discipleship: React.FC = () => {
                                 </div>
                                 <div className="p-6 space-y-6">
                                     <div className="space-y-4">
-                                        <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Nome do Grupo</label>
+                                        <label className="text-[10px] uppercase tracking-widest text-white/ font-bold ml-1">Nome do Grupo</label>
                                         <input type="text" autoFocus placeholder="Ex: Discipulado Jovens" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] uppercase tracking-widest text-white/ font-bold ml-1 flex items-center gap-2">
+                                            <Lock className="w-3 h-3" /> Senha do grupo (opcional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Deixe em branco para grupo aberto"
+                                            value={newGroupPassword}
+                                            onChange={(e) => setNewGroupPassword(e.target.value)}
+                                            className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium"
+                                        />
+                                        <p className="text-[11px] leading-relaxed text-white/">
+                                            Quem receber o convite vai precisar digitar a senha para entrar. Guarde-a para compartilhar com o grupo.
+                                        </p>
                                     </div>
                                     <button onClick={handleCreateGroup} disabled={!newGroupName.trim() || isCreatingGroup} className="w-full py-4 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                                         {isCreatingGroup ? (
@@ -894,14 +1129,14 @@ const Discipleship: React.FC = () => {
                             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/10">
                                     <div className="flex items-center gap-3">
-                                        <TrendingUp className="w-6 h-6 text-white/60" />
+                                        <TrendingUp className="w-6 h-6 text-white/" />
                                         <h3 className="text-xl font-bold tracking-tight">Novo Desafio de Leitura</h3>
                                     </div>
                                     <button onClick={() => setIsChallengeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
                                 </div>
                                 <div className="p-6 space-y-6">
                                     <div className="space-y-4">
-                                        <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Livro da Bíblia</label>
+                                        <label className="text-[10px] uppercase tracking-widest text-white/ font-bold ml-1">Livro da Bíblia</label>
                                         <select
                                             value={challengeData.book}
                                             onChange={(e) => setChallengeData(prev => ({ ...prev, book: e.target.value }))}
@@ -914,11 +1149,11 @@ const Discipleship: React.FC = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Capítulo Inicial</label>
+                                            <label className="text-[10px] uppercase tracking-widest text-white/ font-bold ml-1">Capítulo Inicial</label>
                                             <input type="number" min="1" value={challengeData.start} onChange={(e) => setChallengeData(prev => ({ ...prev, start: parseInt(e.target.value) || 1 }))} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Capítulo Final</label>
+                                            <label className="text-[10px] uppercase tracking-widest text-white/ font-bold ml-1">Capítulo Final</label>
                                             <input type="number" min="1" value={challengeData.end} onChange={(e) => setChallengeData(prev => ({ ...prev, end: parseInt(e.target.value) || 1 }))} className="w-full bg-black/40 border-white/10 rounded-2xl py-4 px-6 text-sm focus:ring-0 focus:border-white/30 transition-all font-medium" />
                                         </div>
                                     </div>
@@ -942,8 +1177,8 @@ const Discipleship: React.FC = () => {
                                     <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"><ArrowLeft className="w-5 h-5" /></button>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Chat Privado"><MessageSquarePlus className="w-5 h-5 text-white/60" /></button>
-                                    <button onClick={() => setIsGroupModalOpen(true)} className="relative p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title={isPro ? "Novo Grupo" : "OneFlow Pro"}><Users className="w-5 h-5 text-white/60" />{!isPro && <Lock className="w-3 h-3 text-white/60 absolute top-1 right-1" />}</button>
+                                    <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Chat Privado"><MessageSquarePlus className="w-5 h-5 text-white/" /></button>
+                                     <button onClick={() => setIsGroupModalOpen(true)} className="relative p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Grupo"><Users className="w-5 h-5 text-white/" /></button>
                                     <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
                                 </div>
                             </div>
@@ -958,7 +1193,7 @@ const Discipleship: React.FC = () => {
                                         onClick={() => setSidebarTab(tab.id)}
                                         className={cn(
                                             "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
-                                            sidebarTab === tab.id ? "bg-white text-black" : "text-white/40 hover:text-white/80"
+                                            sidebarTab === tab.id ? "bg-white text-black" : "text-white/ hover:text-white/80"
                                         )}
                                     >
                                         <tab.icon size={12} /> {tab.label}
@@ -987,11 +1222,11 @@ const Discipleship: React.FC = () => {
                                             )}
                                         >
                                             {conn.type === 'group' ? (
-                                                conn.avatar_url ? <img src={conn.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-6 h-6 text-white/40" />
+                                                conn.avatar_url ? <img src={conn.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-6 h-6 text-white/" />
                                             ) : conn.profile?.avatar_url ? (
                                                 <img src={conn.profile.avatar_url} className="w-full h-full object-cover" />
                                             ) : (
-                                                <User className="w-6 h-6 text-white/20" />
+                                                <User className="w-6 h-6 text-white/" />
                                             )}
                                         </span>
                                         <div className="flex-1 text-left">
@@ -1000,7 +1235,7 @@ const Discipleship: React.FC = () => {
                                                 {conn.type !== 'self' && (
                                                     <span className={cn(
                                                         "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
-                                                        conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : "bg-white/5 text-white/20"
+                                                        conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : "bg-white/5 text-white/"
                                                     )}>
                                                         {conn.type === 'leader' ? 'Líder' : 'Discípulo'}
                                                     </span>
@@ -1013,7 +1248,7 @@ const Discipleship: React.FC = () => {
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center justify-between gap-2 mt-1">
-                                                    <p className="text-[11px] text-white/40 line-clamp-1 italic">Toque para abrir a conversa...</p>
+                                                    <p className="text-[11px] text-white/ line-clamp-1 italic">Toque para abrir a conversa...</p>
                                                     {(() => {
                                                         const unreadKey = conn.type === 'group' ? conn.id : (conn.leader_id === user?.id ? conn.disciple_id : conn.leader_id);
                                                         const count = unreadCounts[unreadKey] || 0;
@@ -1056,11 +1291,11 @@ const Discipleship: React.FC = () => {
                                             <div className="relative group/avatar">
                                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
                                                     {selectedConnection.type === 'group' ? (
-                                                        selectedConnection.avatar_url ? <img src={selectedConnection.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-5 h-5 md:w-6 md:h-6 text-white/40" />
+                                                        selectedConnection.avatar_url ? <img src={selectedConnection.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-5 h-5 md:w-6 md:h-6 text-white/" />
                                                     ) : selectedConnection.profile?.avatar_url ? (
                                                         <img src={selectedConnection.profile.avatar_url} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <User className="w-5 h-5 md:w-6 md:h-6 text-white/20" />
+                                                        <User className="w-5 h-5 md:w-6 md:h-6 text-white/" />
                                                     )}
                                                 </div>
                                                 {selectedConnection.type !== 'group' && selectedConnection.type !== 'self' && (
@@ -1098,7 +1333,7 @@ const Discipleship: React.FC = () => {
                                                             className="flex items-center gap-1.5 overflow-hidden cursor-pointer group/members"
                                                             onClick={() => setIsGroupMembersModalOpen(true)}
                                                         >
-                                                            <span className="text-[10px] md:text-[11px] font-medium text-white/40 group-hover/members:text-white/80 transition-colors truncate flex-1">
+                                                            <span className="text-[10px] md:text-[11px] font-medium text-white/ group-hover/members:text-white/80 transition-colors truncate flex-1">
                                                                 {groupMembers.length > 0 ? groupMembers.map(m => getProfile(m.profiles)?.username).filter(Boolean).join(', ') : 'Carregando participantes...'}
                                                             </span>
                                                         </div>
@@ -1115,7 +1350,7 @@ const Discipleship: React.FC = () => {
                                     <div className="flex items-center gap-2 relative">
                                         {selectedConnection.type !== 'self' && (selectedConnection.leader_id === user?.id || selectedConnection.type === 'disciple' || groupMembers.find(m => m.user_id === user?.id)?.role === 'admin') && (
                                             <button onClick={() => setIsChallengeModalOpen(true)} className="p-2.5 md:p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all border border-white/10" title="Criar Desafio de Leitura">
-                                                <TrendingUp className="w-5 h-5 text-white/60" />
+                                                <TrendingUp className="w-5 h-5 text-white/" />
                                             </button>
                                         )}
                                         {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
@@ -1130,11 +1365,11 @@ const Discipleship: React.FC = () => {
                                                 <AnimatePresence>
                                                     {isMenuOpen && (
                                                         <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-30">
-                                                            <button onClick={() => { handleClearConversation(); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
-                                                                <Trash2 className="w-4 h-4 text-white/40" /> Limpar Conversa
+                                                            <button onClick={() => { handleClearConversation(); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/ hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
+                                                                <Trash2 className="w-4 h-4 text-white/" /> Limpar Conversa
                                                             </button>
                                                             {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
-                                                                <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/60 hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
+                                                                <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); setIsMenuOpen(false); }} className="w-full p-4 flex items-center gap-3 text-white/ hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest border-b border-white/5">
                                                                     <UserPlus className="w-4 h-4" />
                                                                     Adicionar Membro
                                                                 </button>
@@ -1181,14 +1416,14 @@ const Discipleship: React.FC = () => {
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
                                                                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                                                                    <TrendingUp className="w-4 h-4 text-white/60" />
+                                                                    <TrendingUp className="w-4 h-4 text-white/" />
                                                                 </div>
                                                                 <div>
-                                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/60">Desafio Ativo</h4>
+                                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/">Desafio Ativo</h4>
                                                                     <p className="text-sm font-bold">{target.book} {target.start}-{target.end}</p>
                                                                 </div>
                                                             </div>
-                                                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{progress}% concluído</span>
+                                                            <span className="text-[10px] font-black text-white/ uppercase tracking-widest">{progress}% concluído</span>
                                                         </div>
                                                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                                             <motion.div
@@ -1230,7 +1465,7 @@ const Discipleship: React.FC = () => {
                                                     return (
                                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={n.id} className="flex justify-center py-2">
                                                             <div className="bg-white/5 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
-                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 text-center">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/ text-center">
                                                                     {n.content.replace('[SYSTEM]:', '').trim()}
                                                                 </p>
                                                             </div>
@@ -1257,13 +1492,13 @@ const Discipleship: React.FC = () => {
                                                                 {authorProfile?.avatar_url ? (
                                                                     <img src={authorProfile.avatar_url} className="w-full h-full object-cover" />
                                                                 ) : (
-                                                                    <User className="w-4 h-4 text-white/20" />
+                                                                    <User className="w-4 h-4 text-white/" />
                                                                 )}
                                                             </div>
                                                         </div>
 
                                                         <div className={cn("flex flex-col gap-1", isMine ? "items-end" : "items-start")}>
-                                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest px-1">
+                                                            <span className="text-[10px] font-black text-white/ uppercase tracking-widest px-1">
                                                                 {authorProfile?.username || 'Usuário'}
                                                             </span>
                                                             <div className={cn("px-5 py-3.5 rounded-[28px] max-w-[280px] md:max-w-md group relative transition-all shadow-xl", isMine ? "bg-white text-black font-semibold rounded-tr-none" : "bg-white/5 border border-white/10 text-white rounded-tl-none")}>
@@ -1291,7 +1526,7 @@ const Discipleship: React.FC = () => {
                                                                                         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5" /></div>
                                                                                         <div className="flex-1 overflow-hidden">
                                                                                             <p className="text-[11px] font-bold truncate">{n.file_name}</p>
-                                                                                            <p className="text-[9px] uppercase tracking-widest text-white/40">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
+                                                                                            <p className="text-[9px] uppercase tracking-widest text-white/">{n.file_type?.split('/')[1] || 'Arquivo'}</p>
                                                                                         </div>
                                                                                         <a href={n.file_url} target="_blank" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"><Download className="w-4 h-4" /></a>
                                                                                     </div>
@@ -1300,7 +1535,7 @@ const Discipleship: React.FC = () => {
                                                                                     n.content.startsWith('[CHALLENGE]:') ? (
                                                                                         <ChallengeMessageCard note={n} isMine={isMine} />
                                                                                     ) : (
-                                                                                        <p className="text-sm mt-2">{n.content}</p>
+                                                                                        <p className="text-sm mt-2"><MessageContent content={n.content} onOpenProfile={setProfileUserId} isMine={isMine} /></p>
                                                                                     )
                                                                                 )}
                                                                             </div>
@@ -1308,7 +1543,7 @@ const Discipleship: React.FC = () => {
                                                                             n.content.startsWith('[CHALLENGE]:') ? (
                                                                                 <ChallengeMessageCard note={n} isMine={isMine} />
                                                                             ) : (
-                                                                                <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{n.content}</p>
+                                                                                <p className="text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap"><MessageContent content={n.content} onOpenProfile={setProfileUserId} isMine={isMine} /></p>
                                                                             )
                                                                         )}
 
@@ -1319,7 +1554,7 @@ const Discipleship: React.FC = () => {
                                                                             )}>
                                                                                 <button
                                                                                     onClick={() => { setEditingNoteId(n.id); setEditingContent(n.content); }}
-                                                                                    className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white/40 hover:text-white transition-all shadow-sm backdrop-blur-md border border-white/5"
+                                                                                    className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white/ hover:text-white transition-all shadow-sm backdrop-blur-md border border-white/5"
                                                                                     title="Editar"
                                                                                 >
                                                                                     <MessageSquarePlus className="w-3.5 h-3.5" />
@@ -1336,7 +1571,7 @@ const Discipleship: React.FC = () => {
                                                                     </>
                                                                 )}
                                                             </div>
-                                                            <span className="text-[8px] text-white/20 font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                            <span className="text-[8px] text-white/ font-bold uppercase px-1">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                         </div>
                                                     </motion.div>
                                                 );
@@ -1356,7 +1591,7 @@ const Discipleship: React.FC = () => {
                                                     <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                                                     <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                                 </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/50 ml-1">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/ ml-1">
                                                     {typingUsers.length === 1 ? `${typingUsers[0].name.split(' ')[0]} está digitando...` : `${typingUsers.length} pessoas estão digitando...`}
                                                 </span>
                                             </div>
@@ -1369,12 +1604,48 @@ const Discipleship: React.FC = () => {
                                     <div className="max-w-4xl mx-auto flex gap-3 items-end">
                                         <div className="relative">
                                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" />
-                                            <button onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSending} className="p-4 bg-white/5 text-white/40 rounded-[24px] hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50">
+                                            <button onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSending} className="p-4 bg-white/5 text-white/ rounded-[24px] hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50">
                                                 {isUploading || isSending ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Paperclip className="w-5 h-5" />}
                                             </button>
                                         </div>
-                                        <div className="flex-1 bg-white/[0.03] rounded-[32px] flex flex-col p-2 transition-all group/input">
-                                            <textarea rows={1} value={noteInput} onChange={(e) => handleTyping(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Digite sua mensagem..." className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90" />
+                                        <div className="flex-1 bg-white/[0.03] rounded-[32px] flex flex-col p-2 transition-all group/input relative">
+                                            {mentionQuery && filteredMentionCandidates.length > 0 && (
+                                                <div className="absolute bottom-full left-2 right-2 mb-2 z-20 overflow-hidden rounded-2xl border border-white/10 bg-[#141414] shadow-2xl">
+                                                    {filteredMentionCandidates.map((c, i) => (
+                                                        <button
+                                                            key={c.id}
+                                                            type="button"
+                                                            onMouseDown={(e) => { e.preventDefault(); selectMention(c); }}
+                                                            className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${i === mentionIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                                                        >
+                                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                                                                {c.avatar_url ? (
+                                                                    <img src={c.avatar_url} alt="" className="h-full w-full object-cover" />
+                                                                ) : (
+                                                                    <span className="text-[10px] font-black text-white/">{(c.display_name || c.username).charAt(0).toUpperCase()}</span>
+                                                                )}
+                                                            </span>
+                                                            <span className="min-w-0 flex-1">
+                                                                <span className="block truncate text-[13px] font-bold text-white">{c.display_name || c.username}</span>
+                                                                <span className="block truncate text-[10px] text-white/">@{c.username}</span>
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <textarea
+                                                ref={messageInputRef}
+                                                rows={1}
+                                                value={noteInput}
+                                                onChange={(e) => {
+                                                    handleTyping(e.target.value);
+                                                    updateMentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length);
+                                                }}
+                                                onBlur={() => { setMentionQuery(null); handleTypingBlur(); }}
+                                                onKeyDown={handleMessageKeyDown}
+                                                placeholder="Digite sua mensagem... use @ para mencionar"
+                                                className="w-full bg-transparent border-none focus:ring-0 text-sm py-4 px-6 font-medium resize-none custom-scrollbar max-h-32 text-white/90"
+                                            />
                                             <div className="flex justify-end p-2 opacity-60 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => handleSendMessage()} disabled={(!noteInput.trim() && !isUploading) || isSending} className="p-3.5 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-lg disabled:opacity-50 disabled:scale-100">
                                                     {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
@@ -1387,7 +1658,7 @@ const Discipleship: React.FC = () => {
                         ) : (
                             <div className="flex-1 flex items-center justify-center p-12 text-center bg-gradient-to-b from-transparent to-white/[0.02] mix-blend-screen opacity-40">
                                 <div className="max-w-sm space-y-8">
-                                    <MessageSquare className="w-20 h-20 text-white/10 mx-auto" />
+                                    <MessageSquare className="w-20 h-20 text-white/80 mx-auto" />
                                     <h2 className="text-3xl font-black italic -rotate-1 tracking-tighter">Escolha uma jornada</h2>
                                 </div>
                             </div>
@@ -1412,7 +1683,7 @@ const Discipleship: React.FC = () => {
                             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                                     <div className="flex items-center gap-3">
-                                        <Users className="w-5 h-5 text-white/60" />
+                                        <Users className="w-5 h-5 text-white/" />
                                         <h2 className="text-xl font-black italic tracking-tight">Membros do Grupo</h2>
                                     </div>
                                     <button onClick={() => setIsGroupMembersModalOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
@@ -1434,15 +1705,15 @@ const Discipleship: React.FC = () => {
                                                             {memberProfile?.avatar_url ? (
                                                                 <img src={memberProfile.avatar_url} className="w-full h-full object-cover" />
                                                             ) : (
-                                                                <User className="w-5 h-5 text-white/20" />
+                                                                <User className="w-5 h-5 text-white/" />
                                                             )}
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-bold flex items-center gap-2">
                                                                 {memberProfile?.username || 'Usuário'}
-                                                                {isMe && <span className="text-[10px] bg-white/10 px-1.5 rounded-full text-white/60">Você</span>}
+                                                                {isMe && <span className="text-[10px] bg-white/10 px-1.5 rounded-full text-white/">Você</span>}
                                                             </p>
-                                                            <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">{member.role === 'admin' ? 'Co-Líder' : 'Membro'}</p>
+                                                            <p className="text-[10px] text-white/ uppercase tracking-widest font-black">{member.role === 'admin' ? 'Co-Líder' : 'Membro'}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -1460,7 +1731,7 @@ const Discipleship: React.FC = () => {
                                                                 {member.role === 'admin' && (
                                                                     <button 
                                                                         onClick={() => handlePromoteMember(member.id, 'member')}
-                                                                        className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-white/5"
+                                                                        className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-white/ hover:text-white/ rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-white/5"
                                                                         title="Remover Co-líder"
                                                                     >
                                                                         Rebaixar
@@ -1497,18 +1768,15 @@ const Discipleship: React.FC = () => {
 
                 <AnimatePresence>
                     {confirmModal.isOpen && (
-                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#1a1a1a] border border-white/10 p-8 rounded-[32px] w-full max-w-sm shadow-2xl space-y-6">
-                                <div className="space-y-2">
-                                    <h3 className="text-xl font-bold italic tracking-tight">{confirmModal.title}</h3>
-                                    <p className="text-sm text-white/60 leading-relaxed">{confirmModal.message}</p>
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    <button onClick={() => confirmModal.onConfirm()} className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-95 transition-all">Confirmar</button>
-                                    <button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="w-full py-4 bg-white/5 text-white/60 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all">Cancelar</button>
-                                </div>
-                            </motion.div>
-                        </div>
+                        <PasswordPrompt
+                            title={confirmModal.title}
+                            message={confirmModal.message}
+                            withInput={confirmModal.withInput}
+                            inputLabel={confirmModal.inputLabel}
+                            inputPlaceholder={confirmModal.inputPlaceholder}
+                            onConfirm={async (value) => { await confirmModal.onConfirm(value); }}
+                            onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                        />
                     )}
                 </AnimatePresence>
 
@@ -1553,20 +1821,20 @@ const ChallengeMessageCard = ({ note, isMine }: { note: any, isMine?: boolean })
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
                 <div className="flex items-center gap-4 relative">
-                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-white/20 transform group-hover:rotate-6 transition-transform">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-white/20">
                         <TrendingUp className="w-6 h-6 text-black" />
                     </div>
                     <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 leading-none">Desafio de Leitura</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/ leading-none">Desafio de Leitura</h4>
                         <p className="text-base font-bold mt-1.5 text-white">Lançado por {data.leaderName}</p>
                     </div>
                 </div>
 
                 <div className="space-y-2 relative">
-                    <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">Meta Proposta</p>
+                    <p className="text-[10px] text-white/ uppercase tracking-[0.2em] font-black">Meta Proposta</p>
                     <div className="py-4 px-6 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner shadow-black">
                         <p className="text-2xl font-black italic tracking-tighter text-white">{data.book}</p>
-                        <p className="text-sm font-medium text-white/60 mt-1 italic">Capítulos {data.start} até {data.end}</p>
+                        <p className="text-sm font-medium text-white/ mt-1 italic">Capítulos {data.start} até {data.end}</p>
                     </div>
                 </div>
             </div>
@@ -1587,7 +1855,7 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh, currentUs
                     <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
                         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                             <div className="flex items-center gap-3">
-                                <TrendingUp className="w-5 h-5 text-white/60" />
+                                <TrendingUp className="w-5 h-5 text-white/" />
                                 <h2 className="text-xl font-black italic tracking-tight">Meus Desafios</h2>
                             </div>
                             <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
@@ -1619,7 +1887,7 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh, currentUs
                                         <div key={task.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-lg font-black italic text-white/80">{target.book} {target.start}-{target.end}</p>
-                                                <span className="text-[10px] font-black bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{progress}%</span>
+                                                <span className="text-[10px] font-black bg-white/10 text-white/ px-2 py-0.5 rounded-full">{progress}%</span>
                                             </div>
                                             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                                 <div className="h-full bg-white transition-all duration-1000" style={{ width: `${progress}%` }} />

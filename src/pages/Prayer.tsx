@@ -73,8 +73,8 @@ const Prayer: React.FC = () => {
             {/* Header */}
             <header className="relative z-10 p-6 md:p-12">
                 <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all md:-ml-10 flex items-center gap-3 group">
-                    <ArrowLeft size={24} className="text-white/40 group-hover:text-white group-hover:-translate-x-1 transition-all" />
-                    <span className="font-bold text-xs tracking-widest uppercase text-white/40 group-hover:text-white transition-colors">Voltar</span>
+                    <ArrowLeft size={24} className="text-white/ group-hover:text-white transition-colors" />
+                    <span className="font-bold text-xs tracking-widest uppercase text-white/ group-hover:text-white transition-colors">Voltar</span>
                 </button>
             </header>
 
@@ -90,7 +90,7 @@ const Prayer: React.FC = () => {
                             transition={{ duration: 0.4, ease: 'easeOut' }}
                             className="flex flex-col items-center text-center w-full max-w-lg"
                         >
-                            <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase mb-4">Tempo de Oração</span>
+                            <span className="text-[10px] font-black tracking-[0.4em] text-white/ uppercase mb-4">Tempo de Oração</span>
                             <h1 className="text-5xl font-black italic tracking-tighter mb-12">Quanto tempo?</h1>
 
                             {/* Preset grid */}
@@ -102,7 +102,7 @@ const Prayer: React.FC = () => {
                                         className={`py-5 rounded-2xl font-black text-sm transition-all border ${
                                             selectedMinutes === min
                                                 ? 'bg-white text-black border-white scale-105'
-                                                : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20'
+                                                : 'bg-white/5 border-white/10 text-white/ hover:bg-white/10 hover:border-white/20'
                                         }`}
                                     >
                                         {min}<span className="text-[10px] font-bold opacity-60 ml-0.5">min</span>
@@ -120,8 +120,8 @@ const Prayer: React.FC = () => {
                                         placeholder="?"
                                         value={customInput}
                                         onChange={e => { setCustomInput(e.target.value); setSelectedMinutes(null); }}
-                                        className={`w-10 bg-transparent text-center font-black text-sm outline-none placeholder:text-white/20 ${
-                                            customInput ? 'text-black' : 'text-white/60'
+                                        className={`w-10 bg-transparent text-center font-black text-sm outline-none placeholder:text-white/ ${
+                                            customInput ? 'text-black' : 'text-white/'
                                         }`}
                                     />
                                     <span className={`text-[10px] font-bold opacity-60 ${customInput ? 'text-black' : ''}`}>min</span>
@@ -173,7 +173,7 @@ const Prayer: React.FC = () => {
                                         </div>
                                     </motion.div>
                                     {isFinished && (
-                                        <p className="text-white/40 text-xs font-bold tracking-widest uppercase mt-2">Concluído</p>
+                                        <p className="text-white/ text-xs font-bold tracking-widest uppercase mt-2">Concluído</p>
                                     )}
                                 </div>
                             </div>
@@ -204,7 +204,7 @@ const Prayer: React.FC = () => {
 
             {/* Quote footer */}
             <footer className="p-12 text-center relative z-10">
-                <p className="text-white/15 font-serif italic text-base select-none">
+                <p className="text-white/ font-serif italic text-base select-none">
                     "Onde dois ou três estiverem reunidos em meu nome, ali eu estarei com eles."
                 </p>
             </footer>
