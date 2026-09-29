@@ -30,7 +30,7 @@ import ImageCropModal from '../components/ImageCropModal';
 import FeaturedVersePicker from '../components/FeaturedVersePicker';
 import getCroppedImg from '../utils/imageUtils';
 import { profileUrl as buildProfileUrl } from '../lib/site';
-import { listMediaLibrary, type MediaItem } from '../services/features/mediaLibraryService';
+import { listMediaLibrary, MediaPermissionError, type MediaItem } from '../services/features/mediaLibraryService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type NavSection = 'profile' | 'avatar' | 'banner' | 'library' | 'privacy';
@@ -129,7 +129,13 @@ const EditProfile: React.FC = () => {
       const items = await listMediaLibrary();
       setMedia(items);
     } catch (err: any) {
-      setMediaError(err?.message || 'Não foi possível carregar a biblioteca.');
+      if (err instanceof MediaPermissionError) {
+        setMediaError(
+          'O bucket "media" está público, mas falta a permissão de leitura na listagem. Rode a policy do arquivo supabase_media_library.sql no SQL Editor do Supabase.'
+        );
+      } else {
+        setMediaError(err?.message || 'Não foi possível carregar a biblioteca.');
+      }
     } finally {
       setMediaLoading(false);
     }
