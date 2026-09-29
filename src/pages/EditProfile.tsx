@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft,
@@ -15,6 +15,11 @@ import {
   Phone,
   Mail,
   ChevronRight,
+  Images,
+  Search,
+  FolderOpen,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,9 +30,10 @@ import ImageCropModal from '../components/ImageCropModal';
 import FeaturedVersePicker from '../components/FeaturedVersePicker';
 import getCroppedImg from '../utils/imageUtils';
 import { profileUrl as buildProfileUrl } from '../lib/site';
+import { listMediaLibrary, type MediaItem } from '../services/features/mediaLibraryService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type NavSection = 'profile' | 'avatar' | 'banner' | 'privacy';
+type NavSection = 'profile' | 'avatar' | 'banner' | 'library' | 'privacy';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -51,6 +57,7 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode }[] = [
   { id: 'profile', label: 'Perfil', icon: <User size={21} /> },
   { id: 'avatar', label: 'Avatar', icon: <Camera size={21} /> },
   { id: 'banner', label: 'Banner', icon: <Image size={21} /> },
+  { id: 'library', label: 'Biblioteca', icon: <Images size={21} /> },
    { id: 'privacy', label: 'Privacidade', icon: <Shield size={21} /> },
 ];
 
@@ -106,6 +113,59 @@ const EditProfile: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Library ──
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaError, setMediaError] = useState('');
+  const [mediaQuery, setMediaQuery] = useState('');
+  const [mediaTarget, setMediaTarget] = useState<'avatar' | 'banner'>('avatar');
+  const [selectedMediaPath, setSelectedMediaPath] = useState<string | null>(null);
+
+  const loadMedia = useCallback(async () => {
+    setMediaLoading(true);
+    setMediaError('');
+    try {
+      const items = await listMediaLibrary();
+      setMedia(items);
+    } catch (err: any) {
+      setMediaError(err?.message || 'Não foi possível carregar a biblioteca.');
+    } finally {
+      setMediaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'library') loadMedia();
+  }, [activeSection, loadMedia]);
+
+  const filteredMedia = useMemo(() => {
+    const q = mediaQuery.trim().toLowerCase();
+    if (!q) return media;
+    return media.filter((m) => m.path.toLowerCase().includes(q));
+  }, [media, mediaQuery]);
+
+  const mediaFolders = useMemo(
+    () => Array.from(new Set(filteredMedia.map((m) => m.folder))).sort(),
+    [filteredMedia]
+  );
+
+  const applyMedia = (item: MediaItem) => {
+    const url = `${item.url}?t=${Date.now()}`;
+    if (mediaTarget === 'avatar') {
+      setAvatarUrl(url);
+      setPreviewAvatarUrl(url);
+    } else {
+      setBannerUrl(url);
+      setPreviewBannerUrl(url);
+    }
+    setSelectedMediaPath(item.path);
+  };
+
+  const mediaInUse = (item: MediaItem) => {
+    const base = item.url;
+    return previewAvatarUrl.startsWith(base) || previewBannerUrl.startsWith(base);
+  };
 
   // Sync profile changes
   useEffect(() => {
@@ -553,6 +613,142 @@ const EditProfile: React.FC = () => {
                        Recomendado: 1500×500px · JPG, PNG, GIF · Máximo 20MB
                      </p>
                   </div>
+                </motion.div>
+              )}
+
+              {activeSection === 'library' && (
+                <motion.div
+                  key="library"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="ep-editor"
+                >
+                  <div className="ep-section-header">
+                    <h2 className="ep-section-title">Biblioteca</h2>
+                    <p className="ep-section-desc">Escolha uma mídia da biblioteca para usar no seu perfil.</p>
+                  </div>
+
+                  {/* Target selector */}
+                  <div className="ep-block" style={{ paddingTop: 0 }}>
+                    <p className="ep-field-label">Aplicar Como</p>
+                    <p className="ep-field-desc">Selecione em qual parte do perfil a mídia escolhida será usada.</p>
+                    <div className="ep-target-switch">
+                      {([
+                        { id: 'avatar' as const, label: 'Avatar', icon: <Camera size={15} /> },
+                        { id: 'banner' as const, label: 'Banner', icon: <Image size={15} /> },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => setMediaTarget(opt.id)}
+                          className={`ep-target-btn ${mediaTarget === opt.id ? 'ep-target-btn--active' : ''}`}
+                        >
+                          {opt.icon}
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Search */}
+                  <div className="ep-lib-search-row">
+                    <div className="ep-lib-search-wrap">
+                      <span className="ep-lib-search-icon"><Search size={15} /></span>
+                      <input
+                        type="text"
+                        value={mediaQuery}
+                        onChange={(e) => setMediaQuery(e.target.value)}
+                        className="ep-input ep-input--with-prefix"
+                        placeholder="Buscar por nome da mídia..."
+                      />
+                    </div>
+                    <button className="ep-btn-secondary" onClick={loadMedia} disabled={mediaLoading}>
+                      {mediaLoading ? <Loader2 size={15} className="ep-lib-spin" /> : <Images size={15} />}
+                      Atualizar
+                    </button>
+                  </div>
+
+                  {/* States */}
+                  {mediaLoading && !filteredMedia.length && (
+                    <div className="ep-lib-state">
+                      <Loader2 size={22} className="ep-lib-spin" />
+                      <p className="ep-lib-state-title">Carregando mídias...</p>
+                    </div>
+                  )}
+
+                  {mediaError && (
+                    <div className="ep-lib-state ep-lib-state--error">
+                      <AlertTriangle size={22} />
+                      <p className="ep-lib-state-title">Erro ao carregar a biblioteca</p>
+                      <p className="ep-lib-state-desc">{mediaError}</p>
+                      <button className="ep-btn-secondary" onClick={loadMedia}>Tentar Novamente</button>
+                    </div>
+                  )}
+
+                  {!mediaLoading && !mediaError && !filteredMedia.length && (
+                    <div className="ep-lib-state">
+                      <Images size={26} className="ep-lib-state-icon" />
+                      <p className="ep-lib-state-title">
+                        {media.length ? 'Nenhuma mídia encontrada' : 'Biblioteca vazia'}
+                      </p>
+                      <p className="ep-lib-state-desc">
+                        {media.length
+                          ? 'Tente outro termo de busca.'
+                          : 'Envie imagens para o bucket "media" no Supabase para vê-las aqui.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Grid */}
+                  {!!filteredMedia.length && (
+                    <div className="ep-lib-grid-wrap">
+                      {mediaFolders.map((folder) => (
+                        <div key={folder || '__root__'} className="ep-lib-folder">
+                          <p className="ep-lib-folder-label">
+                            <FolderOpen size={13} /> {folder || 'Raiz'}
+                          </p>
+                          <div className="ep-lib-grid">
+                            {filteredMedia
+                              .filter((m) => m.folder === folder)
+                              .map((item) => {
+                                const isSelected = selectedMediaPath === item.path;
+                                const inUse = mediaInUse(item);
+                                return (
+                                  <button
+                                    key={item.path}
+                                    onClick={() => applyMedia(item)}
+                                    className={`ep-lib-item ${isSelected ? 'ep-lib-item--selected' : ''}`}
+                                    title={item.path}
+                                  >
+                                    <img
+                                      src={item.url}
+                                      alt={item.name}
+                                      className="ep-lib-item-img"
+                                      loading="lazy"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <span className="ep-lib-item-info">
+                                      <span className="ep-lib-item-name">{item.name}</span>
+                                      {inUse && <span className="ep-lib-item-badge">Em uso</span>}
+                                    </span>
+                                    {isSelected && <span className="ep-lib-item-check"><Check size={12} /></span>}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedMediaPath && (
+                    <p className="ep-lib-hint">
+                      <Check size={13} />
+                      Mídia aplicada como {mediaTarget === 'avatar' ? 'avatar' : 'banner'}. Clique em
+                      <strong> Salvar Alterações</strong> para confirmar.
+                    </p>
+                  )}
                 </motion.div>
               )}
 
@@ -1328,6 +1524,175 @@ const EP_STYLES = `
   }
   .ep-connection-remove:hover { color: #b8b8b8; }
 
+  /* ── Library ── */
+  .ep-target-switch {
+    display: flex;
+    gap: 8px;
+  }
+  .ep-target-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: #111;
+    border: 1px solid #222;
+    color: #b8b8b8;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ep-target-btn:hover { background: #161616; color: #ccc; }
+  .ep-target-btn--active {
+    background: #fff;
+    border-color: #fff;
+    color: #080808;
+  }
+  .ep-target-btn--active:hover { background: #ebebeb; color: #080808; }
+
+  .ep-lib-search-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .ep-lib-search-wrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  .ep-lib-search-icon {
+    position: absolute;
+    left: 16px;
+    color: #b8b8b8;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ep-lib-search-row .ep-btn-secondary { flex-shrink: 0; }
+
+  .ep-lib-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 64px 24px;
+    text-align: center;
+    border: 1px dashed #1e1e1e;
+    border-radius: 16px;
+    background: #0c0c0c;
+  }
+  .ep-lib-state--error { border-color: #2d1414; background: #120b0b; color: #d97070; }
+  .ep-lib-state-icon { color: #2a2a2a; }
+  .ep-lib-state-title { font-size: 15px; font-weight: 600; color: #b8b8b8; margin: 0; }
+  .ep-lib-state-desc { font-size: 12px; color: #4a4a4a; margin: 0; max-width: 320px; line-height: 1.5; }
+  .ep-lib-spin { animation: ep-spin 0.8s linear infinite; }
+
+  .ep-lib-grid-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  .ep-lib-folder-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #b8b8b8;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  .ep-lib-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 14px;
+  }
+  .ep-lib-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border-radius: 13px;
+    background: #0f0f0f;
+    border: 1px solid #1a1a1a;
+    cursor: pointer;
+    overflow: hidden;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  }
+  .ep-lib-item:hover {
+    border-color: #2e2e2e;
+    background: #131313;
+    transform: translateY(-2px);
+  }
+  .ep-lib-item--selected {
+    border-color: #fff;
+    background: #141414;
+  }
+  .ep-lib-item-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    background: #0a0a0a;
+  }
+  .ep-lib-item-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 11px;
+    min-width: 0;
+  }
+  .ep-lib-item-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: #b8b8b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  .ep-lib-item-badge {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #080808;
+    background: #fff;
+    border-radius: 4px;
+    padding: 2px 5px;
+    flex-shrink: 0;
+  }
+  .ep-lib-item-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    color: #080808;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ep-lib-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 28px;
+    font-size: 12px;
+    color: #b8b8b8;
+  }
+  .ep-lib-hint strong { color: #fff; font-weight: 600; }
+
   /* ── Privacy ── */
   .ep-privacy-list { display: flex; flex-direction: column; gap: 10px; }
   .ep-privacy-item {
@@ -1551,6 +1916,9 @@ const EP_STYLES = `
     .ep-header-title { font-size: 15px; }
     .ep-additional-grid { grid-template-columns: 1fr; }
     .ep-save-btn { padding: 8px 14px; font-size: 12px; }
+    .ep-lib-search-row { flex-direction: column; align-items: stretch; }
+    .ep-lib-search-row .ep-btn-secondary { justify-content: center; }
+    .ep-lib-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   }
 `;
 
