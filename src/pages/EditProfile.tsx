@@ -61,17 +61,59 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode }[] = [
  * Subseções da biblioteca, na ordem em que aparecem na tela.
  *
  * A categoria de uma mídia é a pasta em que ela está dentro do bucket
- * `media`: um arquivo em `media/gifs-femininos/x.gif` cai em "Gifs
- * Femininos". As quatro são sempre renderizadas, mesmo vazias, para o
- * usuário ver o que ainda falta preencher. Ao adicionar arquivos no
- * Supabase, use exatamente um destes nomes de pasta.
+ * `media`: um arquivo em `media/banner_boys/x.gif` cai em "Banners
+ * Boys". Todas são sempre renderizadas, mesmo vazias, para o usuário
+ * ver o que ainda falta preencher.
+ *
+ * `folder` é o nome canônico da pasta; `aliases` cobre variações de
+ * escrita que já existiram no bucket (hífen no lugar de underscore,
+ * ou a palavra em outra ordem, como `icones-femininos` em vez de
+ * `feminino_icons`). `shape: 'wide'` marca as categorias que são
+ * banners (2048x338) e não avatares quadrados.
  */
-const LIBRARY_SECTIONS = [
-  { folder: 'icones-femininos', label: 'Ícones Femininos' },
-  { folder: 'gifs-femininos', label: 'Gifs Femininos' },
-  { folder: 'icones-masculinos', label: 'Ícones Masculinos' },
-  { folder: 'gifs-masculinos', label: 'Gifs Masculinos' },
+const LIBRARY_SECTIONS: { folder: string; label: string; shape: 'square' | 'wide'; aliases?: string[] }[] = [
+  { folder: 'feminino_icons', label: 'Ícones Femininos', shape: 'square', aliases: ['icones_femininos'] },
+  { folder: 'gifs_femininos', label: 'Gifs Femininos', shape: 'square' },
+  { folder: 'masculino_icons', label: 'Ícones Masculinos', shape: 'square', aliases: ['icones_masculinos'] },
+  { folder: 'masculino_gifs', label: 'Gifs Masculinos', shape: 'square', aliases: ['gifs_masculinos'] },
+  { folder: 'famosas_icons', label: 'Ícones Famosas', shape: 'square', aliases: ['icones_famosas'] },
+  { folder: 'famosas_gifs', label: 'Gifs Famosas', shape: 'square', aliases: ['gifs_famosas'] },
+  { folder: 'famosos_icons', label: 'Ícones Famosos', shape: 'square', aliases: ['icones_famosos'] },
+  { folder: 'famosos_gifs', label: 'Gifs Famosos', shape: 'square', aliases: ['gifs_famosos'] },
+  { folder: 'banner_girls', label: 'Banners Girls', shape: 'wide', aliases: ['banners_girls'] },
+  { folder: 'banner_boys', label: 'Banners Boys', shape: 'wide', aliases: ['banners_boys'] },
 ];
+
+/**
+ * Reduz um nome de pasta a uma chave comparável: sem acentos, minúsculo
+ * e com qualquer separador virando `_`. Faz `gifs-femininos`,
+ * `Gifs_Femininos` e `gifs femininos` caírem na mesma seção.
+ */
+const folderKey = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const LIBRARY_SECTION_KEYS = LIBRARY_SECTIONS.map((section) => ({
+  folder: section.folder,
+  keys: [section.folder, ...(section.aliases ?? [])].map(folderKey),
+}));
+
+/**
+ * Seção de uma mídia a partir da pasta em que ela está.
+ *
+ * Só o último nível da pasta conta (`banner/banner_boys/x.gif` casa com
+ * "Banners Boys"), e uma pasta vazia — arquivo na raiz do bucket — não
+ * casa com nada, caindo em "Outras".
+ */
+const sectionOfFolder = (folder: string) => {
+  const leaf = folderKey(folder.split('/').pop() ?? '');
+  if (!leaf) return null;
+  return LIBRARY_SECTION_KEYS.find((section) => section.keys.includes(leaf)) ?? null;
+};
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const EditProfile: React.FC = () => {
@@ -155,27 +197,38 @@ const EditProfile: React.FC = () => {
   }, [activeSection, loadMedia]);
 
   /**
-   * Monta as abas da biblioteca com as mídias dentro de cada uma. O que
-   * não estiver em nenhuma das quatro pastas cai em "Outras" para não
+   * Abas da biblioteca com as mídias dentro de cada uma. O que não
+   * estiver em nenhuma das pastas conocidas cai em "Outras" para não
    * sumir da tela.
    */
   const mediaTabs = useMemo(() => {
     const tabs = LIBRARY_SECTIONS.map((s) => ({ ...s, items: [] as MediaItem[] }));
     const extras: MediaItem[] = [];
     for (const item of media) {
-      const match = tabs.find((t) => t.folder === item.folder);
+      const section = sectionOfFolder(item.folder);
+      const match = section ? tabs.find((t) => t.folder === section.folder) : undefined;
       if (match) match.items.push(item);
       else extras.push(item);
     }
-    if (extras.length) tabs.push({ folder: 'outras', label: 'Outras', items: extras });
+    if (extras.length) tabs.push({ folder: 'outras', label: 'Outras', shape: 'square', items: extras });
     return tabs;
   }, [media]);
 
   /**
    * Aba em foco. O fallback cobre a aba "Outras" sumindo quando a
-   * busca passa a filtrar tudo o que estava fora das quatro pastas.
+   * busca passa a filtrar tudo o que estava fora das pastas conhecidas.
    */
   const activeTab = mediaTabs.find((t) => t.folder === libraryTab) ?? mediaTabs[0];
+
+  /**
+   * Trocar de aba define o destino: banner vai para o banner do perfil,
+   * ícone/gif quadrado para o avatar. Sem um seletor explícito na tela,
+   * é a aba que diz o que a mídia é.
+   */
+  const selectTab = (tab: { folder: string; shape: 'square' | 'wide' }) => {
+    setLibraryTab(tab.folder);
+    setMediaTarget(tab.shape === 'wide' ? 'banner' : 'avatar');
+  };
 
   const applyMedia = (item: MediaItem) => {
     const url = `${item.url}?t=${Date.now()}`;
@@ -639,34 +692,13 @@ const EditProfile: React.FC = () => {
                         key={tab.folder}
                         role="tab"
                         aria-selected={activeTab.folder === tab.folder}
-                        onClick={() => setLibraryTab(tab.folder)}
+                        onClick={() => selectTab(tab)}
                         className={`ep-lib-tab ${activeTab.folder === tab.folder ? 'ep-lib-tab--active' : ''}`}
                       >
                         {tab.label}
                         <span className="ep-lib-tab-count">{tab.items.length}</span>
                       </button>
                     ))}
-                  </div>
-
-                  {/* Target selector */}
-                  <div className="ep-block" style={{ paddingTop: 0 }}>
-                    <p className="ep-field-label">Aplicar Como</p>
-                    <p className="ep-field-desc">Selecione em qual parte do perfil a mídia escolhida será usada.</p>
-                    <div className="ep-target-switch">
-                      {([
-                        { id: 'avatar' as const, label: 'Avatar', icon: <Camera size={15} /> },
-                        { id: 'banner' as const, label: 'Banner', icon: <Image size={15} /> },
-                      ]).map((opt) => (
-                        <button
-                          key={opt.id}
-                          onClick={() => setMediaTarget(opt.id)}
-                          className={`ep-target-btn ${mediaTarget === opt.id ? 'ep-target-btn--active' : ''}`}
-                        >
-                          {opt.icon}
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   {/* Refresh */}
@@ -700,7 +732,7 @@ const EditProfile: React.FC = () => {
                       <p className="ep-lib-state-title">{`${activeTab.label} vazio`}</p>
                       <p className="ep-lib-state-desc">
                         {activeTab.folder === 'outras'
-                          ? 'Mídias fora das quatro categorias aparecem aqui.'
+                          ? 'Mídias fora das categorias acima aparecem aqui.'
                           : `Envie imagens para a pasta "${activeTab.folder}" no bucket "media" do Supabase para vê-las aqui.`}
                       </p>
                     </div>
@@ -708,7 +740,7 @@ const EditProfile: React.FC = () => {
 
                   {/* Grid da aba ativa */}
                   {!!activeTab.items.length && (
-                    <div className="ep-lib-grid">
+                    <div className={`ep-lib-grid ${activeTab.shape === 'wide' ? 'ep-lib-grid--wide' : ''}`}>
                       {activeTab.items.map((item) => {
                         const isSelected = selectedMediaPath === item.path;
                         const inUse = mediaInUse(item);
@@ -716,7 +748,7 @@ const EditProfile: React.FC = () => {
                           <button
                             key={item.path}
                             onClick={() => applyMedia(item)}
-                            className={`ep-lib-item ${isSelected ? 'ep-lib-item--selected' : ''}`}
+                            className={`ep-lib-item ${activeTab.shape === 'wide' ? 'ep-lib-item--wide' : ''} ${isSelected ? 'ep-lib-item--selected' : ''}`}
                             title={item.path}
                           >
                             <img
@@ -1516,33 +1548,6 @@ const EP_STYLES = `
   .ep-connection-remove:hover { color: #b8b8b8; }
 
   /* ── Library ── */
-  .ep-target-switch {
-    display: flex;
-    gap: 8px;
-  }
-  .ep-target-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 16px;
-    border-radius: 10px;
-    background: #111;
-    border: 1px solid #222;
-    color: #b8b8b8;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-  }
-  .ep-target-btn:hover { background: #161616; color: #ccc; }
-  .ep-target-btn--active {
-    background: #fff;
-    border-color: #fff;
-    color: #080808;
-  }
-  .ep-target-btn--active:hover { background: #ebebeb; color: #080808; }
-
   .ep-lib-actions {
     display: flex;
     align-items: center;
@@ -1608,6 +1613,7 @@ const EP_STYLES = `
     grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
     gap: 14px;
   }
+  .ep-lib-grid--wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
   .ep-lib-item {
     position: relative;
     display: flex;
@@ -1638,6 +1644,8 @@ const EP_STYLES = `
     display: block;
     background: #0a0a0a;
   }
+  /* Banners 2048x338: num quadrado sobraria só o centro da arte. */
+  .ep-lib-item--wide .ep-lib-item-img { aspect-ratio: 2048 / 338; }
   .ep-lib-item-badge {
     position: absolute;
     bottom: 8px;
@@ -1897,6 +1905,7 @@ const EP_STYLES = `
     .ep-header-title { font-size: 15px; }
     .ep-save-btn { padding: 8px 14px; font-size: 12px; }
     .ep-lib-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .ep-lib-grid--wide { grid-template-columns: 1fr; }
   }
 `;
 
