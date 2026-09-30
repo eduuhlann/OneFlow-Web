@@ -12,12 +12,9 @@ import {
   Upload,
   X,
   AtSign,
-  Phone,
   Mail,
   ChevronRight,
   Images,
-  Search,
-  FolderOpen,
   Loader2,
   AlertTriangle,
 } from 'lucide-react';
@@ -27,7 +24,6 @@ import { useProfile } from '../contexts/ProfileContext';
 import { supabase } from '../services/supabase';
 import PageTransition from '../components/PageTransition';
 import ImageCropModal from '../components/ImageCropModal';
-import FeaturedVersePicker from '../components/FeaturedVersePicker';
 import getCroppedImg from '../utils/imageUtils';
 import { profileUrl as buildProfileUrl } from '../lib/site';
 import { listMediaLibrary, MediaPermissionError, type MediaItem } from '../services/features/mediaLibraryService';
@@ -61,6 +57,22 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode }[] = [
    { id: 'privacy', label: 'Privacidade', icon: <Shield size={21} /> },
 ];
 
+/**
+ * Subseções da biblioteca, na ordem em que aparecem na tela.
+ *
+ * A categoria de uma mídia é a pasta em que ela está dentro do bucket
+ * `media`: um arquivo em `media/gifs-femininos/x.gif` cai em "Gifs
+ * Femininos". As quatro são sempre renderizadas, mesmo vazias, para o
+ * usuário ver o que ainda falta preencher. Ao adicionar arquivos no
+ * Supabase, use exatamente um destes nomes de pasta.
+ */
+const LIBRARY_SECTIONS = [
+  { folder: 'icones-femininos', label: 'Ícones Femininos' },
+  { folder: 'gifs-femininos', label: 'Gifs Femininos' },
+  { folder: 'icones-masculinos', label: 'Ícones Masculinos' },
+  { folder: 'gifs-masculinos', label: 'Gifs Masculinos' },
+];
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -85,9 +97,7 @@ const EditProfile: React.FC = () => {
   const [username, setUsername] = useState(profile?.username || meta.username || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [shortBio, setShortBio] = useState(profile?.short_bio || '');
-  const [featuredVerse, setFeaturedVerse] = useState(profile?.featured_verse || '');
   const [email] = useState(user?.email || '');
-  const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(getBestAvatarUrl());
   const [previewAvatarUrl, setPreviewAvatarUrl] = useState(getBestAvatarUrl());
   const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
@@ -100,7 +110,6 @@ const EditProfile: React.FC = () => {
     username: profile?.username || meta.username || '',
     bio: profile?.bio || '',
     shortBio: profile?.short_bio || '',
-    featuredVerse: profile?.featured_verse || '',
     avatarUrl: getBestAvatarUrl(),
     bannerUrl: profile?.banner_url || '',
   });
@@ -118,8 +127,8 @@ const EditProfile: React.FC = () => {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState('');
-  const [mediaQuery, setMediaQuery] = useState('');
   const [mediaTarget, setMediaTarget] = useState<'avatar' | 'banner'>('avatar');
+  const [libraryTab, setLibraryTab] = useState(LIBRARY_SECTIONS[0].folder);
   const [selectedMediaPath, setSelectedMediaPath] = useState<string | null>(null);
 
   const loadMedia = useCallback(async () => {
@@ -145,22 +154,28 @@ const EditProfile: React.FC = () => {
     if (activeSection === 'library') loadMedia();
   }, [activeSection, loadMedia]);
 
-  const filteredMedia = useMemo(() => {
-    const q = mediaQuery.trim().toLowerCase();
-    if (!q) return media;
-    return media.filter((m) => m.path.toLowerCase().includes(q));
-  }, [media, mediaQuery]);
+  /**
+   * Monta as abas da biblioteca com as mídias dentro de cada uma. O que
+   * não estiver em nenhuma das quatro pastas cai em "Outras" para não
+   * sumir da tela.
+   */
+  const mediaTabs = useMemo(() => {
+    const tabs = LIBRARY_SECTIONS.map((s) => ({ ...s, items: [] as MediaItem[] }));
+    const extras: MediaItem[] = [];
+    for (const item of media) {
+      const match = tabs.find((t) => t.folder === item.folder);
+      if (match) match.items.push(item);
+      else extras.push(item);
+    }
+    if (extras.length) tabs.push({ folder: 'outras', label: 'Outras', items: extras });
+    return tabs;
+  }, [media]);
 
-  /** Rótulo por caminho, para o item em uso reagir à busca. */
-  const mediaLabelByPath = useMemo(
-    () => new Map(media.map((m) => [m.path, m.label])),
-    [media]
-  );
-
-  const mediaFolders = useMemo(
-    () => Array.from(new Set(filteredMedia.map((m) => m.folder))).sort(),
-    [filteredMedia]
-  );
+  /**
+   * Aba em foco. O fallback cobre a aba "Outras" sumindo quando a
+   * busca passa a filtrar tudo o que estava fora das quatro pastas.
+   */
+  const activeTab = mediaTabs.find((t) => t.folder === libraryTab) ?? mediaTabs[0];
 
   const applyMedia = (item: MediaItem) => {
     const url = `${item.url}?t=${Date.now()}`;
@@ -186,7 +201,6 @@ const EditProfile: React.FC = () => {
       setUsername(profile.username || '');
       setBio(profile.bio || '');
       setShortBio(profile.short_bio || '');
-      setFeaturedVerse(profile.featured_verse || '');
       const best = profile.avatar_url || meta.avatar_url || meta.picture || '';
       setAvatarUrl(best);
       setPreviewAvatarUrl(best);
@@ -202,11 +216,10 @@ const EditProfile: React.FC = () => {
       username !== origValues.username ||
       bio !== origValues.bio ||
       shortBio !== origValues.shortBio ||
-      featuredVerse !== origValues.featuredVerse ||
       avatarUrl !== origValues.avatarUrl ||
       bannerUrl !== origValues.bannerUrl;
     setHasChanges(changed);
-  }, [displayName, username, bio, shortBio, featuredVerse, avatarUrl, bannerUrl]);
+  }, [displayName, username, bio, shortBio, avatarUrl, bannerUrl]);
 
   // ── Handlers ──
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
@@ -284,7 +297,7 @@ const EditProfile: React.FC = () => {
         const { data: existing } = await supabase.from('profiles').select('id').eq('username', cleanUsername).single();
         if (existing && existing.id !== user?.id) { setError('Este nome de usuário já está em uso.'); setIsSaving(false); return; }
       }
-       await updateProfile({ display_name: displayName, username: cleanUsername, bio, short_bio: shortBio.trim() || null, featured_verse: featuredVerse || null, avatar_url: avatarUrl || null, banner_url: bannerUrl || null });
+       await updateProfile({ display_name: displayName, username: cleanUsername, bio, short_bio: shortBio.trim() || null, avatar_url: avatarUrl || null, banner_url: bannerUrl || null });
       setHasChanges(false); setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) { setError(err.message || 'Erro ao salvar.'); }
     finally { setIsSaving(false); }
@@ -508,13 +521,6 @@ const EditProfile: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* ── Versículo do perfil (#4) ── */}
-                  <div className="ep-block">
-                    <p className="ep-field-label">Versículo do Perfil</p>
-                    <p className="ep-field-desc">Fica fixado no seu perfil e no card de compartilhamento.</p>
-                    <FeaturedVersePicker value={featuredVerse} onChange={setFeaturedVerse} />
-                  </div>
-
                   <div className="ep-divider" />
 
                   {/* ── Additional Info ── */}
@@ -535,22 +541,6 @@ const EditProfile: React.FC = () => {
                             readOnly
                             className="ep-input ep-input--with-prefix ep-input--readonly"
                             placeholder="seuemail@exemplo.com"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="ep-additional-field">
-                        <label className="ep-field-label ep-field-label--sm" htmlFor="ep-phone">Telefone</label>
-                        <p className="ep-field-desc ep-field-desc--xs">Pode ser usado para recuperação da conta.</p>
-                        <div className="ep-input-wrap ep-input-wrap--prefix">
-                          <span className="ep-input-prefix"><Phone size={14} /></span>
-                          <input
-                            id="ep-phone"
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="ep-input ep-input--with-prefix"
-                            placeholder="(00) 00000-0000"
                           />
                         </div>
                       </div>
@@ -642,6 +632,22 @@ const EditProfile: React.FC = () => {
                     <p className="ep-section-desc">Escolha uma mídia da biblioteca para usar no seu perfil.</p>
                   </div>
 
+                  {/* Category tabs */}
+                  <div className="ep-lib-tabs" role="tablist">
+                    {mediaTabs.map((tab) => (
+                      <button
+                        key={tab.folder}
+                        role="tab"
+                        aria-selected={activeTab.folder === tab.folder}
+                        onClick={() => setLibraryTab(tab.folder)}
+                        className={`ep-lib-tab ${activeTab.folder === tab.folder ? 'ep-lib-tab--active' : ''}`}
+                      >
+                        {tab.label}
+                        <span className="ep-lib-tab-count">{tab.items.length}</span>
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Target selector */}
                   <div className="ep-block" style={{ paddingTop: 0 }}>
                     <p className="ep-field-label">Aplicar Como</p>
@@ -663,18 +669,8 @@ const EditProfile: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Search */}
-                  <div className="ep-lib-search-row">
-                    <div className="ep-lib-search-wrap">
-                      <span className="ep-lib-search-icon"><Search size={15} /></span>
-                      <input
-                        type="text"
-                        value={mediaQuery}
-                        onChange={(e) => setMediaQuery(e.target.value)}
-                        className="ep-input ep-input--with-prefix"
-                        placeholder="Buscar por nome da mídia..."
-                      />
-                    </div>
+                  {/* Refresh */}
+                  <div className="ep-lib-actions">
                     <button className="ep-btn-secondary" onClick={loadMedia} disabled={mediaLoading}>
                       {mediaLoading ? <Loader2 size={15} className="ep-lib-spin" /> : <Images size={15} />}
                       Atualizar
@@ -682,7 +678,7 @@ const EditProfile: React.FC = () => {
                   </div>
 
                   {/* States */}
-                  {mediaLoading && !filteredMedia.length && (
+                  {mediaLoading && !media.length && (
                     <div className="ep-lib-state">
                       <Loader2 size={22} className="ep-lib-spin" />
                       <p className="ep-lib-state-title">Carregando mídias...</p>
@@ -698,59 +694,43 @@ const EditProfile: React.FC = () => {
                     </div>
                   )}
 
-                  {!mediaLoading && !mediaError && !filteredMedia.length && (
+                  {!mediaLoading && !mediaError && !activeTab.items.length && (
                     <div className="ep-lib-state">
                       <Images size={26} className="ep-lib-state-icon" />
-                      <p className="ep-lib-state-title">
-                        {media.length ? 'Nenhuma mídia encontrada' : 'Biblioteca vazia'}
-                      </p>
+                      <p className="ep-lib-state-title">{`${activeTab.label} vazio`}</p>
                       <p className="ep-lib-state-desc">
-                        {media.length
-                          ? 'Tente outro termo de busca.'
-                          : 'Envie imagens para o bucket "media" no Supabase para vê-las aqui.'}
+                        {activeTab.folder === 'outras'
+                          ? 'Mídias fora das quatro categorias aparecem aqui.'
+                          : `Envie imagens para a pasta "${activeTab.folder}" no bucket "media" do Supabase para vê-las aqui.`}
                       </p>
                     </div>
                   )}
 
-                  {/* Grid */}
-                  {!!filteredMedia.length && (
-                    <div className="ep-lib-grid-wrap">
-                      {mediaFolders.map((folder) => (
-                        <div key={folder || '__root__'} className="ep-lib-folder">
-                          <p className="ep-lib-folder-label">
-                            <FolderOpen size={13} /> {folder || 'Raiz'}
-                          </p>
-                          <div className="ep-lib-grid">
-                            {filteredMedia
-                              .filter((m) => m.folder === folder)
-                              .map((item) => {
-                                const isSelected = selectedMediaPath === item.path;
-                                const inUse = mediaInUse(item);
-                                return (
-                                  <button
-                                    key={item.path}
-                                    onClick={() => applyMedia(item)}
-                                    className={`ep-lib-item ${isSelected ? 'ep-lib-item--selected' : ''}`}
-                                    title={item.path}
-                                  >
-                                    <img
-                                      src={item.url}
-                                      alt={item.name}
-                                      className="ep-lib-item-img"
-                                      loading="lazy"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    <span className="ep-lib-item-info">
-                                      <span className="ep-lib-item-name">{item.label}</span>
-                                      {inUse && <span className="ep-lib-item-badge">Em uso</span>}
-                                    </span>
-                                    {isSelected && <span className="ep-lib-item-check"><Check size={12} /></span>}
-                                  </button>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Grid da aba ativa */}
+                  {!!activeTab.items.length && (
+                    <div className="ep-lib-grid">
+                      {activeTab.items.map((item) => {
+                        const isSelected = selectedMediaPath === item.path;
+                        const inUse = mediaInUse(item);
+                        return (
+                          <button
+                            key={item.path}
+                            onClick={() => applyMedia(item)}
+                            className={`ep-lib-item ${isSelected ? 'ep-lib-item--selected' : ''}`}
+                            title={item.path}
+                          >
+                            <img
+                              src={item.url}
+                              alt={item.name}
+                              className="ep-lib-item-img"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                            />
+                            {inUse && <span className="ep-lib-item-badge">Em uso</span>}
+                            {isSelected && <span className="ep-lib-item-check"><Check size={12} /></span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -1355,10 +1335,9 @@ const EP_STYLES = `
   /* ── Additional grid ── */
   .ep-additional-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 28px;
   }
-  .ep-additional-field {}
 
   /* ── Buttons ── */
   .ep-btn-primary {
@@ -1564,28 +1543,11 @@ const EP_STYLES = `
   }
   .ep-target-btn--active:hover { background: #ebebeb; color: #080808; }
 
-  .ep-lib-search-row {
+  .ep-lib-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
     margin-bottom: 28px;
   }
-  .ep-lib-search-wrap {
-    position: relative;
-    flex: 1;
-    display: flex;
-    align-items: center;
-  }
-  .ep-lib-search-icon {
-    position: absolute;
-    left: 16px;
-    color: #b8b8b8;
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-    z-index: 1;
-  }
-  .ep-lib-search-row .ep-btn-secondary { flex-shrink: 0; }
 
   .ep-lib-state {
     display: flex;
@@ -1604,22 +1566,43 @@ const EP_STYLES = `
   .ep-lib-state-desc { font-size: 12px; color: #4a4a4a; margin: 0; max-width: 320px; line-height: 1.5; }
   .ep-lib-spin { animation: ep-spin 0.8s linear infinite; }
 
-  .ep-lib-grid-wrap {
+  .ep-lib-tabs {
     display: flex;
-    flex-direction: column;
-    gap: 30px;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 22px;
   }
-  .ep-lib-folder-label {
-    display: flex;
+  .ep-lib-tab {
+    display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 11px;
-    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 10px;
+    background: #111;
+    border: 1px solid #222;
     color: #b8b8b8;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin: 0 0 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
+  .ep-lib-tab:hover { background: #161616; color: #ccc; }
+  .ep-lib-tab--active {
+    background: #fff;
+    border-color: #fff;
+    color: #080808;
+  }
+  .ep-lib-tab--active:hover { background: #ebebeb; color: #080808; }
+  .ep-lib-tab-count {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #2a2a2a;
+    color: #cfcfcf;
+  }
+  .ep-lib-tab--active .ep-lib-tab-count { background: #080808; color: #fff; }
   .ep-lib-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
@@ -1655,23 +1638,10 @@ const EP_STYLES = `
     display: block;
     background: #0a0a0a;
   }
-  .ep-lib-item-info {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 11px;
-    min-width: 0;
-  }
-  .ep-lib-item-name {
-    font-size: 11px;
-    font-weight: 500;
-    color: #b8b8b8;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-  }
   .ep-lib-item-badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
     font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
@@ -1680,7 +1650,6 @@ const EP_STYLES = `
     background: #fff;
     border-radius: 4px;
     padding: 2px 5px;
-    flex-shrink: 0;
   }
   .ep-lib-item-check {
     position: absolute;
@@ -1926,10 +1895,7 @@ const EP_STYLES = `
     .ep-content { padding: 20px 16px; }
     .ep-header { padding: 16px; }
     .ep-header-title { font-size: 15px; }
-    .ep-additional-grid { grid-template-columns: 1fr; }
     .ep-save-btn { padding: 8px 14px; font-size: 12px; }
-    .ep-lib-search-row { flex-direction: column; align-items: stretch; }
-    .ep-lib-search-row .ep-btn-secondary { justify-content: center; }
     .ep-lib-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   }
 `;

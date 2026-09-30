@@ -55,9 +55,9 @@ const CATEGORIES: FaqCategory[] = [
         title: 'Perfil e conta',
         icon: SettingsIcon,
         items: [
-            { q: 'Onde edito meu perfil?', a: 'Em Configurações → Editar Perfil. Você pode trocar avatar, banner, nome, bio curta (até 60 caracteres), versículo fixado, biografia completa e usuário.', tags: ['perfil', 'editar', 'avatar', 'bio', 'versiculo'] },
-            { q: 'O que é a bio curta e o versículo fixado?', a: 'A bio curta é uma frase de até 60 caracteres que aparece junto do seu nome em todo lugar, inclusive no card de compartilhamento. O versículo fixado é a passagem que você quer deixar à vista no seu perfil público.', tags: ['bio', 'curta', 'versiculo', 'card', 'compartilhar'] },
-            { q: 'Como compartilho meu perfil?', a: 'Copie o link /u/seu-usuario na página do seu perfil. O versículo e a bio curta aparecem no topo, e quem abrir o link não precisa ter conta.', tags: ['link', 'compartilhar', 'publico', 'url'] },
+            { q: 'Onde edito meu perfil?', a: 'Em Configurações → Editar Perfil. Você pode trocar avatar, banner, nome, bio curta (até 60 caracteres), biografia completa e usuário.', tags: ['perfil', 'editar', 'avatar', 'bio'] },
+            { q: 'O que é a bio curta?', a: 'A bio curta é uma frase de até 60 caracteres que aparece junto do seu nome em todo lugar, inclusive no card de compartilhamento.', tags: ['bio', 'curta', 'card', 'compartilhar'] },
+            { q: 'Como compartilho meu perfil?', a: 'Copie o link /u/seu-usuario na página do seu perfil. A bio curta aparece no topo, e quem abrir o link não precisa ter conta.', tags: ['link', 'compartilhar', 'publico', 'url'] },
             { q: 'Como excluo minha conta?', a: 'Em Configurações → Segurança → Excluir Minha Conta. Você precisa digitar EXCLUIR para confirmar, e a remoção é definitiva: perfil, grupos e conversas são apagados.', tags: ['excluir', 'deletar', 'conta', 'remover', 'seguranca'] },
         ],
     },
