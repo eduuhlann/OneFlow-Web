@@ -141,8 +141,14 @@ export const listMediaLibrary = async (): Promise<MediaItem[]> => {
         const subfolders: string[] = [];
         for (const entry of pages.flat()) {
             if (entry.name.startsWith('.')) continue;
-            if (entry.id) continue; // placeholder de pasta
             const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+            // O placeholder de pasta volta com `id: null` e o arquivo real
+            // com um uuid. Tratar `id` preenchido como pasta descartaria
+            // todas as imagens e a galeria ficaria sempre vazia.
+            if (!entry.id) {
+                if (depth < MAX_DEPTH) subfolders.push(path);
+                continue;
+            }
             // FileObject tipa apenas `metadata`, mas algumas respostas
             // trazem `mimetype` no nível raiz.
             const mimetype =
