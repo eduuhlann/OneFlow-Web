@@ -15,14 +15,38 @@ export interface MediaItem {
     /** Pasta imediatamente acima do arquivo (vazio para arquivos na raiz) */
     folder: string;
     name: string;
+    /** Nome amigável para exibir (sem o sufixo técnico do chat) */
+    label: string;
+    /** Extensão inferida do mimetype quando o arquivo não tem uma no nome */
+    extension: string;
     url: string;
     size: number | null;
     updatedAt: string | null;
 }
 
-const isImage = (name: string) => {
-    const ext = name.split('.').pop()?.toLowerCase() ?? '';
-    return IMAGE_EXTENSIONS.includes(ext);
+const MIME_EXTENSIONS: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/avif': 'avif',
+    'image/svg+xml': 'svg',
+    'image/bmp': 'bmp',
+};
+
+const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
+
+/**
+ * Imagem = extensão conhecida **ou** mimetype de imagem.
+ *
+ * O bucket pode guardar arquivos sem extensão no nome (por exemplo
+ * `1753900000000_abc.attach_1720000000000`), e nesses casos só o
+ * mimetype revela que é imagem. Checar apenas a extensão esconderia
+ * a mídia inteira da galeria.
+ */
+const isImage = (name: string, mimetype?: string | null) => {
+    if (IMAGE_EXTENSIONS.includes(extOf(name))) return true;
+    return (mimetype ?? '').toLowerCase().startsWith('image/');
 };
 
 /** Lista arquivos e subpastas de um prefixo do bucket. */
@@ -46,14 +70,35 @@ const folderOf = (path: string) => {
 
 const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1);
 
-const toItem = (path: string, meta?: { size?: number | null; updated_at?: string | null }): MediaItem => ({
-    path,
-    folder: folderOf(path),
-    name: nameOf(path),
-    url: supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl,
-    size: meta?.size ?? null,
-    updatedAt: meta?.updated_at ?? null,
-});
+/**
+ * Rótulo exibido na grade.
+ *
+ * Arquivos com nome de timestamp e sufixo técnico (padrão do upload de
+ * chat: `1753900000000_abc.attach_1720000000000`) viram
+ * "1753900000000_abc.jpg" para o usuário, e a busca passa a ignorar
+ * esse sufixo.
+ */
+const toLabel = (name: string, ext: string) => {
+    const stem = name.replace(/\.[^.]+$/, '').replace(/\.attach_\d+$/, '');
+    return `${stem}.${ext}`;
+};
+
+const toItem = (path: string, meta?: { size?: number | null; updated_at?: string | null; mimetype?: string | null }): MediaItem => {
+    const name = nameOf(path);
+    const ext = IMAGE_EXTENSIONS.includes(extOf(name))
+        ? extOf(name)
+        : MIME_EXTENSIONS[(meta?.mimetype ?? '').toLowerCase()] ?? 'jpg';
+    return {
+        path,
+        folder: folderOf(path),
+        name,
+        label: toLabel(name, ext),
+        extension: ext,
+        url: supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl,
+        size: meta?.size ?? null,
+        updatedAt: meta?.updated_at ?? null,
+    };
+};
 
 /**
  * Erro de permissão no endpoint de listagem.
@@ -98,7 +143,11 @@ export const listMediaLibrary = async (): Promise<MediaItem[]> => {
             if (entry.name.startsWith('.')) continue;
             if (entry.id) continue; // placeholder de pasta
             const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-            if (isImage(entry.name)) items.push(toItem(path, entry));
+            // FileObject tipa apenas `metadata`, mas algumas respostas
+            // trazem `mimetype` no nível raiz.
+            const mimetype =
+                entry.metadata?.mimetype ?? (entry as { mimetype?: string }).mimetype ?? null;
+            if (isImage(entry.name, mimetype)) items.push(toItem(path, { ...entry, mimetype }));
             else if (depth < MAX_DEPTH) subfolders.push(path);
         }
 

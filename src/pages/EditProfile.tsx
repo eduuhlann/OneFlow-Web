@@ -151,6 +151,12 @@ const EditProfile: React.FC = () => {
     return media.filter((m) => m.path.toLowerCase().includes(q));
   }, [media, mediaQuery]);
 
+  /** Rótulo por caminho, para o item em uso reagir à busca. */
+  const mediaLabelByPath = useMemo(
+    () => new Map(media.map((m) => [m.path, m.label])),
+    [media]
+  );
+
   const mediaFolders = useMemo(
     () => Array.from(new Set(filteredMedia.map((m) => m.folder))).sort(),
     [filteredMedia]
@@ -735,7 +741,7 @@ const EditProfile: React.FC = () => {
                                       referrerPolicy="no-referrer"
                                     />
                                     <span className="ep-lib-item-info">
-                                      <span className="ep-lib-item-name">{item.name}</span>
+                                      <span className="ep-lib-item-name">{item.label}</span>
                                       {inUse && <span className="ep-lib-item-badge">Em uso</span>}
                                     </span>
                                     {isSelected && <span className="ep-lib-item-check"><Check size={12} /></span>}
