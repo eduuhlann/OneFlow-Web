@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePreferences } from '../contexts/PreferencesContext';
+import { GridBackground } from './GridBackground';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -97,6 +98,8 @@ const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ forceParticles 
             {(forceParticles || preferences.wallpaper === 'particles') && (
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-60 mix-blend-screen" />
             )}
+
+            {preferences.wallpaper === 'grid' && <GridBackground />}
 
             {preferences.wallpaper === 'custom' && preferences.customWallpaper && (
                 <div className="absolute inset-0 w-full h-full overflow-hidden">

@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type ThemeType = 'classic-dark' | 'royal-purple' | 'midnight-blue' | 'pure-monochrome';
-export type WallpaperType = 'particles' | 'mesh' | 'aurora' | 'gradient' | 'none' | 'custom';
+export type WallpaperType = 'particles' | 'mesh' | 'aurora' | 'gradient' | 'grid' | 'none' | 'custom';
 export type DashboardLayoutItem = 'nav';
+/** Qual dock fica no rodapé do dashboard. */
+export type DashboardStyle = 'floating' | 'nav';
 
 export interface CustomWallpaper {
     type: 'image' | 'video';
@@ -16,7 +18,7 @@ export interface UserPreferences {
     dashboardLayout: DashboardLayoutItem[];
     menuOrder?: string[]; // IDs of the cards
     uploadedWallpapers?: CustomWallpaper[];
-    dashboardStyle?: 'cards' | 'dock';
+    dashboardStyle?: DashboardStyle;
 }
 
 const defaultPreferences: UserPreferences = {
@@ -25,7 +27,7 @@ const defaultPreferences: UserPreferences = {
     dashboardLayout: ['nav'],
     menuOrder: ['bible', 'plans', 'prayer', 'customize'],
     uploadedWallpapers: [],
-    dashboardStyle: 'dock'
+    dashboardStyle: 'floating'
 };
 
 interface PreferencesContextType {
@@ -49,6 +51,11 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 }
                 if (parsed.menuOrder) {
                     parsed.menuOrder = parsed.menuOrder.filter((item: string) => item !== 'journey');
+                }
+                // A preferência usava 'cards' | 'dock' e nada lia ela.
+                // Qualquer valor fora dos dois docks atuais cai no padrão.
+                if (parsed.dashboardStyle !== 'floating' && parsed.dashboardStyle !== 'nav') {
+                    delete parsed.dashboardStyle;
                 }
                 return { ...defaultPreferences, ...parsed };
             } catch (e) {

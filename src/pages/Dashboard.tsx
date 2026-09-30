@@ -8,16 +8,22 @@ import CustomizationModal from '../components/CustomizationModal';
 import { Header } from '../components/dashboard/Header';
 import { ModulesGrid } from '../components/dashboard/ModulesGrid';
 import { MobileDock } from '../components/dashboard/MobileDock';
+import { AppDock } from '../components/dashboard/AppDock';
 import { DockAvatar } from '../components/dashboard/DockAvatar';
 import { FloatingDockDesktop } from '../components/ui/floating-dock';
 import { NotificationBell } from '../components/NotificationBell';
-import { CUSTOMIZE_MODULE_ID, DASHBOARD_MODULES } from '../components/dashboard/modules';
+import { CUSTOMIZE_MODULE_ID, DASHBOARD_MODULES, type DashboardModule } from '../components/dashboard/modules';
+import { usePreferences } from '../contexts/PreferencesContext';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
+  const { preferences } = usePreferences();
   const navigate = useNavigate();
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
+
+  // Personalizar → Estilo de Navegação decide qual dock fica no rodapé.
+  const dockStyle = preferences.dashboardStyle === 'nav' ? 'nav' : 'floating';
 
   const displayName =
     profile?.display_name ||
@@ -29,6 +35,15 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  /**
+   * Navegação dos módulos do dashboard. Compartilhada pelos dois docks
+   * para o clique se comportar igual em qualquer um deles.
+   */
+  const handleModuleClick = (module: DashboardModule) => {
+    if (module.id === CUSTOMIZE_MODULE_ID) setIsCustomizationOpen(true);
+    else if (module.path) navigate(module.path);
   };
 
   return (
@@ -104,29 +119,36 @@ export default function Dashboard() {
         {/* Mobile floating dock */}
         <MobileDock onCustomize={() => setIsCustomizationOpen(true)} />
 
-        {/* Desktop animated floating dock */}
+        {/* Dock do rodapé: o usuário escolhe o estilo em Personalizar */}
         <div
           className="pointer-events-none fixed bottom-0 left-0 right-0 z-[100] hidden justify-center md:flex"
           style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
         >
           <div className="pointer-events-auto">
-            <FloatingDockDesktop
-              className="h-[104px] items-end gap-4 border border-white/10 bg-neutral-900/70 px-6 pb-5 shadow-2xl shadow-black/50 backdrop-blur-xl"
-              scale={1.15}
-              items={DASHBOARD_MODULES.map((module) => ({
-                title: module.label,
-                icon: (
-                  <module.icon className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-                ),
-                href: module.path || '#',
-                onClick:
-                  module.id === CUSTOMIZE_MODULE_ID
-                    ? () => setIsCustomizationOpen(true)
-                    : module.path
-                      ? () => navigate(module.path!)
-                      : undefined,
-              }))}
-            />
+            {dockStyle === 'nav' ? (
+              <AppDock
+                items={DASHBOARD_MODULES.map((module) => ({
+                  id: module.id,
+                  label: module.label,
+                  icon: module.icon,
+                  path: module.path,
+                  onClick: () => handleModuleClick(module),
+                }))}
+              />
+            ) : (
+              <FloatingDockDesktop
+                className="h-[104px] items-end gap-4 border border-white/10 bg-neutral-900/70 px-6 pb-5 shadow-2xl shadow-black/50 backdrop-blur-xl"
+                scale={1.15}
+                items={DASHBOARD_MODULES.map((module) => ({
+                  title: module.label,
+                  icon: (
+                    <module.icon className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+                  ),
+                  href: module.path || '#',
+                  onClick: () => handleModuleClick(module),
+                }))}
+              />
+            )}
           </div>
         </div>
 

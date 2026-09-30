@@ -1,4 +1,5 @@
 import { BookOpen, Calendar, Clock, Palette, User, type LucideIcon } from 'lucide-react';
+import type { DashboardStyle } from '../../contexts/PreferencesContext';
 
 export interface DashboardModule {
   id: string;
@@ -45,4 +46,13 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     description: 'Mude sua experiência de leitura',
     icon: Palette,
   },
+];
+
+/**
+ * Docks disponíveis no rodapé do dashboard. O usuário escolhe um deles
+ * em Personalizar → Estilo do App → Estilo de Navegação.
+ */
+export const DOCK_STYLES: { id: DashboardStyle; label: string }[] = [
+  { id: 'floating', label: 'Dock Flutuante' },
+  { id: 'nav', label: 'Navegação do App' },
 ];

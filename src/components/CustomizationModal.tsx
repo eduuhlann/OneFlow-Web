@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Palette as PaletteIcon, Image as ImageIcon, Layout as LayoutIcon, Upload, Trash2 } from 'lucide-react';
 import { usePreferences, ThemeType, WallpaperType, DashboardLayoutItem } from '../contexts/PreferencesContext';
+import { DOCK_STYLES } from './dashboard/modules';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -151,7 +152,8 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                             { id: 'particles', label: 'Partículas' },
                                             { id: 'mesh', label: 'Mesh Flow' },
                                             { id: 'aurora', label: 'Aurora Boreal' },
-                                            { id: 'gradient', label: 'Degradê Premium' }
+                                            { id: 'gradient', label: 'Degradê Premium' },
+                                            { id: 'grid', label: 'Grid Distorcido' }
                                         ].map((wp) => (
                                             <button
                                                 key={wp.id}
@@ -175,18 +177,18 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                         <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/ uppercase">Estilo de Navegação</h4>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {(['cards', 'dock'] as const).map((style) => (
+                                        {DOCK_STYLES.map((style) => (
                                             <button
-                                                key={style}
-                                                onClick={() => updatePreference('dashboardStyle', style)}
+                                                key={style.id}
+                                                onClick={() => updatePreference('dashboardStyle', style.id)}
                                                 className={cn(
                                                     "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
-                                                    (preferences.dashboardStyle || 'dock') === style
+                                                    (preferences.dashboardStyle || 'floating') === style.id
                                                         ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
                                                         : "border-transparent bg-white/[0.03] text-white/ hover:bg-white/5 hover:text-white/80"
                                                 )}
                                             >
-                                                {style === 'cards' ? 'Cards (Grid)' : 'Floating Dock'}
+                                                {style.label}
                                             </button>
                                         ))}
                                     </div>
