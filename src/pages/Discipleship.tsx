@@ -4,7 +4,6 @@ import {
     ArrowLeft,
     User,
     Users,
-    Plus,
     Search,
     Send,
     BookOpen,
@@ -28,8 +27,7 @@ import {
     Loader2,
     LogOut,
     MessageSquarePlus,
-    Lock,
-    Compass
+    Lock
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,6 +36,11 @@ import { discipleshipService, DiscipleshipTask, DiscipleshipNote } from '../serv
 import { statsService, BibleStats } from '../services/features/statsService';
 import { UserProfileModal } from '../components/discipleship/UserProfileModal';
 import { ExplorePanel } from '../components/discipleship/ExplorePanel';
+import { SidebarHeader } from '../components/discipleship/SidebarHeader';
+import { NavigationTabs, type SidebarTab } from '../components/discipleship/NavigationTabs';
+import { SidebarFooter } from '../components/discipleship/SidebarFooter';
+import { ConversationList, toPreviewText, type FeedConversation } from '../components/discipleship/ConversationList';
+import { EmptyState } from '../components/discipleship/EmptyState';
 import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -105,7 +108,7 @@ const MentionChip = ({
                 onMouseEnter={() => setShow(true)}
                 onMouseLeave={() => setShow(false)}
                 onClick={() => target && onOpenProfile(target.id)}
-                className={`font-bold ${isMine ? 'text-black/70 hover:text-black' : 'text-amber-200/90 hover:text-amber-200'}`}
+                className={`font-bold ${isMine ? 'text-black/70 hover:text-black' : 'text-white/70 hover:text-white underline decoration-white/20 underline-offset-2'}`}
             >
                 @{username}
             </button>
@@ -155,7 +158,7 @@ const Discipleship: React.FC = () => {
     const { profile } = useProfile();
         const [loading, setLoading] = useState(true);
     const [view, setView] = useState<'list' | 'chat'>('list');
-    const [sidebarTab, setSidebarTab] = useState<'chats' | 'explore'>('chats');
+    const [sidebarTab, setSidebarTab] = useState<SidebarTab>('chats');
     const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
     // Menções (#26)
@@ -197,6 +200,7 @@ const Discipleship: React.FC = () => {
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [editingContent, setEditingContent] = useState('');
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+    const [previews, setPreviews] = useState<Record<string, { content: string; created_at: string }>>({});
     const [typingUsers, setTypingUsers] = useState<{ id: string, name: string }[]>([]);
     const [isPresenceReady, setIsPresenceReady] = useState(false);
 
@@ -281,9 +285,13 @@ const Discipleship: React.FC = () => {
 
             setConnections(filteredAll);
 
-            // Fetch unread counts
-            const counts = await discipleshipService.getUnreadCounts(user.id);
+            // Feed da sidebar: última mensagem + não lidas
+            const [counts, latest] = await Promise.all([
+                discipleshipService.getUnreadCounts(user.id),
+                discipleshipService.getConversationPreviews(user.id)
+            ]);
             setUnreadCounts(counts);
+            setPreviews(latest);
         } catch (error) {
             console.error('Error loading connections:', error);
         } finally {
@@ -1038,14 +1046,58 @@ const Discipleship: React.FC = () => {
         }
     };
 
+    /** Chave estável da conversa: grupo pelo id, privé pelo id do parceiro. */
+    const conversationKey = (conn: any) =>
+        conn.type === 'group' ? conn.id : (conn.leader_id === user?.id ? conn.disciple_id : conn.leader_id);
+
+    // Feed da sidebar: conversa mais recente primeiro, com trecho da última mensagem.
+    const feed = useMemo<FeedConversation[]>(() => connections
+        .map(conn => {
+            const key = conversationKey(conn);
+            const latest = key ? previews[key] : undefined;
+            const isGroup = conn.type === 'group';
+            const isSelf = conn.type === 'self';
+            return {
+                key: `${conn.type}-${conn.id}`,
+                type: conn.type,
+                name: isGroup
+                    ? conn.name
+                    : (conn.profile?.display_name || conn.profile?.username || 'Usuário'),
+                avatarUrl: isGroup ? (conn.avatar_url || null) : (conn.profile?.avatar_url || null),
+                profileId: isGroup || isSelf
+                    ? null
+                    : (conn.type === 'leader' ? conn.leader_id : conn.disciple_id) || null,
+                preview: toPreviewText(latest?.content),
+                previewAt: latest?.created_at,
+                isPending: conn.status === 'pending' || conn.member_status === 'pending',
+                unread: key ? (unreadCounts[key] || 0) : 0,
+                source: conn,
+            };
+        })
+        .sort((a, b) => {
+            const aTime = new Date(a.previewAt || a.source?.created_at || 0).getTime();
+            const bTime = new Date(b.previewAt || b.source?.created_at || 0).getTime();
+            return bTime - aTime;
+        }), [connections, previews, unreadCounts, user]);
+
+    const selectedFeedKey = selectedConnection ? `${selectedConnection.type}-${selectedConnection.id}` : null;
+    // No celular a sidebar e a conversa dividem a tela: `view` decide qual delas aparece.
+    // Sem nenhuma conversa, o estado inicial ocupa a tela inteira em vez de uma lista vazia.
+    const mainVisibleOnMobile = view === 'chat' || connections.length === 0;
+
+    const openNewConversation = () => {
+        setSearchMode('global');
+        setIsSearchOpen(true);
+    };
+
     return (
         <PageTransition>
-                <div className="h-screen bg-[#0d0d0d] text-white flex flex-col overflow-hidden">
+                <div className="h-screen bg-[var(--of-bg)] text-white flex flex-col overflow-hidden">
                 {/* Modals handled same as before... (Search, Group Creation) */}
                 <AnimatePresence>
                     {isSearchOpen && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
+                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[var(--of-surface)] border border-[var(--of-border)] w-full max-w-md rounded-[32px] overflow-hidden">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between">
                                     <h3 className="text-xl font-bold tracking-tight">
                                         {searchMode === 'group' ? `Convidar para ${selectedConnection?.name}` : 'Chamar no Privado'}
@@ -1060,7 +1112,7 @@ const Discipleship: React.FC = () => {
                                     <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                                         {inviteSuccess ? (
                                             <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                                                <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
+                                                <div className="w-16 h-16 bg-[var(--of-surface-hover)] border border-[var(--of-border)] rounded-full flex items-center justify-center text-white">
                                                     <Check className="w-8 h-8" />
                                                 </div>
                                                 <p className="text-sm font-bold text-white/">Convite enviado para <span className="text-white">{inviteSuccess}</span>!</p>
@@ -1088,7 +1140,7 @@ const Discipleship: React.FC = () => {
                 <AnimatePresence>
                     {isGroupModalOpen && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
+                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[var(--of-surface)] border border-[var(--of-border)] w-full max-w-md rounded-[32px] overflow-hidden">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between">
                                     <h3 className="text-xl font-bold tracking-tight">Criar Novo Grupo</h3>
                                     <button onClick={() => setIsGroupModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
@@ -1126,7 +1178,7 @@ const Discipleship: React.FC = () => {
                     )}
                     {isChallengeModalOpen && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#1a1a1a] border border-white/10 w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl">
+                            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[var(--of-surface)] border border-[var(--of-border)] w-full max-w-md rounded-[32px] overflow-hidden">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/10">
                                     <div className="flex items-center gap-3">
                                         <TrendingUp className="w-6 h-6 text-white/" />
@@ -1170,104 +1222,32 @@ const Discipleship: React.FC = () => {
 
 
                     {/* Sidebar */}
-                    <aside className={cn("w-full md:w-[380px] border-r border-white/5 flex flex-col transition-all", view === 'chat' ? 'hidden md:flex' : 'flex')}>
-                        <header className="p-6 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"><ArrowLeft className="w-5 h-5" /></button>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Chat Privado"><MessageSquarePlus className="w-5 h-5 text-white/" /></button>
-                                     <button onClick={() => setIsGroupModalOpen(true)} className="relative p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all shadow-xl" title="Novo Grupo"><Users className="w-5 h-5 text-white/" /></button>
-                                    <button onClick={() => { setSearchMode('global'); setIsSearchOpen(true); }} className="p-3 bg-white text-black rounded-2xl hover:scale-110 active:scale-90 transition-all shadow-xl"><Plus className="w-5 h-5" /></button>
-                                </div>
-                            </div>
+                    <aside
+                        className={cn(
+                            "w-full shrink-0 flex-col border-r border-[var(--of-border)] bg-[var(--of-sidebar)] md:flex md:w-[var(--of-sidebar-w)]",
+                            view === 'chat' ? "hidden md:flex" : "flex"
+                        )}
+                    >
+                        <SidebarHeader
+                            onBack={() => navigate('/dashboard')}
+                            onNewConversation={openNewConversation}
+                            onNewGroup={() => setIsGroupModalOpen(true)}
+                            onNewJourney={() => navigate('/plans/ai-generator')}
+                        />
 
-                            <div className="flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10">
-                                {([
-                                    { id: 'chats' as const, label: 'Conversas', icon: MessageSquare },
-                                    { id: 'explore' as const, label: 'Explorar', icon: Compass },
-                                ]).map(tab => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setSidebarTab(tab.id)}
-                                        className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
-                                            sidebarTab === tab.id ? "bg-white text-black" : "text-white/ hover:text-white/80"
-                                        )}
-                                    >
-                                        <tab.icon size={12} /> {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </header>
+                        <NavigationTabs value={sidebarTab} onChange={setSidebarTab} />
 
                         {sidebarTab === 'chats' ? (
-                        <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar pb-24">
-                            {connections.map(conn => {
-                                const isPending = (conn.status === 'pending') || (conn.member_status === 'pending');
-                                return (
-                                    <button key={`${conn.type}-${conn.id}`} onClick={() => !isPending && handleSelectConnection(conn)} className={cn("w-full p-4 rounded-[28px] flex items-center gap-4 transition-all group", selectedConnection?.id === conn.id ? "bg-white/10 border border-white/10 shadow-lg" : "hover:bg-white/5 border border-transparent", isPending && "cursor-default opacity-80")}>
-                                        <span
-                                            role="button"
-                                            tabIndex={-1}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const targetId = conn.type === 'leader' ? conn.leader_id : conn.disciple_id;
-                                                if (conn.type !== 'group' && conn.type !== 'self' && targetId) setProfileUserId(targetId);
-                                            }}
-                                            className={cn(
-                                                "w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 transition-transform",
-                                                conn.type !== 'group' && conn.type !== 'self' && "hover:scale-105 active:scale-95 cursor-pointer"
-                                            )}
-                                        >
-                                            {conn.type === 'group' ? (
-                                                conn.avatar_url ? <img src={conn.avatar_url} className="w-full h-full object-cover" /> : <Users className="w-6 h-6 text-white/" />
-                                            ) : conn.profile?.avatar_url ? (
-                                                <img src={conn.profile.avatar_url} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <User className="w-6 h-6 text-white/" />
-                                            )}
-                                        </span>
-                                        <div className="flex-1 text-left">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-bold text-sm">{conn.type === 'group' ? conn.name : (conn.profile?.display_name || conn.profile?.username || 'Usuário')}</span>
-                                                {conn.type !== 'self' && (
-                                                    <span className={cn(
-                                                        "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
-                                                        conn.type === 'leader' ? "bg-indigo-500/10 text-indigo-400" : "bg-white/5 text-white/"
-                                                    )}>
-                                                        {conn.type === 'leader' ? 'Líder' : 'Discípulo'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {isPending ? (
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleRespondInvite(conn, true); }} className="px-3 py-1 bg-white text-black rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all">Aceitar</button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleRespondInvite(conn, false); }} className="px-3 py-1 bg-white/10 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all">Recusar</button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between gap-2 mt-1">
-                                                    <p className="text-[11px] text-white/ line-clamp-1 italic">Toque para abrir a conversa...</p>
-                                                    {(() => {
-                                                        const unreadKey = conn.type === 'group' ? conn.id : (conn.leader_id === user?.id ? conn.disciple_id : conn.leader_id);
-                                                        const count = unreadCounts[unreadKey] || 0;
-                                                        if (count > 0) {
-                                                            return (
-                                                                <div className="min-w-[18px] h-[18px] bg-white text-black text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-lg shrink-0">
-                                                                    {count}
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    })()}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                            <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+                                <ConversationList
+                                    items={feed}
+                                    selectedKey={selectedFeedKey}
+                                    loading={loading}
+                                    onSelect={item => handleSelectConnection(item.source)}
+                                    onOpenProfile={setProfileUserId}
+                                    onRespondInvite={(item, accept) => handleRespondInvite(item.source, accept)}
+                                />
+                            </div>
                         ) : (
                             <ExplorePanel
                                 onOpenProfile={setProfileUserId}
@@ -1278,10 +1258,15 @@ const Discipleship: React.FC = () => {
                                 }}
                             />
                         )}
+
+                        <SidebarFooter />
                     </aside>
 
                     {/* Chat Area */}
-                    <main className={cn("flex-1 flex flex-col bg-[#0d0d0d] transition-all relative", view === 'list' ? 'hidden md:flex' : 'flex')}>
+                    <main className={cn(
+                        "flex-1 min-w-0 flex-col bg-[var(--of-bg)] relative",
+                        mainVisibleOnMobile ? "flex" : "hidden md:flex"
+                    )}>
                         {selectedConnection ? (
                             <>
                                 <header className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md sticky top-0 z-20">
@@ -1339,8 +1324,8 @@ const Discipleship: React.FC = () => {
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                                            <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Disponível</span>
+                                                            <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-pulse" />
+                                                            <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--of-secondary)]">Disponível</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1354,8 +1339,8 @@ const Discipleship: React.FC = () => {
                                             </button>
                                         )}
                                         {selectedConnection.type === 'group' && selectedConnection.leader_id === user!.id && (
-                                            <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); }} className="p-2.5 md:p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-2xl transition-all border border-indigo-500/10">
-                                                <UserPlus className="w-5 h-5 text-indigo-400" />
+                                            <button onClick={() => { setSearchMode('group'); setIsSearchOpen(true); }} className="p-2.5 md:p-3 bg-[var(--of-surface)] hover:bg-[var(--of-surface-hover)] rounded-2xl transition-all duration-[var(--of-dur)] border border-[var(--of-border)]">
+                                                <UserPlus className="w-5 h-5 text-[var(--of-secondary)]" />
                                             </button>
                                         )}
                                         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2.5 md:p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors border border-white/5">
@@ -1376,11 +1361,11 @@ const Discipleship: React.FC = () => {
                                                             )}
                                                             {selectedConnection.type === 'group' && (
                                                                 selectedConnection.leader_id === user!.id ? (
-                                                                    <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                                                                    <button onClick={handleDeleteGroup} className="w-full p-4 flex items-center gap-3 text-[var(--of-secondary)] hover:text-white hover:bg-[var(--of-surface-hover)] transition-colors text-xs font-bold uppercase tracking-widest">
                                                                         <Trash2 className="w-4 h-4" /> Excluir Grupo
                                                                     </button>
                                                                 ) : (
-                                                                    <button onClick={handleLeaveGroup} className="w-full p-4 flex items-center gap-3 text-red-400 hover:bg-red-400/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                                                                    <button onClick={handleLeaveGroup} className="w-full p-4 flex items-center gap-3 text-[var(--of-secondary)] hover:text-white hover:bg-[var(--of-surface-hover)] transition-colors text-xs font-bold uppercase tracking-widest">
                                                                         <LogOut className="w-4 h-4" /> Sair do Grupo
                                                                     </button>
                                                                 )
@@ -1435,7 +1420,7 @@ const Discipleship: React.FC = () => {
                                                         {(progress === 100 || selectedConnection.leader_id === user!.id) && (
                                                             <button
                                                                 onClick={() => discipleshipService.completeTask(task.id).then(() => loadChatData())}
-                                                                className="py-2.5 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/10"
+                                                                className="py-2.5 bg-white text-black text-[10px] font-semibold uppercase tracking-[0.16em] rounded-full hover:scale-[1.02] active:scale-95 transition-all duration-[var(--of-dur)]"
                                                             >
                                                                 {progress === 100 ? "Concluir Desafio ✅" : "Marcar como Concluído"}
                                                             </button>
@@ -1448,7 +1433,7 @@ const Discipleship: React.FC = () => {
                                 )}
 
                                 {/* Chat Feed */}
-                                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
+                                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
                                     <div className="max-w-3xl mx-auto space-y-6">
                                         {notes.length === 0 ? (
                                             <div className="flex flex-col items-center justify-center py-20 opacity-20">
@@ -1561,7 +1546,7 @@ const Discipleship: React.FC = () => {
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => handleDeleteNote(n.id)}
-                                                                                    className="p-1.5 bg-red-500/5 hover:bg-red-500/20 rounded-lg text-red-500/40 hover:text-red-500 transition-all shadow-sm backdrop-blur-md border border-red-500/10"
+                                                                                    className="p-1.5 bg-[var(--of-surface)] hover:bg-[var(--of-surface-hover)] rounded-lg text-[var(--of-secondary)] hover:text-white transition-all duration-[var(--of-dur)] border border-[var(--of-border)]"
                                                                                     title="Excluir"
                                                                                 >
                                                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -1656,12 +1641,10 @@ const Discipleship: React.FC = () => {
                                 </footer>
                             </>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center p-12 text-center bg-gradient-to-b from-transparent to-white/[0.02] mix-blend-screen opacity-40">
-                                <div className="max-w-sm space-y-8">
-                                    <MessageSquare className="w-20 h-20 text-white/80 mx-auto" />
-                                    <h2 className="text-3xl font-black italic -rotate-1 tracking-tighter">Escolha uma jornada</h2>
-                                </div>
-                            </div>
+                            <EmptyState
+                                onNewConversation={openNewConversation}
+                                onExplorePlans={() => navigate('/plans')}
+                            />
                         )}
                     </main>
                 </div>
@@ -1680,7 +1663,7 @@ const Discipleship: React.FC = () => {
                 <AnimatePresence>
                     {isGroupMembersModalOpen && selectedConnection?.type === 'group' && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[var(--of-surface)] border border-[var(--of-border)] rounded-[32px] w-full max-w-md overflow-hidden">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                                     <div className="flex items-center gap-3">
                                         <Users className="w-5 h-5 text-white/" />
@@ -1722,7 +1705,7 @@ const Discipleship: React.FC = () => {
                                                                 {member.role === 'member' && (
                                                                     <button 
                                                                         onClick={() => handlePromoteMember(member.id, 'admin')}
-                                                                        className="px-2 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-blue-500/10"
+                                                                        className="px-2 py-1.5 bg-[var(--of-surface-hover)] hover:bg-[var(--of-surface-hover)] text-white rounded-lg text-[9px] font-semibold uppercase tracking-[0.16em] transition-colors flex items-center gap-1 border border-[var(--of-border)]"
                                                                         title="Promover a Co-líder"
                                                                     >
                                                                         <TrendingUp className="w-3 h-3" /> Co-líder
@@ -1739,14 +1722,14 @@ const Discipleship: React.FC = () => {
                                                                 )}
                                                                 <button 
                                                                     onClick={() => handleTransferLeadership(member.user_id)}
-                                                                    className="px-2 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-indigo-500/10"
+                                                                    className="px-2 py-1.5 bg-white text-black rounded-lg text-[9px] font-semibold uppercase tracking-[0.16em] transition-colors flex items-center gap-1"
                                                                     title="Tornar Líder"
                                                                 >
                                                                     Líder
                                                                 </button>
                                                                 <button 
                                                                     onClick={() => handleRemoveMember(member.user_id, memberProfile?.username || 'Usuário')}
-                                                                    className="px-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-red-500/10"
+                                                                    className="px-2 py-1.5 bg-[var(--of-surface-hover)] hover:bg-[var(--of-surface-hover)] text-[var(--of-secondary)] hover:text-white rounded-lg text-[9px] font-semibold uppercase tracking-[0.16em] transition-colors flex items-center gap-1 border border-[var(--of-border)]"
                                                                     title="Remover do Grupo"
                                                                 >
                                                                     <X className="w-3 h-3" />
@@ -1793,7 +1776,7 @@ const Discipleship: React.FC = () => {
                 <AnimatePresence>
                     {alertBanner.isOpen && (
                         <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -100, opacity: 0 }} className="fixed top-0 left-1/2 -translate-x-1/2 z-[210] w-full max-w-sm px-4">
-                            <div className={cn("flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl shadow-2xl", alertBanner.type === 'error' ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-green-500/10 border-green-500/20 text-green-400")}>
+                            <div className={cn("flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl shadow-2xl", "bg-[var(--of-surface)] border-[var(--of-border-hover)] text-white")}>
                                 <div className="flex items-center gap-3">
                                     {alertBanner.type === 'error' ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                                     <span className="text-[11px] font-black uppercase tracking-widest">{alertBanner.message}</span>
@@ -1817,11 +1800,8 @@ const ChallengeMessageCard = ({ note, isMine }: { note: any, isMine?: boolean })
                 "bg-black border border-white/10 rounded-[32px] p-6 md:p-8 space-y-6 max-w-sm shadow-2xl relative overflow-hidden group",
                 isMine ? "border-white/30" : ""
             )}>
-                {/* Decorative element */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
-
                 <div className="flex items-center gap-4 relative">
-                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-xl shadow-white/20">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center">
                         <TrendingUp className="w-6 h-6 text-black" />
                     </div>
                     <div>
@@ -1852,7 +1832,7 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh, currentUs
         <AnimatePresence>
             {isOpen && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f0f0f] border border-white/10 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[var(--of-surface)] border border-[var(--of-border)] rounded-[32px] w-full max-w-md overflow-hidden">
                         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                             <div className="flex items-center gap-3">
                                 <TrendingUp className="w-5 h-5 text-white/" />
@@ -1895,7 +1875,7 @@ const MyChallengesModal = ({ isOpen, onClose, tasks, stats, onRefresh, currentUs
                                             {progress === 100 && (
                                                 <button
                                                     onClick={() => discipleshipService.completeTask(task.id).then(() => { onRefresh(); onClose(); })}
-                                                    className="w-full py-2 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest rounded-xl"
+                                                    className="w-full py-2 bg-white text-black text-[10px] font-semibold uppercase tracking-[0.16em] rounded-full transition-all duration-[var(--of-dur)]"
                                                 >
                                                     Marcar como Concluído ✅
                                                 </button>

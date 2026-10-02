@@ -39,6 +39,30 @@
   transform: rotateY(-90deg);
 }
 
+/* Scrollbar discreta e monocromática (usada nas listas e conversas) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #2a2a2a;
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #3a3a3a;
+}
+
 .translate-z-0 {
   transform: translateZ(0);
 }
@@ -68,6 +92,29 @@
   --color-accent: rgba(255, 255, 255, 0.2);
   --color-accent-hover: rgba(255, 255, 255, 0.4);
   --color-text-glow: rgba(255, 255, 255, 0.3);
+}
+
+/* =========================================
+   ONEFLOW MONOCHROME SURFACES
+   Paleta exclusiva de preto, branco e cinzas.
+   Usada nas telas de conversa (Discipleship).
+   ========================================= */
+:root {
+  --of-bg: #080808;
+  --of-sidebar: #090909;
+  --of-surface: #111111;
+  --of-surface-hover: #171717;
+  --of-border: #1f1f1f;
+  --of-border-pill: #292929;
+  --of-border-hover: #3a3a3a;
+  --of-primary: #ffffff;
+  --of-secondary: #a1a1a1;
+  --of-muted: #666666;
+
+  --of-dur: 180ms;
+  --of-ease: ease;
+  --of-sidebar-w: 348px;
+  --of-radius-pill: 999px;
 }
 
 /* Classic Dark (default) */

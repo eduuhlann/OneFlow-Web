@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Clock, Palette, User, type LucideIcon } from 'lucide-react';
+import { BookOpen, Calendar, Palette, User, type LucideIcon } from 'lucide-react';
 import type { DashboardStyle } from '../../contexts/PreferencesContext';
 
 export interface DashboardModule {
@@ -32,13 +32,6 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     description: 'Siga planos de leitura',
     icon: Calendar,
     path: '/plans',
-  },
-  {
-    id: 'prayer',
-    label: 'Oração',
-    description: 'Tenha um momento de oração',
-    icon: Clock,
-    path: '/prayer',
   },
   {
     id: CUSTOMIZE_MODULE_ID,

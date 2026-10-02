@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Palette as PaletteIcon, Image as ImageIcon, Layout as LayoutIcon, Upload, Trash2 } from 'lucide-react';
-import { usePreferences, ThemeType, WallpaperType, DashboardLayoutItem } from '../contexts/PreferencesContext';
+import { usePreferences, ThemeType, DashboardLayoutItem } from '../contexts/PreferencesContext';
 import { DOCK_STYLES } from './dashboard/modules';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -140,35 +140,6 @@ export default function CustomizationModal({ isOpen, onClose }: Props) {
                                             Nenhum upload ainda
                                         </p>
                                     )}
-                                </section>
-
-                                {/* System Backgrounds Section */}
-                                <section className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-bold tracking-[0.2em] text-white/ uppercase">Fundo do Sistema</h4>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { id: 'particles', label: 'Partículas' },
-                                            { id: 'mesh', label: 'Mesh Flow' },
-                                            { id: 'aurora', label: 'Aurora Boreal' },
-                                            { id: 'gradient', label: 'Degradê Premium' },
-                                            { id: 'grid', label: 'Grid Distorcido' }
-                                        ].map((wp) => (
-                                            <button
-                                                key={wp.id}
-                                                onClick={() => updatePreference('wallpaper', wp.id as WallpaperType)}
-                                                className={cn(
-                                                    "py-3 px-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border-2",
-                                                    preferences.wallpaper === wp.id
-                                                        ? "border-white bg-white/10 text-white shadow-lg shadow-white/5"
-                                                        : "border-transparent bg-white/[0.03] text-white/ hover:bg-white/5 hover:text-white/80"
-                                                )}
-                                            >
-                                                {wp.label}
-                                            </button>
-                                        ))}
-                                    </div>
                                 </section>
 
                                 {/* Dashboard Style Section */}

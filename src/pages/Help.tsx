@@ -23,7 +23,7 @@ const CATEGORIES: FaqCategory[] = [
         title: 'Primeiros passos',
         icon: Rocket,
         items: [
-            { q: 'Como funciona o OneFlow?', a: 'O OneFlow reúne sua jornada de fé em um só lugar: leitura da Bíblia, planos de leitura, discipulado em grupo, oração e perfis públicos. Você navega pelos módulos pelo menu inferior (celular) ou pelo painel (computador).', tags: ['inicio', 'sobre', 'app', 'tutorial'] },
+            { q: 'Como funciona o OneFlow?', a: 'O OneFlow reúne sua jornada de fé em um só lugar: leitura da Bíblia, planos de leitura, discipulado em grupo e perfis públicos. Você navega pelos módulos pelo menu inferior (celular) ou pelo painel (computador).', tags: ['inicio', 'sobre', 'app', 'tutorial'] },
             { q: 'Preciso pagar para usar?', a: 'Não. O OneFlow é totalmente gratuito para todos: banner personalizado, grupos de discipulado, geração de planos com IA e perfis públicos estão liberados para toda pessoa.', tags: ['gratis', 'preco', 'pago', 'gratuito'] },
         ],
     },

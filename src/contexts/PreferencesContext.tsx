@@ -25,7 +25,7 @@ const defaultPreferences: UserPreferences = {
     theme: 'classic-dark',
     wallpaper: 'particles',
     dashboardLayout: ['nav'],
-    menuOrder: ['bible', 'plans', 'prayer', 'customize'],
+    menuOrder: ['bible', 'plans', 'customize'],
     uploadedWallpapers: [],
     dashboardStyle: 'floating'
 };
@@ -50,7 +50,7 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
                     parsed.dashboardLayout = parsed.dashboardLayout.filter((item: any) => item === 'nav');
                 }
                 if (parsed.menuOrder) {
-                    parsed.menuOrder = parsed.menuOrder.filter((item: string) => item !== 'journey');
+                    parsed.menuOrder = parsed.menuOrder.filter((item: string) => item !== 'journey' && item !== 'prayer');
                 }
                 // A preferência usava 'cards' | 'dock' e nada lia ela.
                 // Qualquer valor fora dos dois docks atuais cai no padrão.

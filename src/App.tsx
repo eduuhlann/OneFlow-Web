@@ -18,7 +18,6 @@ import Plans from './pages/Plans';
 import AiPlanGenerator from './pages/AiPlanGenerator';
 import PlanDetails from './pages/PlanDetails';
 import PlanView from './pages/PlanView';
-import Prayer from './pages/Prayer';
 import Settings from './pages/Settings';
 import Discipleship from '@/src/pages/Discipleship';
 import EditProfile from './pages/EditProfile';
@@ -83,11 +82,6 @@ function AnimatedRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/plano/:id" element={<PlanView />} />
-        <Route path="/prayer" element={
-          <ProtectedRoute>
-            <Prayer />
-          </ProtectedRoute>
-        } />
         {/* <Route path="/journey" element={
           <ProtectedRoute>
             <Journey />

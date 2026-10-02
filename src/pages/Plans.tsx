@@ -1,47 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-    ArrowLeft,
-    BookOpen,
-    ChevronRight,
-    Plus,
-    CheckCircle2,
-    Timer,
-    Calendar,
-    Info,
-    Trash2,
-    Users,
-    LogIn
-} from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronRight, Plus, Trash2, Users, LogIn, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { plansService, Plan, UserPlan } from '../services/features/plansService';
 import { aiPlansService, type AiPlan } from '../services/features/aiPlansService';
-import logo from '../assets/logo.png';
 import PageTransition from '../components/PageTransition';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
 
 const Plans: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [activePlans, setActivePlans] = useState<UserPlan[]>([]);
-    const [customPlans, setCustomPlans] = useState<Plan[]>([]);
     const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [notice, setNotice] = useState<{ text: string; tone: 'error' | 'success' } | null>(null);
     const [aiPlans, setAiPlans] = useState<(AiPlan & { progress: number; memberCount: number })[]>([]);
     const [aiLoading, setAiLoading] = useState(true);
     const [inviteCode, setInviteCode] = useState('');
     const [joiningCode, setJoiningCode] = useState(false);
-
-    const refreshData = () => {
-        setActivePlans(plansService.getActivePlans());
-        setCustomPlans(plansService.getCustomPlans());
-    };
 
     const refreshAiPlans = async () => {
         if (!user) {
@@ -56,9 +29,13 @@ const Plans: React.FC = () => {
     };
 
     useEffect(() => {
-        refreshData();
         refreshAiPlans();
     }, [user]);
+
+    const flash = (text: string, tone: 'error' | 'success' = 'success') => {
+        setNotice({ text, tone });
+        setTimeout(() => setNotice(null), 3200);
+    };
 
     const handleJoinCode = async () => {
         if (!user || !inviteCode.trim()) return;
@@ -69,8 +46,7 @@ const Plans: React.FC = () => {
             setInviteCode('');
             navigate(`/plano/${planId}`);
         } else {
-            setSuccessMessage('Código inválido ou plano fechado para novos membros.');
-            setTimeout(() => setSuccessMessage(null), 3000);
+            flash('Código inválido ou plano fechado para novos membros.', 'error');
         }
     };
 
@@ -80,337 +56,250 @@ const Plans: React.FC = () => {
         setShowConfirmDelete(null);
     };
 
-    const handleJoin = (planId: string) => {
-        plansService.joinPlan(planId);
-        refreshData();
-        const plan = customPlans.find(p => p.id === planId);
-        setSuccessMessage(`Você iniciou o plano: ${plan?.title}`);
-        setTimeout(() => setSuccessMessage(null), 3000);
-    };
-
-    const handleDelete = (planId: string) => {
-        if (plansService.getCustomPlans().some(p => p.id === planId)) {
-            plansService.deleteCustomPlan(planId);
-        } else {
-            plansService.leavePlan(planId);
-        }
-        refreshData();
-        setShowConfirmDelete(null);
-    };
-
-    const isPlanActive = (planId: string) => activePlans.some(p => p.planId === planId);
-
     return (
         <PageTransition>
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 selection:bg-white selection:text-black">
-            <div className="max-w-4xl mx-auto">
-                <header className="flex items-center justify-between mb-16">
-                    <div className="flex items-center gap-4 md:gap-12">
-                        <button onClick={() => navigate('/dashboard')} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all">
-                            <ArrowLeft size={24} />
-                        </button>
-                        <div>
-                            <span className="text-[10px] font-bold tracking-[0.5em] text-white/ uppercase">Jornadas Espirituais</span>
-                            <h1 className="text-3xl sm:text-5xl font-serif italic tracking-tight">Meus Planos</h1>
-                        </div>
-                    </div>
-                </header>
+            <div className="min-h-screen bg-[var(--of-bg)] text-white">
+                <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-32 pt-6 md:px-10 md:pt-10">
+                    {/* Header */}
+                    <header className="flex items-start justify-between gap-6 pb-14 pt-4 md:pb-20 md:pt-6">
+                        <div className="flex items-center gap-5">
+                            <button
+                                onClick={() => navigate('/dashboard')}
+                                title="Voltar"
+                                aria-label="Voltar"
+                                className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--of-border)] bg-[var(--of-surface)] text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white"
+                            >
+                                <ArrowLeft size={17} strokeWidth={1.75} />
+                            </button>
 
-                <AnimatePresence>
-                    {successMessage && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mb-8"
-                        >
-                            <div className="p-4 bg-white/10 border border-white/20 rounded-2xl text-white flex items-center gap-3 text-sm font-bold">
-                                <CheckCircle2 size={18} /> {successMessage}
+                            <div>
+                                <span className="block text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--of-muted)]">
+                                    jornadas
+                                </span>
+                                <h1 className="mt-2 font-serif text-4xl font-normal leading-none tracking-tight sm:text-5xl">
+                                    Meus planos
+                                </h1>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        </div>
 
-                {/* AI Plan Banner */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-8 bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 rounded-[2.5rem] text-white mb-12 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-all duration-300"
-                >
-                    <div className="flex-1">
-                        <h2 className="text-3xl font-serif mb-2 tracking-tight italic">Plano Personalizado com IA</h2>
-                        <p className="text-white/ text-sm font-medium leading-relaxed">Deixe a nossa IA criar uma trilha de estudo única baseada no seu momento de vida e necessidades espirituais.</p>
-                    </div>
-                    <button 
-                        onClick={() => navigate('/plans/ai-generator')}
-                        className="px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all whitespace-nowrap uppercase"
-                    >
-                        CRIAR AGORA
-                    </button>
-                </motion.div>
+                        <button
+                            onClick={() => navigate('/plans/ai-generator')}
+                            className="group hidden h-11 shrink-0 items-center gap-2 rounded-full border border-transparent bg-white px-6 text-[12px] font-semibold uppercase tracking-[0.16em] text-black transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-primary)] active:scale-95 sm:inline-flex"
+                        >
+                            <Plus size={15} strokeWidth={2} />
+                            Novo plano
+                        </button>
+                    </header>
 
+                    {/* Aviso */}
+                    <AnimatePresence>
+                        {notice && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.18 }}
+                                className={`mb-10 flex items-center justify-between gap-4 rounded-xl border px-5 py-4 text-[14px] transition-colors duration-[var(--of-dur)] ${notice.tone === 'error'
+                                    ? 'border-[var(--of-border-hover)] text-white'
+                                    : 'border-[var(--of-border)] text-[var(--of-secondary)]'
+                                    }`}
+                            >
+                                <span>{notice.text}</span>
+                                <button
+                                    onClick={() => setNotice(null)}
+                                    aria-label="Fechar aviso"
+                                    className="shrink-0 text-[var(--of-muted)] transition-colors duration-[var(--of-dur)] hover:text-white"
+                                >
+                                    <X size={14} strokeWidth={1.75} />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                <div className="space-y-12">
-                    <section>
-                        <h3 className="text-xs font-black tracking-[0.3em] text-white/ uppercase mb-8 flex items-center gap-4">
-                            Meus Planos com IA
-                            <div className="flex-1 h-px bg-white/5" />
-                        </h3>
+                    {/* Criar com IA */}
+                    <section className="rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 md:p-10">
+                        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h2 className="font-serif text-2xl font-normal tracking-tight md:text-[28px]">Plano personalizado com IA</h2>
+                                <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[var(--of-secondary)]">
+                                    Uma trilha de estudo criada a partir do seu momento de vida e das suas
+                                    necessidades espirituais.
+                                </p>
+                            </div>
 
-                        <div className="mb-6 flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => navigate('/plans/ai-generator')}
+                                className="h-[56px] shrink-0 rounded-full border border-[var(--of-border-hover)] px-8 text-[13px] font-medium tracking-tight text-white transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-white/40 hover:bg-[var(--of-surface-hover)] active:scale-[0.98]"
+                            >
+                                Criar agora
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* Entrar com código */}
+                    <section className="mt-16 md:mt-20">
+                        <h2 className="flex items-center gap-5 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--of-muted)]">
+                            Entrar com código
+                            <span className="h-px flex-1 bg-[var(--of-border)]" />
+                        </h2>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-4">
                             <input
                                 value={inviteCode}
                                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                onKeyDown={e => { if (e.key === 'Enter') handleJoinCode(); }}
                                 placeholder="CÓDIGO DE CONVITE"
                                 maxLength={8}
-                                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs tracking-[0.3em] font-serif text-white placeholder:text-white/ focus:outline-none focus:border-white/30 transition-colors"
+                                aria-label="Código de convite"
+                                className="min-w-0 flex-1 rounded-full border border-[var(--of-border)] bg-[var(--of-surface)] px-7 py-5 font-sans text-[13px] tracking-[0.3em] text-white uppercase placeholder:text-[var(--of-muted)] focus:border-[var(--of-border-hover)] focus:outline-none transition-colors duration-[var(--of-dur)]"
                             />
                             <button
                                 onClick={handleJoinCode}
                                 disabled={joiningCode || !inviteCode.trim()}
-                                className="px-8 py-4 border border-white/15 rounded-2xl font-bold text-xs tracking-[0.2em] uppercase text-white/ hover:text-white hover:border-white/40 transition-colors disabled:opacity-30 flex items-center gap-2 justify-center"
+                                className="inline-flex h-[58px] shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--of-border)] px-8 text-[13px] font-medium tracking-tight text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white active:scale-[0.98] disabled:pointer-events-none disabled:opacity-30"
                             >
-                                <LogIn size={14} /> Entrar
+                                <LogIn size={16} strokeWidth={1.75} />
+                                {joiningCode ? 'Entrando...' : 'Entrar'}
                             </button>
                         </div>
-
-                        <div className="grid grid-cols-1 gap-4">
-                            {aiLoading ? (
-                                <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                    <p className="text-white/ font-medium">Carregando seus planos...</p>
-                                </div>
-                            ) : aiPlans.length === 0 ? (
-                                <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                    <BookOpen className="mx-auto text-white/80 mb-4" size={48} />
-                                    <p className="text-white/ font-medium">Você ainda não criou nenhum plano com IA.</p>
-                                </div>
-                            ) : (
-                                aiPlans.map(plan => (
-                                    <motion.div
-                                        key={plan.id}
-                                        layout
-                                        className="p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] group cursor-pointer hover:bg-white/[0.08] transition-all duration-300 hover:-translate-y-1"
-                                        onClick={() => navigate(`/plano/${plan.id}`)}
-                                    >
-                                        <div className="flex items-center gap-6">
-                                            <div className="flex-1">
-                                                <div className="flex items-center justify-between mb-2 gap-4">
-                                                    <h4 className="text-xl font-serif">{plan.title}</h4>
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        {plan.mode === 'grupo' && (
-                                                            <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-white/">
-                                                                <Users size={12} /> {plan.memberCount}
-                                                            </span>
-                                                        )}
-                                                        <span className="text-[10px] font-black tracking-widest text-white/ uppercase">
-                                                            {plan.progress}%
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                                    <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${Math.max(plan.progress, 2)}%` }}
-                                                        className="h-full bg-white"
-                                                    />
-                                                </div>
-                                                <p className="text-[10px] uppercase tracking-widest text-white/ mt-2">
-                                                    {plan.duration_days} dias
-                                                    {plan.objective ? ` · ${plan.objective}` : ''}
-                                                    {plan.privacy === 'link' ? ' · link público' : ''}
-                                                </p>
-                                            </div>
-                                            {plan.user_id === user?.id && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowConfirmDelete(plan.id);
-                                                    }}
-                                                    className="p-3 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            )}
-                                            <div className="p-3 bg-white text-black rounded-xl hover:scale-110 active:scale-95 transition-all">
-                                                <ChevronRight size={18} />
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))
-                            )}
-                        </div>
                     </section>
 
-                    <section>
-                        <h3 className="text-xs font-black tracking-[0.3em] text-white/ uppercase mb-8 flex items-center gap-4">
-                            Planos Ativos
-                            <div className="flex-1 h-px bg-white/5" />
-                        </h3>
+                    {/* Planos */}
+                    <section className="mt-16 md:mt-20">
+                        <h2 className="flex items-center gap-5 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--of-muted)]">
+                            Seus planos
+                            <span className="h-px flex-1 bg-[var(--of-border)]" />
+                        </h2>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            {activePlans.length === 0 ? (
-                                <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                    <BookOpen className="mx-auto text-white/80 mb-4" size={48} />
-                                    <p className="text-white/ font-medium">Você ainda não iniciou nenhum plano.</p>
-                                </div>
-                            ) : (
-                                activePlans.map(up => {
-                                    const customPlans = plansService.getCustomPlans();
-                                    const plan = customPlans.find(p => p.id === up.planId);
-                                    if (!plan) return null;
-                                    const progress = plansService.getPlanProgress(plan.id);
-
-                                    return (
-                                        <motion.div
-                                            key={up.planId}
-                                            layout
-                                            className="p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] group cursor-pointer hover:bg-white/[0.08] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(255,255,255,0.04)] hover:-translate-y-1"
-                                            onClick={() => navigate(`/plans/${plan.id}`)}
-                                        >
-                                            <div className="flex items-center gap-6">
-
-                                                <div className="flex-1">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <h4 className="text-xl font-serif">{plan.title}</h4>
-                                                        <span className="text-[10px] font-black tracking-widest text-white/ uppercase">{progress}% concluído</span>
-                                                    </div>
-                                                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                                        <motion.div
-                                                            initial={{ width: 0 }}
-                                                            animate={{ width: `${progress}%` }}
-                                                            className="h-full bg-white"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowConfirmDelete(plan.id);
-                                                    }}
-                                                    className="p-3 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                                <div className="p-3 bg-white text-black rounded-xl hover:scale-110 active:scale-95 transition-all">
-                                                    <ChevronRight size={18} />
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </section>
-
-                    <section>
-                        <h3 className="text-xs font-black tracking-[0.3em] text-white/ uppercase mb-8 flex items-center gap-4">
-                            Planos salvos neste dispositivo
-                            <div className="flex-1 h-px bg-white/5" />
-                        </h3>
-
-                        {customPlans.filter(p => !isPlanActive(p.id)).length === 0 ? (
-                            <div className="p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] text-center">
-                                <BookOpen className="mx-auto text-white/80 mb-4" size={48} />
-                                <p className="text-white/ font-medium">Nenhum plano antigo por aqui.</p>
+                        {aiLoading ? (
+                            <div className="py-24 text-center text-[15px] text-[var(--of-muted)]">
+                                Carregando seus planos...
+                            </div>
+                        ) : aiPlans.length === 0 ? (
+                            <div className="flex flex-col items-center gap-6 py-28 text-center">
+                                <BookOpen size={56} strokeWidth={1} className="text-[var(--of-muted)]" />
+                                <p className="max-w-sm text-[15px] leading-relaxed text-[var(--of-secondary)]">
+                                    Você ainda não tem planos. Comece pela trilha criada para o seu momento.
+                                </p>
                                 <button
                                     onClick={() => navigate('/plans/ai-generator')}
-                                    className="mt-6 px-8 py-4 bg-white text-black rounded-2xl font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all uppercase"
+                                    className="h-[54px] rounded-full border border-[var(--of-border-hover)] px-8 text-[13px] font-medium tracking-tight transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-white/40 hover:bg-[var(--of-surface-hover)]"
                                 >
-                                    CRIAR COM IA
+                                    Criar meu primeiro plano
                                 </button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {customPlans.filter(p => !isPlanActive(p.id)).map(plan => (
-                                <motion.div
-                                    key={plan.id}
-                                    whileHover={{ y: -5 }}
-                                    className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] flex flex-col justify-between group relative hover:bg-white/[0.05] transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(255,255,255,0.1)] hover:-translate-y-1"
-                                >
-                                    {plan.category === 'ai' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setShowConfirmDelete(plan.id);
-                                            }}
-                                            className="absolute top-6 right-6 p-3 bg-white/5 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all opacity-0 group-hover:opacity-100 z-10"
-                                            title="Excluir plano"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    )}
-                                    <div>
-                                        <div className="flex items-start justify-between gap-4 mb-3">
-                                            <h4 className="text-2xl font-serif tracking-tight">{plan.title}</h4>
-                                            <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black tracking-widest uppercase border border-white/5 text-white/ shrink-0 mt-2">
-                                                {plan.durationDays} DIAS
-                                            </span>
+                            <div className="mt-6 divide-y divide-[var(--of-border)] border-y border-[var(--of-border)]">
+                                {aiPlans.map(plan => (
+                                    <motion.div
+                                        key={plan.id}
+                                        layout
+                                        onClick={() => navigate(`/plano/${plan.id}`)}
+                                        className="group flex cursor-pointer items-center gap-6 px-3 py-8 transition-colors duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-surface-hover)] md:py-9"
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="truncate font-serif text-xl tracking-tight md:text-2xl">
+                                                    {plan.title}
+                                                </h3>
+                                                {plan.mode === 'grupo' && (
+                                                    <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--of-muted)]">
+                                                        <Users size={12} strokeWidth={1.75} />
+                                                        {plan.memberCount}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-4 flex items-center gap-4">
+                                                <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-[var(--of-border)]">
+                                                    <span
+                                                        className="block h-full rounded-full bg-white transition-all duration-500"
+                                                        style={{ width: `${Math.max(plan.progress, 2)}%` }}
+                                                    />
+                                                </span>
+                                                <span className="shrink-0 text-[11px] tabular-nums text-[var(--of-muted)]">
+                                                    {plan.progress}%
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-3.5 truncate text-[12px] text-[var(--of-muted)]">
+                                                {plan.duration_days} dias
+                                                {plan.objective ? ` · ${plan.objective}` : ''}
+                                                {plan.privacy === 'link' ? ' · link público' : ''}
+                                            </p>
                                         </div>
-                                        <p className="text-white/ text-sm italic opacity-80">{plan.description}</p>
-                                    </div>
-                                    <div className="mt-8">
-                                        <button
-                                            onClick={() => handleJoin(plan.id)}
-                                            className="w-full py-4 bg-white/5 hover:bg-white text-white hover:text-black border border-white/10 rounded-2xl font-bold text-xs tracking-widest transition-all uppercase"
-                                        >
-                                            Iniciar Plano
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            ))}
+
+                                        {plan.user_id === user?.id && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowConfirmDelete(plan.id);
+                                                }}
+                                                title="Excluir plano"
+                                                aria-label={`Excluir plano ${plan.title}`}
+                                                className="shrink-0 rounded-full p-3 text-[var(--of-muted)] opacity-0 transition-all duration-[var(--of-dur)] hover:bg-[var(--of-surface)] hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+                                            >
+                                                <Trash2 size={16} strokeWidth={1.75} />
+                                            </button>
+                                        )}
+
+                                        <ChevronRight
+                                            size={18}
+                                            strokeWidth={1.75}
+                                            className="shrink-0 text-[var(--of-muted)] transition-all duration-[var(--of-dur)] group-hover:translate-x-0.5 group-hover:text-white"
+                                        />
+                                    </motion.div>
+                                ))}
                             </div>
                         )}
                     </section>
                 </div>
-            </div>
 
-            {/* Delete Confirmation Modal */}
-            <AnimatePresence>
-                {showConfirmDelete && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowConfirmDelete(null)}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#111] border border-white/10 p-10 rounded-[3rem] max-w-sm w-full relative z-10 text-center"
-                        >
-                            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                                <Trash2 size={28} />
-                            </div>
-                            <h3 className="text-2xl font-bold mb-4">Remover Plano?</h3>
-                            <p className="text-white/ text-sm mb-8 leading-relaxed">Isso irá apagar todo o seu progresso neste plano. Esta ação não pode ser desfeita.</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => setShowConfirmDelete(null)}
-                                    className="py-4 bg-white/5 rounded-2xl font-bold text-sm"
-                                >
-                                    CANCELAR
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (aiPlans.some(p => p.id === showConfirmDelete)) {
-                                            handleDeleteAiPlan(showConfirmDelete);
-                                        } else {
-                                            handleDelete(showConfirmDelete);
-                                        }
-                                    }}
-                                    className="py-4 bg-red-600 rounded-2xl font-bold text-sm"
-                                >
-                                    REMOVER
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </div>
+                {/* Confirmação de exclusão */}
+                <AnimatePresence>
+                    {showConfirmDelete && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.18 }}
+                                onClick={() => setShowConfirmDelete(null)}
+                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            />
+                            <motion.div
+                                initial={{ scale: 0.97, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.97, opacity: 0 }}
+                                transition={{ duration: 0.18, ease: 'easeOut' }}
+                                className="relative z-10 w-full max-w-sm rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 text-center"
+                            >
+                                <span className="mx-auto mb-5 flex size-12 items-center justify-center rounded-full border border-[var(--of-border)] bg-[var(--of-surface-hover)]">
+                                    <Trash2 size={18} strokeWidth={1.5} className="text-[var(--of-secondary)]" />
+                                </span>
+                                <h3 className="text-lg font-medium tracking-tight">Remover plano?</h3>
+                                <p className="mt-2 text-[13px] leading-relaxed text-[var(--of-secondary)]">
+                                    Isso apaga todo o seu progresso neste plano. Esta ação não pode ser desfeita.
+                                </p>
+                                <div className="mt-7 grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setShowConfirmDelete(null)}
+                                        className="h-11 rounded-full border border-[var(--of-border)] text-[12px] font-medium tracking-tight text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteAiPlan(showConfirmDelete)}
+                                        className="h-11 rounded-full bg-white text-[12px] font-medium tracking-tight text-black transition-all duration-[var(--of-dur)] hover:bg-[var(--of-primary)] active:scale-[0.98]"
+                                    >
+                                        Remover
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
         </PageTransition>
     );
 };

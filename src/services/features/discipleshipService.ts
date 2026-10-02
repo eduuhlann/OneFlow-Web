@@ -1233,5 +1233,48 @@ export const discipleshipService = {
             }
         });
         return counts;
+    },
+
+    /**
+     * Última mensagem de cada conversa, indexada pelo mesmo chave usada em
+     * getUnreadCounts (group_id ou o id do parceiro). Serve para a lista de
+     * conversas se comportar como um feed: trecho da mensagem + horário.
+     */
+    async getConversationPreviews(userId: string): Promise<Record<string, { content: string; created_at: string }>> {
+        const { data: groupMemberships } = await supabase
+            .from('discipleship_group_members')
+            .select('group_id')
+            .eq('user_id', userId)
+            .eq('status', 'active');
+
+        const groupIds = groupMemberships?.map(m => m.group_id) || [];
+
+        let query = supabase
+            .from('discipleship_notes')
+            .select('leader_id, disciple_id, group_id, content, file_name, created_at')
+            .neq('author_id', userId);
+
+        if (groupIds.length > 0) {
+            query = query.or(`leader_id.eq.${userId},disciple_id.eq.${userId},group_id.in.(${groupIds.join(',')})`);
+        } else {
+            query = query.or(`leader_id.eq.${userId},disciple_id.eq.${userId}`);
+        }
+
+        const { data: notes, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(200);
+
+        if (error || !notes) return {};
+
+        const previews: Record<string, { content: string; created_at: string }> = {};
+        for (const note of notes) {
+            const key = note.group_id || (note.leader_id === userId ? note.disciple_id : note.leader_id);
+            if (!key || previews[key]) continue;
+            previews[key] = {
+                content: note.content || note.file_name || '',
+                created_at: note.created_at
+            };
+        }
+        return previews;
     }
 };
