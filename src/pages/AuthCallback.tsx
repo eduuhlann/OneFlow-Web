@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 
 export default function AuthCallback() {
-    const navigate = useNavigate();
-    const handled = useRef(false);
+    const authentication = useRef<Promise<void> | null>(null);
     const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
-        if (handled.current) return;
-        handled.current = true;
+        let active = true;
 
         const cleanCallbackUrl = () => {
             const url = new URL(window.location.href);
@@ -18,27 +16,21 @@ export default function AuthCallback() {
             window.history.replaceState({}, document.title, url.toString());
         };
 
-        const redirectIfAuthenticated = async () => {
-            const { data, error } = await supabase.auth.getSession();
-            if (error) throw error;
-            if (!data.session) return false;
-
-            cleanCallbackUrl();
-            window.location.replace('http://localhost:3000/dashboard');
-            return true;
-        };
-
-        const handleCallback = async () => {
-            try {
+        // Reuse the same exchange when StrictMode replays the effect: PKCE codes are single-use.
+        if (!authentication.current) {
+            authentication.current = (async () => {
                 const searchParams = new URLSearchParams(window.location.search);
                 const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
                 const code = searchParams.get('code') || hashParams.get('code');
                 const accessToken = hashParams.get('access_token');
                 const refreshToken = hashParams.get('refresh_token');
                 const errorCode = searchParams.get('error') || hashParams.get('error');
+                const errorReason = searchParams.get('error_code') || hashParams.get('error_code');
                 const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
 
                 if (errorCode) {
+                    if (errorCode === 'access_denied') throw new Error('Login cancelado. Você pode tentar novamente.');
+                    if (errorReason === 'bad_oauth_state') throw new Error('Não foi possível validar esta tentativa. Feche a aba antiga de autorização e inicie um novo login neste navegador.');
                     throw new Error(errorDescription || errorCode);
                 }
 
@@ -53,19 +45,36 @@ export default function AuthCallback() {
                     if (error) throw error;
                 }
 
-                if (await redirectIfAuthenticated()) return;
+                const { data, error } = await supabase.auth.getSession();
+                if (error) throw error;
+                if (!data.session) throw new Error('O login não foi concluído. Inicie uma nova tentativa neste navegador.');
+            })();
+        }
 
-                throw new Error('A sessão do Discord não foi concluída. Tente novamente.');
-            } catch (error) {
-                const message = error instanceof Error ? error.message : 'Não foi possível concluir o login.';
-                console.error('[AuthCallback]', error);
-                setErrorMsg(message);
-                window.setTimeout(() => navigate('/auth', { replace: true }), 3000);
-            }
+        const timeout = window.setTimeout(() => {
+            if (active) setErrorMsg('O login está demorando para responder. Você pode voltar e tentar novamente.');
+        }, 20000);
+
+        void authentication.current.then(() => {
+            if (!active) return;
+            window.clearTimeout(timeout);
+            cleanCallbackUrl();
+            window.location.replace(new URL('/dashboard', window.location.origin).toString());
+        }).catch((error: unknown) => {
+            if (!active) return;
+            window.clearTimeout(timeout);
+            cleanCallbackUrl();
+            const message = error instanceof Error ? error.message : 'Não foi possível concluir o login.';
+            setErrorMsg(/code verifier|code_verifier|flow state|flow_state|invalid_grant/i.test(message)
+                ? 'Esta tentativa expirou ou foi iniciada em outro navegador. Comece o login novamente neste navegador.'
+                : message);
+        });
+
+        return () => {
+            active = false;
+            window.clearTimeout(timeout);
         };
-
-        void handleCallback();
-    }, [navigate]);
+    }, []);
 
     return (
         <div style={{
@@ -79,16 +88,15 @@ export default function AuthCallback() {
         }}>
             {errorMsg ? (
                 <>
-                    <p style={{ color: '#ef4444', fontSize: 13, fontFamily: 'sans-serif', textAlign: 'center', maxWidth: 320, padding: '0 16px' }}>
+                    <p role="alert" style={{ color: '#ef4444', fontSize: 13, fontFamily: 'sans-serif', textAlign: 'center', maxWidth: 360, padding: '0 16px' }}>
                         {errorMsg}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'sans-serif' }}>
-                        Redirecionando...
-                    </p>
+                    <Link to="/auth" className="rounded-xl bg-white px-5 py-3 font-outfit text-sm text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Tentar novamente</Link>
+                    <Link to="/" className="font-outfit text-xs text-white/60 hover:text-white">Voltar ao início</Link>
                 </>
             ) : (
                 <>
-                    <div style={{
+                    <div className="auth-callback-spinner" aria-hidden="true" style={{
                         width: 40,
                         height: 40,
                         border: '3px solid rgba(255,255,255,0.1)',
@@ -96,8 +104,8 @@ export default function AuthCallback() {
                         borderRadius: '50%',
                         animation: 'spin 0.8s linear infinite',
                     }} />
-                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                    <p style={{
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .auth-callback-spinner { animation: none !important; } }`}</style>
+                    <p role="status" style={{
                         color: 'rgba(255,255,255,0.75)',
                         fontSize: 12,
                         letterSpacing: '0.3em',

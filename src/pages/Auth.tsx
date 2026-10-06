@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
     AlertCircle,
+    ArrowLeft,
     ArrowRight
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
@@ -19,7 +20,8 @@ function AuthParticles() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        let animId: number;
+        let animId = 0;
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         let particles: { x: number; y: number; size: number; vx: number; vy: number; opacity: number }[] = [];
 
         const resize = () => {
@@ -57,23 +59,37 @@ function AuthParticles() {
                 if (p.y < 0) p.y = canvas.height;
                 if (p.y > canvas.height) p.y = 0;
             }
-            animId = requestAnimationFrame(draw);
+            if (!reducedMotion.matches) {
+                animId = requestAnimationFrame(draw);
+            }
         };
 
-        window.addEventListener('resize', () => { resize(); init(); });
-        resize();
-        init();
-        draw();
+        const handleResize = () => {
+            cancelAnimationFrame(animId);
+            resize();
+            init();
+            draw();
+        };
+        const handleMotionPreference = () => {
+            cancelAnimationFrame(animId);
+            draw();
+        };
+
+        window.addEventListener('resize', handleResize);
+        reducedMotion.addEventListener('change', handleMotionPreference);
+        handleResize();
 
         return () => {
             cancelAnimationFrame(animId);
-            window.removeEventListener('resize', resize);
+            window.removeEventListener('resize', handleResize);
+            reducedMotion.removeEventListener('change', handleMotionPreference);
         };
     }, []);
 
     return (
         <canvas
             ref={canvasRef}
+            aria-hidden="true"
             className="fixed inset-0 w-full h-full pointer-events-none z-0"
             style={{ background: '#000' }}
         />
@@ -87,6 +103,14 @@ export default function Auth() {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        const restoreLoginButtons = (event: PageTransitionEvent) => {
+            if (event.persisted) setLoading(false);
+        };
+        window.addEventListener('pageshow', restoreLoginButtons);
+        return () => window.removeEventListener('pageshow', restoreLoginButtons);
+    }, []);
+
+    useEffect(() => {
         if (user) {
             navigate('/dashboard');
         }
@@ -96,12 +120,11 @@ export default function Auth() {
         setLoading(true);
         setError('');
         try {
-            const options: any = {
-                redirectTo: new URL('/auth/callback', window.location.origin).toString(),
-            };
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
-                options,
+                options: {
+                    redirectTo: new URL('/auth/callback', window.location.origin).toString(),
+                },
             });
             if (error) throw error;
         } catch (err: any) {
@@ -114,7 +137,15 @@ export default function Auth() {
         <div className="min-h-screen text-white relative overflow-hidden selection:bg-white selection:text-black">
             <AuthParticles />
 
-            <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-4 md:p-6 overflow-y-auto">
+            <Link
+                to="/"
+                className="absolute top-5 left-5 md:top-7 md:left-7 z-20 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm text-white/70 backdrop-blur-sm transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            >
+                <ArrowLeft size={16} aria-hidden="true" />
+                Voltar ao início
+            </Link>
+
+            <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-4 md:p-6 pt-24 md:pt-24 pb-10 overflow-y-auto">
                 {/* Left Side: Logo - Hidden on mobile */}
                 <div className="hidden lg:flex flex-1 items-center justify-center lg:justify-center order-2 lg:order-1" style={{ perspective: 1200 }}>
                     <motion.div

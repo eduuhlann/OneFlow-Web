@@ -1,0 +1,202 @@
+.flow-art {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 600 / 620;
+  isolation: isolate;
+  user-select: none;
+}
+
+.flow-art-field {
+  position: absolute;
+  inset: 9% 4% 12%;
+  z-index: -1;
+  background: radial-gradient(ellipse at 52% 48%, rgba(244, 243, 238, 0.052), transparent 64%);
+  border-radius: 50%;
+}
+
+.flow-art-plane {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.flow-art-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.flow-art-contours {
+  transform-origin: 300px 305px;
+  animation: flow-art-sway 20s ease-in-out infinite alternate;
+}
+
+.flow-art-orbits {
+  transform-origin: 300px 305px;
+  animation: flow-art-orbit 38s ease-in-out infinite alternate;
+}
+
+.flow-art-core {
+  position: absolute;
+  left: 50%;
+  top: 49.2%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow-art-wordmark {
+  position: relative;
+  display: block;
+  width: 112px;
+  height: 33px;
+  overflow: hidden;
+  opacity: 0.91;
+}
+
+.flow-art-wordmark img {
+  position: absolute;
+  width: 127px;
+  max-width: none;
+  height: 127px;
+  top: -46.5px;
+  left: -7.7px;
+  object-fit: contain;
+}
+
+.flow-art-core-caption {
+  color: rgba(244, 243, 238, 0.38);
+  font-family: 'Outfit', sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+
+.flow-art-label {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 33px;
+  padding: 0 12px;
+  color: rgba(244, 243, 238, 0.75);
+  border: 1px solid rgba(244, 243, 238, 0.13);
+  border-radius: 30px;
+  background: rgba(13, 13, 13, 0.88);
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  animation: flow-art-drift 7s ease-in-out infinite alternate;
+}
+
+.flow-art-label svg {
+  opacity: 0.65;
+}
+
+.flow-art-label i {
+  width: 3px;
+  height: 3px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: rgba(244, 243, 238, 0.55);
+}
+
+.flow-art-label-word {
+  left: 9%;
+  top: 18.9%;
+}
+
+.flow-art-label-purpose {
+  right: 2%;
+  top: 33.9%;
+  animation-delay: -2.5s;
+}
+
+.flow-art-label-connection {
+  left: 9.5%;
+  bottom: 22.3%;
+  animation-delay: -5s;
+}
+
+.flow-art-dot {
+  animation: flow-art-twinkle 4s ease-in-out infinite alternate;
+}
+
+.flow-art-dot-two {
+  animation-delay: -1.7s;
+}
+
+.flow-art-dot-three {
+  animation-delay: -3.1s;
+}
+
+.flow-art-footnote {
+  position: absolute;
+  left: 23.4%;
+  right: 23.4%;
+  bottom: 5.7%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(244, 243, 238, 0.28);
+  font-family: 'Outfit', sans-serif;
+  font-size: 7px;
+  letter-spacing: 0.2em;
+}
+
+.flow-art-footnote span:last-child {
+  font-family: Georgia, serif;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.flow-art[data-still='true'] .flow-art-contours,
+.flow-art[data-still='true'] .flow-art-orbits,
+.flow-art[data-still='true'] .flow-art-label,
+.flow-art[data-still='true'] .flow-art-dot {
+  animation-play-state: paused;
+}
+
+@keyframes flow-art-sway {
+  from { transform: rotate(-2deg); }
+  to { transform: rotate(3deg); }
+}
+
+@keyframes flow-art-orbit {
+  from { transform: rotate(-4deg); }
+  to { transform: rotate(8deg); }
+}
+
+@keyframes flow-art-drift {
+  from { transform: translateY(-3px); }
+  to { transform: translateY(3px); }
+}
+
+@keyframes flow-art-twinkle {
+  from { opacity: 0.16; }
+  to { opacity: 0.6; }
+}
+
+@media (max-width: 600px) {
+  .flow-art { max-width: 460px; }
+  .flow-art-label { gap: 6px; min-height: 28px; padding: 0 10px; font-size: 9px; }
+  .flow-art-label-purpose { right: 0; }
+  .flow-art-wordmark { width: 94px; height: 28px; }
+  .flow-art-wordmark img { width: 107px; height: 107px; top: -39px; left: -6.5px; }
+  .flow-art-core { gap: 7px; }
+  .flow-art-core-caption { font-size: 7px; }
+  .flow-art-footnote { font-size: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-art-contours,
+  .flow-art-orbits,
+  .flow-art-label,
+  .flow-art-dot { animation: none; }
+}

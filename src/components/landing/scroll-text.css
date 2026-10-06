@@ -1,0 +1,47 @@
+.landing-scroll-text,
+.landing-scroll-text-visual {
+  display: inline;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+.landing-scroll-text-token,
+.landing-scroll-text-word {
+  display: inline-block;
+  font: inherit;
+  line-height: 1;
+  letter-spacing: inherit;
+  color: inherit;
+  vertical-align: baseline;
+}
+
+.landing-scroll-text-word {
+  white-space: nowrap;
+}
+
+.landing-scroll-text-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-scroll-text-token {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+.landing[data-motion='paused'] .landing-scroll-text-token {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}

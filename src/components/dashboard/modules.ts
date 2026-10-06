@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Palette, User, type LucideIcon } from 'lucide-react';
+import { BookOpen, Calendar, MessageSquareText, Palette, User, type LucideIcon } from 'lucide-react';
 import type { DashboardStyle } from '../../contexts/PreferencesContext';
 
 export interface DashboardModule {
@@ -32,6 +32,13 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     description: 'Siga planos de leitura',
     icon: Calendar,
     path: '/plans',
+  },
+  {
+    id: 'oneflow-ai',
+    label: 'OneFlow V1',
+    description: 'Converse com a inteligência artificial',
+    icon: MessageSquareText,
+    path: '/oneflow-ai',
   },
   {
     id: CUSTOMIZE_MODULE_ID,

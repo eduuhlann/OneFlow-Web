@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     ArrowLeft,
+    House,
     User,
     Users,
     Search,
@@ -40,7 +41,7 @@ import { SidebarHeader } from '../components/discipleship/SidebarHeader';
 import { NavigationTabs, type SidebarTab } from '../components/discipleship/NavigationTabs';
 import { SidebarFooter } from '../components/discipleship/SidebarFooter';
 import { ConversationList, toPreviewText, type FeedConversation } from '../components/discipleship/ConversationList';
-import { EmptyState } from '../components/discipleship/EmptyState';
+import DiscipleshipWelcome from '../components/discipleship/DiscipleshipWelcome';
 import PageTransition from '../components/PageTransition';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -156,8 +157,8 @@ const Discipleship: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const { profile } = useProfile();
-        const [loading, setLoading] = useState(true);
-    const [view, setView] = useState<'list' | 'chat'>('list');
+    const [loading, setLoading] = useState(true);
+    const [view, setView] = useState<'welcome' | 'list' | 'chat'>('welcome');
     const [sidebarTab, setSidebarTab] = useState<SidebarTab>('chats');
     const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
@@ -207,6 +208,7 @@ const Discipleship: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const connectionsRef = useRef<any[]>([]);
+    const connectionsLoadVersionRef = useRef(0);
     const selectedConnectionRef = useRef<any | null>(null);
     const presenceChannelRef = useRef<any>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -218,7 +220,7 @@ const Discipleship: React.FC = () => {
         loadConnections();
         const msgChannel = subscribeToMessages();
         return () => {
-            supabase.removeChannel(msgChannel);
+            if (msgChannel) supabase.removeChannel(msgChannel);
         };
     }, [user]);
 
@@ -243,6 +245,7 @@ const Discipleship: React.FC = () => {
     };
 
     const loadConnections = async () => {
+        const loadVersion = ++connectionsLoadVersionRef.current;
         if (!user) return;
         setLoading(true);
         try {
@@ -251,6 +254,7 @@ const Discipleship: React.FC = () => {
                 discipleshipService.getLeaders(user.id),
                 discipleshipService.getGroups(user.id)
             ]);
+            if (loadVersion !== connectionsLoadVersionRef.current) return;
 
             // Normalize connections for the list
             let all = [
@@ -290,12 +294,15 @@ const Discipleship: React.FC = () => {
                 discipleshipService.getUnreadCounts(user.id),
                 discipleshipService.getConversationPreviews(user.id)
             ]);
+            if (loadVersion !== connectionsLoadVersionRef.current) return;
             setUnreadCounts(counts);
             setPreviews(latest);
         } catch (error) {
-            console.error('Error loading connections:', error);
+            if (loadVersion === connectionsLoadVersionRef.current) {
+                console.error('Error loading connections:', error);
+            }
         } finally {
-            setLoading(false);
+            if (loadVersion === connectionsLoadVersionRef.current) setLoading(false);
         }
     };
 
@@ -780,6 +787,7 @@ const Discipleship: React.FC = () => {
                 profile: conn.profiles
             };
             handleSelectConnection(formattedConn);
+            void loadConnections();
         } catch (error) {
             setAlertBanner({ isOpen: true, message: 'Erro ao iniciar chat privado.', type: 'error' });
         }
@@ -801,6 +809,7 @@ const Discipleship: React.FC = () => {
                     profile: conn.profiles
                 });
                 setView('chat');
+                void loadConnections();
             } catch (error) {
                 if (!cancelled) setAlertBanner({ isOpen: true, message: 'Erro ao iniciar chat privado.', type: 'error' });
             }
@@ -1081,9 +1090,23 @@ const Discipleship: React.FC = () => {
         }), [connections, previews, unreadCounts, user]);
 
     const selectedFeedKey = selectedConnection ? `${selectedConnection.type}-${selectedConnection.id}` : null;
-    // No celular a sidebar e a conversa dividem a tela: `view` decide qual delas aparece.
-    // Sem nenhuma conversa, o estado inicial ocupa a tela inteira em vez de uma lista vazia.
-    const mainVisibleOnMobile = view === 'chat' || connections.length === 0;
+    const mainVisibleOnMobile = view !== 'list';
+
+    const showWelcome = () => {
+        setSelectedConnection(null);
+        setIsMenuOpen(false);
+        setView('welcome');
+        if (searchParams.has('chat')) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.delete('chat');
+            setSearchParams(nextParams, { replace: true });
+        }
+    };
+
+    const showSidebar = (tab: SidebarTab) => {
+        setSidebarTab(tab);
+        setView('list');
+    };
 
     const openNewConversation = () => {
         setSearchMode('global');
@@ -1092,7 +1115,7 @@ const Discipleship: React.FC = () => {
 
     return (
         <PageTransition>
-                <div className="h-screen bg-[var(--of-bg)] text-white flex flex-col overflow-hidden">
+                <div className="h-dvh bg-[var(--of-bg)] text-white font-outfit flex flex-col overflow-hidden">
                 {/* Modals handled same as before... (Search, Group Creation) */}
                 <AnimatePresence>
                     {isSearchOpen && (
@@ -1218,14 +1241,14 @@ const Discipleship: React.FC = () => {
                     )}
                 </AnimatePresence>
 
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex min-h-0 flex-1 overflow-hidden">
 
 
                     {/* Sidebar */}
                     <aside
                         className={cn(
                             "w-full shrink-0 flex-col border-r border-[var(--of-border)] bg-[var(--of-sidebar)] md:flex md:w-[var(--of-sidebar-w)]",
-                            view === 'chat' ? "hidden md:flex" : "flex"
+                            view === 'list' ? "flex" : "hidden md:flex"
                         )}
                     >
                         <SidebarHeader
@@ -1234,6 +1257,21 @@ const Discipleship: React.FC = () => {
                             onNewGroup={() => setIsGroupModalOpen(true)}
                             onNewJourney={() => navigate('/plans/ai-generator')}
                         />
+
+                        <button
+                            type="button"
+                            onClick={showWelcome}
+                            aria-current={view === 'welcome' ? 'page' : undefined}
+                            className={cn(
+                                "mx-4 mb-3 flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-left text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+                                view === 'welcome'
+                                    ? "border-white/15 bg-white/10 text-white"
+                                    : "border-transparent text-white/50 hover:bg-white/5 hover:text-white"
+                            )}
+                        >
+                            <House size={15} aria-hidden="true" />
+                            Início do discipulado
+                        </button>
 
                         <NavigationTabs value={sidebarTab} onChange={setSidebarTab} />
 
@@ -1264,7 +1302,7 @@ const Discipleship: React.FC = () => {
 
                     {/* Chat Area */}
                     <main className={cn(
-                        "flex-1 min-w-0 flex-col bg-[var(--of-bg)] relative",
+                        "flex-1 min-h-0 min-w-0 flex-col bg-[var(--of-bg)] relative",
                         mainVisibleOnMobile ? "flex" : "hidden md:flex"
                     )}>
                         {selectedConnection ? (
@@ -1641,9 +1679,14 @@ const Discipleship: React.FC = () => {
                                 </footer>
                             </>
                         ) : (
-                            <EmptyState
-                                onNewConversation={openNewConversation}
+                            <DiscipleshipWelcome
+                                displayName={profile?.display_name || profile?.username || user?.user_metadata?.full_name}
+                                connectionCount={connections.filter(connection => connection.type !== 'self' && connection.status !== 'pending' && connection.member_status !== 'pending').length}
+                                onExplorePeople={() => showSidebar('explore')}
+                                onConversations={() => showSidebar('chats')}
+                                onNewGroup={() => setIsGroupModalOpen(true)}
                                 onExplorePlans={() => navigate('/plans')}
+                                onBack={() => navigate('/dashboard')}
                             />
                         )}
                     </main>

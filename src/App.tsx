@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProfileProvider } from './contexts/ProfileContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
@@ -9,6 +9,8 @@ import { DiscipleshipListener } from './components/DiscipleshipListener';
 import ParticleBackground from './components/ParticleBackground';
 
 // Pages
+const Landing = lazy(() => import('./pages/Landing'));
+
 import Auth from './pages/Auth';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
@@ -25,7 +27,13 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import PublicProfile from './pages/PublicProfile';
 import Help from './pages/Help';
+import OneFlowAI from './pages/OneFlowAI';
 // import Journey from './pages/Journey';
+
+function AppBackground() {
+  const { pathname } = useLocation();
+  return pathname === '/' ? null : <ParticleBackground />;
+}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -33,7 +41,15 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={
+          <Suspense fallback={
+            <div className="min-h-screen bg-black text-white flex items-center justify-center" role="status">
+              <span className="font-outfit text-sm tracking-[0.2em] uppercase">Carregando OneFlow…</span>
+            </div>
+          }>
+            <Landing />
+          </Suspense>
+        } />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/ajuda" element={<Help />} />
@@ -43,6 +59,11 @@ function AnimatedRoutes() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/oneflow-ai" element={
+          <ProtectedRoute>
+            <OneFlowAI />
           </ProtectedRoute>
         } />
         <Route path="/bible" element={
@@ -113,7 +134,7 @@ export default function App() {
       <AuthProvider>
         <ProfileProvider>
           <PreferencesProvider>
-            <ParticleBackground />
+            <AppBackground />
             <DiscipleshipListener />
             <AnimatedRoutes />
           </PreferencesProvider>
@@ -122,4 +143,3 @@ export default function App() {
     </Router>
   );
 }
-
