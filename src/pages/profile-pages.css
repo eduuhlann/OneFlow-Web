@@ -1,0 +1,33 @@
+.profile-page { font-family: 'Outfit', sans-serif; color: #f4f3ee; }
+.profile-page > main, .profile-page header > div { max-width: 1120px; }
+.profile-page > main { padding-top: 36px; }
+.profile-page header button { font-size: 13px; text-transform: none; letter-spacing: 0; min-height: 42px; }
+.profile-card { border-radius: 22px; border-color: #ffffff18; }
+.profile-banner { height: 320px; }
+.profile-featured-verse { font-size: 18px; line-height: 1.6; max-width: 50%; text-wrap: balance; }
+.profile-avatar { width: 144px; height: 144px; }
+.profile-content { padding-top: 108px; padding-bottom: 36px; }
+.profile-name { font-family: 'Outfit', sans-serif; font-size: 44px; line-height: 1.2; font-weight: 500; letter-spacing: -1.2px; overflow-wrap: anywhere; }
+.profile-username { font-size: 17px; color: #aaa9a3; }
+.profile-bio { font-family: 'Outfit', sans-serif; font-size: 17px; line-height: 1.8; color: #c0bfb9; white-space: pre-line; overflow-wrap: anywhere; }
+.profile-action { min-height: 48px; font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; padding-inline: 22px; }
+.profile-stat-grid { margin-top: 36px; gap: 16px; }
+.profile-stat { gap: 14px; padding: 26px 18px; border-radius: 14px; border-color: #ffffff15; }
+.profile-stat > span:nth-child(2) { font-size: 36px; }
+.profile-stat > span:last-child { font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #aaa9a3; }
+.profile-stat svg { width: 20px; height: 20px; }
+.profile-link-bar { gap: 20px; padding-top: 24px; }
+.profile-link-bar button { min-height: 44px; font-size: 13px; font-weight: 500; letter-spacing: 0; }
+.profile-link-bar div > span { font-size: 14px; }
+@media (max-width: 640px) {
+ .profile-page > main { padding-top: 20px; }
+ .profile-banner { height: 220px; }
+ .profile-avatar { width: 112px; height: 112px; }
+ .profile-content { padding: 84px 22px 28px; }
+ .profile-name { font-size: 34px; }
+ .profile-bio { font-size: 16px; }
+ .profile-featured-verse { font-size: 14px; max-width: 60%; }
+ .profile-stat-grid { gap: 12px; }
+ .profile-stat { padding: 22px 14px; }
+ .profile-stat > span:nth-child(2) { font-size: 30px; }
+}

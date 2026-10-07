@@ -4,7 +4,6 @@ import { motion, MotionConfig, useReducedMotion, useScroll, useSpring } from 'mo
 import { ArrowDown, ArrowUpRight, BookOpen, Check, Menu, Pause, Play, Plus, Sparkles, Users, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
-import FlowArtwork from '../components/landing/FlowArtwork';
 import FeatureShowcase from '../components/landing/FeatureShowcase';
 import ScrollText from '../components/landing/ScrollText';
 import { scrollLandingTo, useSmoothScroll } from '../components/landing/useSmoothScroll';
@@ -104,7 +103,6 @@ export default function Landing() {
               </Reveal>
               <Reveal delay={0.4}><div className="landing-hero-note"><span className="landing-note-line" /><p>Um só lugar. Muitas formas de crescer.</p></div></Reveal>
             </div>
-            <Reveal className="landing-hero-art" delay={0.15}><FlowArtwork paused={motionDisabled} /></Reveal>
             <div className="landing-hero-bottom"><span>PALAVRA. CONEXÃO. PROPÓSITO.</span><a href="#experiencia" onClick={(event) => { event.preventDefault(); navigateSection('experiencia'); }} aria-label="Explorar a experiência">CONTINUE A JORNADA<ArrowDown size={14} /></a><span className="landing-hero-index">01 — 04</span></div>
           </section>
 

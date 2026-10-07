@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { aiPlansService, type AiPlan } from '../services/features/aiPlansService';
 import PageTransition from '../components/PageTransition';
+import './library-pages.css';
 
 const Plans: React.FC = () => {
     const navigate = useNavigate();
@@ -58,8 +59,8 @@ const Plans: React.FC = () => {
 
     return (
         <PageTransition>
-            <div className="min-h-screen bg-[var(--of-bg)] text-white">
-                <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-32 pt-6 md:px-10 md:pt-10">
+            <div className="plans-page min-h-screen bg-[var(--of-bg)] text-white">
+                <div className="plans-library mx-auto flex w-full max-w-5xl flex-col px-6 pb-32 pt-6 md:px-10 md:pt-10">
                     {/* Header */}
                     <header className="flex items-start justify-between gap-6 pb-14 pt-4 md:pb-20 md:pt-6">
                         <div className="flex items-center gap-5">
@@ -84,7 +85,7 @@ const Plans: React.FC = () => {
 
                         <button
                             onClick={() => navigate('/plans/ai-generator')}
-                            className="group hidden h-11 shrink-0 items-center gap-2 rounded-full border border-transparent bg-white px-6 text-[12px] font-semibold uppercase tracking-[0.16em] text-black transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-primary)] active:scale-95 sm:inline-flex"
+                            className="plans-new-button group flex h-11 shrink-0 items-center gap-2 rounded-full border border-transparent bg-white px-6 text-[12px] font-semibold uppercase tracking-[0.16em] text-black transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-primary)] active:scale-95"
                         >
                             <Plus size={15} strokeWidth={2} />
                             Novo plano
@@ -116,11 +117,16 @@ const Plans: React.FC = () => {
                         )}
                     </AnimatePresence>
 
+                    <div className="library-intro plans-intro">
+                        <p className="library-eyebrow">UM DIA DE CADA VEZ</p>
+                        <h2>Crie raízes na <em>Palavra.</em></h2>
+                        <p>Um plano para seu momento. Uma caminhada no seu ritmo.</p>
+                    </div>
                     {/* Criar com IA */}
-                    <section className="rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 md:p-10">
+                    <section className="plans-create rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 md:p-10">
                         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
                             <div>
-                                <h2 className="font-serif text-2xl font-normal tracking-tight md:text-[28px]">Plano personalizado com IA</h2>
+                                <h2 className="font-serif text-2xl font-normal tracking-tight md:text-[28px]">Sua próxima jornada começa aqui</h2>
                                 <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[var(--of-secondary)]">
                                     Uma trilha de estudo criada a partir do seu momento de vida e das suas
                                     necessidades espirituais.
@@ -131,24 +137,25 @@ const Plans: React.FC = () => {
                                 onClick={() => navigate('/plans/ai-generator')}
                                 className="h-[56px] shrink-0 rounded-full border border-[var(--of-border-hover)] px-8 text-[13px] font-medium tracking-tight text-white transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-white/40 hover:bg-[var(--of-surface-hover)] active:scale-[0.98]"
                             >
-                                Criar agora
+                                Criar meu plano
                             </button>
                         </div>
                     </section>
 
                     {/* Entrar com código */}
-                    <section className="mt-16 md:mt-20">
-                        <h2 className="flex items-center gap-5 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--of-muted)]">
+                    <section className="plans-section mt-16 md:mt-20">
+                        <h2 className="library-section-title flex items-center gap-5">
                             Entrar com código
                             <span className="h-px flex-1 bg-[var(--of-border)]" />
                         </h2>
 
+                        <p className="plans-invite-description">Recebeu um convite? Entre no plano e compartilhe a jornada.</p>
                         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-4">
                             <input
                                 value={inviteCode}
                                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                                 onKeyDown={e => { if (e.key === 'Enter') handleJoinCode(); }}
-                                placeholder="CÓDIGO DE CONVITE"
+                                placeholder="Digite o código de convite"
                                 maxLength={8}
                                 aria-label="Código de convite"
                                 className="min-w-0 flex-1 rounded-full border border-[var(--of-border)] bg-[var(--of-surface)] px-7 py-5 font-sans text-[13px] tracking-[0.3em] text-white uppercase placeholder:text-[var(--of-muted)] focus:border-[var(--of-border-hover)] focus:outline-none transition-colors duration-[var(--of-dur)]"
@@ -165,8 +172,8 @@ const Plans: React.FC = () => {
                     </section>
 
                     {/* Planos */}
-                    <section className="mt-16 md:mt-20">
-                        <h2 className="flex items-center gap-5 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--of-muted)]">
+                    <section className="plans-section mt-16 md:mt-20">
+                        <h2 className="library-section-title flex items-center gap-5">
                             Seus planos
                             <span className="h-px flex-1 bg-[var(--of-border)]" />
                         </h2>
@@ -195,7 +202,7 @@ const Plans: React.FC = () => {
                                         key={plan.id}
                                         layout
                                         onClick={() => navigate(`/plano/${plan.id}`)}
-                                        className="group flex cursor-pointer items-center gap-6 px-3 py-8 transition-colors duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-surface-hover)] md:py-9"
+                                        className="plans-item group flex cursor-pointer items-center gap-6 px-3 py-8 transition-colors duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-surface-hover)] md:py-9"
                                     >
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-3">
@@ -214,7 +221,7 @@ const Plans: React.FC = () => {
                                                 <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-[var(--of-border)]">
                                                     <span
                                                         className="block h-full rounded-full bg-white transition-all duration-500"
-                                                        style={{ width: `${Math.max(plan.progress, 2)}%` }}
+                                                        style={{ width: `${Math.min(100, Math.max(0, plan.progress))}%` }}
                                                     />
                                                 </span>
                                                 <span className="shrink-0 text-[11px] tabular-nums text-[var(--of-muted)]">

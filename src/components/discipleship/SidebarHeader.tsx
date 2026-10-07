@@ -33,7 +33,7 @@ const GhostButton = ({
  * O botão "+" é o único elemento preenchido em branco.
  */
 export const SidebarHeader: React.FC<Props> = ({ onBack, onNewConversation, onNewGroup, onNewJourney }) => (
-    <header className="flex items-center justify-between gap-2 px-4 pt-4">
+    <header className="flex items-center justify-between gap-3 px-4 pt-4 pb-4">
         <button
             type="button"
             onClick={onBack}
@@ -44,7 +44,7 @@ export const SidebarHeader: React.FC<Props> = ({ onBack, onNewConversation, onNe
             <ArrowLeft size={16} strokeWidth={1.75} />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
             <GhostButton icon={MessageSquarePlus} label="Nova conversa" onClick={onNewConversation} />
             <GhostButton icon={Users} label="Novo grupo" onClick={onNewGroup} />
             <button

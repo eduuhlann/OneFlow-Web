@@ -13,6 +13,7 @@ import { ProfileBanner } from '../components/profile/ProfileBanner';
 import { StatCard, STAT_ICONS } from '../components/profile/ProfileStats';
 import { ProfileLinkBar } from '../components/profile/ProfileLinkBar';
 import { ProfileButton } from '../components/profile/ProfileButton';
+import './profile-pages.css';
 
 const PublicProfile: React.FC = () => {
     const { username = '' } = useParams<{ username: string }>();
@@ -140,7 +141,7 @@ const PublicProfile: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#080808] text-white">
+        <div className="profile-page min-h-screen bg-[#080808] text-white">
             <ProfileNav onBack={handleBack} onApp={() => navigate('/dashboard')} />
 
             <main className="mx-auto max-w-4xl px-4 pb-24 pt-6 sm:px-6 lg:px-8">
@@ -164,12 +165,12 @@ const PublicProfile: React.FC = () => {
                     </div>
                 ) : notFound || !profile ? (
                     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-5 text-center">
-                        <span className="font-serif text-3xl tracking-tight text-white/">OneFlow</span>
+                        <span className="font-serif text-3xl tracking-tight text-white/60">OneFlow</span>
                         {noUsername ? (
                             <>
                                 <h1 className="font-serif text-2xl font-bold tracking-tight">Você ainda não tem um link público</h1>
-                                <p className="max-w-sm text-[15px] text-white/">
-                                    Defina um nome de usuário para ter um endereço público em <span className="text-white/">/u/seu_usuario</span>.
+                                <p className="max-w-sm text-[15px] text-white/60">
+                                    Defina um nome de usuário para ter um endereço público em <span className="text-white/60">/u/seu_usuario</span>.
                                 </p>
                                 <button
                                     onClick={() => navigate('/profile/edit')}
@@ -181,8 +182,8 @@ const PublicProfile: React.FC = () => {
                         ) : (
                             <>
                                 <h1 className="font-serif text-2xl font-bold tracking-tight">Perfil não encontrado</h1>
-                                <p className="max-w-sm text-[15px] text-white/">
-                                    O usuário <span className="text-white/">@{cleanUsername}</span> não existe ou mudou de nome.
+                                <p className="max-w-sm text-[15px] text-white/60">
+                                    O usuário <span className="text-white/60">@{cleanUsername}</span> não existe ou mudou de nome.
                                 </p>
                                 <button
                                     onClick={() => navigate('/dashboard')}
@@ -198,20 +199,20 @@ const PublicProfile: React.FC = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.22 }}
-                        className="overflow-hidden rounded-[2rem] border border-white/[0.06] bg-[#0a0a0a] shadow-[0_12px_40px_-12px_rgba(255,255,255,0.06)]"
+                        className="profile-card overflow-hidden rounded-[2rem] border border-white/[0.06] bg-[#0a0a0a] shadow-[0_12px_40px_-12px_rgba(255,255,255,0.06)]"
                     >
                         <ProfileBanner bannerSrc={bannerSrc} featuredVerse={profile.featured_verse} avatarSrc={avatarSrc} displayName={profile.display_name} />
 
-                        <div className="px-6 pt-20 pb-8 sm:px-9 sm:pt-24 lg:pt-28">
+                        <div className="profile-content px-6 pt-20 pb-8 sm:px-9 sm:pt-24 lg:pt-28">
                             {/* Informações + ações */}
                             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
                                 <div className="min-w-0 flex-1 space-y-3">
-                                    <h1 className="truncate font-serif text-[28px] font-bold leading-none tracking-tight text-white sm:text-3xl lg:text-[34px]">
+                                    <h1 className="profile-name font-serif text-[28px] font-bold leading-none tracking-tight text-white sm:text-3xl lg:text-[34px]">
                                         {profile.display_name || profile.username || 'Usuário'}
                                     </h1>
-                                    <p className="text-[15px] font-sans font-medium text-white/">@{profile.username || 'sem_username'}</p>
+                                    <p className="profile-username text-[15px] font-sans font-medium text-white/60">@{profile.username || 'sem_username'}</p>
                                     {(profile.short_bio || profile.bio) && (
-                                        <p className="mt-1 line-clamp-3 font-serif text-[15px] leading-snug text-white/">
+                                        <p className="profile-bio mt-1 font-serif text-[15px] leading-snug text-white/60">
                                             {profile.short_bio || profile.bio}
                                         </p>
                                     )}
@@ -220,14 +221,11 @@ const PublicProfile: React.FC = () => {
                                 <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                                     {isSelf ? (
                                         <>
-                                            <ProfileButton variant="primary" onClick={() => navigate('/profile')}>
+                                            <ProfileButton variant="primary" onClick={() => navigate('/profile/edit')}>
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                                Meu Perfil
+                                                Editar perfil
                                             </ProfileButton>
-                                            <ProfileButton variant="secondary" onClick={() => navigate('/profile/edit')}>
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                                Editar
-                                            </ProfileButton>
+
                                         </>
                                     ) : (
                                         <>
@@ -254,7 +252,7 @@ const PublicProfile: React.FC = () => {
                                     <button
                                         onClick={() => copy(shareUrl)}
                                         aria-label={copied ? 'Link copiado' : 'Copiar link do perfil'}
-                                        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/12 text-white/ transition-colors duration-150 hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b]"
+                                        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/12 text-white/60 transition-colors duration-150 hover:border-white/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b]"
                                     >
                                         {copied
                                             ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
@@ -265,14 +263,14 @@ const PublicProfile: React.FC = () => {
                             </div>
 
                             {/* Estatísticas */}
-                            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div className="profile-stat-grid mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
                                 {stats.map((s) => (
                                     <StatCard key={s.label} icon={s.icon} value={s.value} label={s.label} />
                                 ))}
                             </div>
 
                             {/* Link público */}
-                            <div className="mt-7 border-t border-white/[0.06] pt-6">
+                            <div className="mt-8">
                                 <ProfileLinkBar url={shareUrl} copied={copied} onCopy={() => copy(shareUrl)} />
                             </div>
                         </div>

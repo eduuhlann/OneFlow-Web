@@ -24,6 +24,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import { Loading } from '../components/Loading';
+import './library-pages.css';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -39,7 +40,7 @@ const Bible: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
-    const [fontSize, setFontSize] = useState(20);
+    const [fontSize, setFontSize] = useState(22);
     const [fontFamily, setFontFamily] = useState<'sans' | 'serif' | 'mono'>('serif');
     const [showInsights, setShowInsights] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -146,7 +147,7 @@ const Bible: React.FC = () => {
                 className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
             >
                 <span className="text-xs font-bold uppercase tracking-wider">{currentVersion}</span>
-                <ChevronDown className="w-3 h-3 text-white/" />
+                <ChevronDown className="w-3 h-3 text-white/60" />
             </button>
             
             <AnimatePresence>
@@ -169,10 +170,10 @@ const Bible: React.FC = () => {
                                     )}
                                 >
                                     <div className="uppercase text-xs font-bold tracking-widest text-white">{v.version}</div>
-                                    <div className="text-[10px] text-white/ truncate mt-0.5">{v.name || 'Nova Versão'}</div>
+                                    <div className="text-[10px] text-white/60 truncate mt-0.5">{v.name || 'Nova Versão'}</div>
                                 </button>
                             )) : (
-                                <div className="px-4 py-3 text-xs text-white/ text-center">Carregando versões...</div>
+                                <div className="px-4 py-3 text-xs text-white/60 text-center">Carregando versões...</div>
                             )}
                         </motion.div>
                     </>
@@ -192,7 +193,7 @@ const Bible: React.FC = () => {
     // 1. Book Selection
     if (!bookAbbrev) {
         return (
-            <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black">
+            <div className="bible-page min-h-screen bg-black text-white selection:bg-white selection:text-black">
                 <Header>
                     <div className="flex items-center gap-4">
                         <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -201,21 +202,21 @@ const Bible: React.FC = () => {
                         <h1 className="text-xl font-bold tracking-tight">Bíblia Sagrada</h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="relative w-48 hidden md:block">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/ w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder="Pesquisar livro..."
-                                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 focus:outline-none focus:border-white/30 transition-all text-xs"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
                         <VersionSelector />
                     </div>
                 </Header>
 
-                <div className="max-w-4xl mx-auto px-6 pt-28 pb-24">
+                <div className="bible-library max-w-4xl mx-auto px-6 pt-28 pb-24">
+                    <div className="library-intro">
+                        <p className="library-eyebrow">LEIA. RESPIRE. REFLITA.</p>
+                        <h2>A Palavra no <em>seu ritmo.</em></h2>
+                        <p>Escolha um livro e encontre um momento para se aprofundar.</p>
+                        <label className="library-search">
+                            <Search size={21} aria-hidden="true" />
+                            <input type="search" aria-label="Pesquisar livro da Bíblia" placeholder="Qual livro você quer ler?" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} />
+                        </label>
+                    </div>
+                    {filteredBooks.length === 0 && <p className="library-no-results" role="status">Nenhum livro encontrado. Tente outro nome ou abreviação.</p>}
                     <div className="space-y-16">
                         {[
                             { label: 'Velho Testamento', books: testaments.VT },
@@ -223,7 +224,7 @@ const Bible: React.FC = () => {
                         ].map(({ label, books: sectionBooks }) => (
                             <section key={label}>
                                 <div className="flex items-center gap-4 mb-6">
-                                    <h2 className="text-[10px] font-black tracking-[0.3em] text-white/ uppercase">{label}</h2>
+                                    <h2 className="library-section-title">{label}</h2>
                                     <div className="flex-1 h-px bg-white/5" />
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -231,10 +232,10 @@ const Bible: React.FC = () => {
                                         <Link
                                             key={book.abbrev.pt}
                                             to={`/bible/${book.abbrev.pt}`}
-                                            className="group p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.07] hover:border-white/15 transition-all active:scale-95"
+                                            className="bible-book group p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.07] hover:border-white/15 transition-all active:scale-95"
                                         >
                                             <p className="text-base font-bold group-hover:text-white transition-colors">{book.name}</p>
-                                            <p className="text-[10px] text-white/ font-bold uppercase tracking-widest mt-1">{book.chapters} Cap.</p>
+                                            <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest mt-1">{book.chapters} Cap.</p>
                                         </Link>
                                     ))}
                                 </div>
@@ -249,7 +250,7 @@ const Bible: React.FC = () => {
     // 2. Chapter Selection
     if (bookAbbrev && !chapterNum) {
         return (
-            <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black">
+            <div className="bible-page min-h-screen bg-black text-white selection:bg-white selection:text-black">
                 <Header>
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate('/bible')} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -257,7 +258,7 @@ const Bible: React.FC = () => {
                         </button>
                         <div>
                             <h2 className="text-lg font-bold tracking-tight">{selectedBook?.name}</h2>
-                            <p className="text-[10px] text-white/ uppercase tracking-widest font-bold">{selectedBook?.chapters} Capítulos</p>
+                            <p className="text-[10px] text-white/60 uppercase tracking-widest font-bold">{selectedBook?.chapters} Capítulos</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -268,9 +269,14 @@ const Bible: React.FC = () => {
                     </div>
                 </Header>
 
-                <div className="max-w-2xl mx-auto px-6 pt-28 pb-24">
+                <div className="bible-chapters max-w-2xl mx-auto px-6 pt-28 pb-24">
+                    <div className="library-intro">
+                        <p className="library-eyebrow">ESCOLHA SEU PRÓXIMO CAPÍTULO</p>
+                        <h1>{selectedBook?.name}</h1>
+                        <p>{selectedBook?.chapters} capítulos para explorar. Os capítulos lidos aparecem em destaque.</p>
+                    </div>
                     {selectedBook?.description && (
-                        <p className="text-white/ text-sm font-light leading-relaxed mb-10 italic">{selectedBook.description}</p>
+                        <p className="text-white/60 text-sm font-light leading-relaxed mb-10 italic">{selectedBook.description}</p>
                     )}
                     <div className="grid grid-cols-5 sm:grid-cols-7 gap-2.5">
                         {Array.from({ length: selectedBook?.chapters || 0 }, (_, i) => i + 1).map(c => {
@@ -298,7 +304,7 @@ const Bible: React.FC = () => {
 
     // 3. Reader View
     return (
-        <div className="min-h-screen bg-black text-white selection:bg-white/20 selection:text-white">
+        <div className="bible-page min-h-screen bg-black text-white selection:bg-white/20 selection:text-white">
             <Header>
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(`/bible/${bookAbbrev}`)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -307,9 +313,9 @@ const Bible: React.FC = () => {
                     <div>
                         <h2 className="text-base font-bold flex items-center gap-2">
                             {selectedBook?.name} {chapterNum}
-                            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/ uppercase">{currentVersion}</span>
+                            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/60 uppercase">{currentVersion}</span>
                         </h2>
-                        {chapterTitle && <p className="text-[10px] text-white/ font-bold uppercase tracking-widest">{chapterTitle}</p>}
+                        {chapterTitle && <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">{chapterTitle}</p>}
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -321,7 +327,7 @@ const Bible: React.FC = () => {
                         <ChevronRight className="w-5 h-5" />
                     </button>
                     <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-white/5 rounded-full transition-colors ml-1">
-                        <Settings className="w-5 h-5 text-white/" />
+                        <Settings className="w-5 h-5 text-white/60" />
                     </button>
                 </div>
             </Header>
@@ -341,7 +347,7 @@ const Bible: React.FC = () => {
                         >
                             <div className="max-w-sm mx-auto space-y-8">
                                 <div>
-                                    <h3 className="text-[10px] font-black text-white/ uppercase tracking-widest mb-4">Tamanho da Fonte</h3>
+                                    <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-4">Tamanho da Fonte</h3>
                                     <div className="flex items-center justify-between gap-3">
                                         {[16, 18, 20, 24, 28].map(size => (
                                             <button
@@ -358,7 +364,7 @@ const Bible: React.FC = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="text-[10px] font-black text-white/ uppercase tracking-widest mb-4">Estilo</h3>
+                                    <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-4">Estilo</h3>
                                     <div className="grid grid-cols-3 gap-3">
                                         {(['sans', 'serif', 'mono'] as const).map(font => (
                                             <button
@@ -380,14 +386,14 @@ const Bible: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            <main className="max-w-2xl mx-auto px-6 pt-28 pb-40">
+            <main className="bible-reader max-w-2xl mx-auto px-6 pt-28 pb-40">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-48">
                         <Loading fullScreen={false} />
                     </div>
                 ) : error ? (
                     <div className="bg-white/5 border border-white/10 p-10 rounded-3xl text-center">
-                        <p className="text-white/ font-bold text-lg mb-6">{error}</p>
+                        <p className="text-white/60 font-bold text-lg mb-6">{error}</p>
                         <button
                             onClick={() => loadChapter(bookAbbrev!, chapterNum!, currentVersion)}
                             className="bg-white text-black px-8 py-3 rounded-2xl font-bold text-sm"
@@ -409,7 +415,7 @@ const Bible: React.FC = () => {
                     >
                         {/* Chapter number */}
                         <div className="text-center mb-12">
-                            <span className="text-[10px] font-black tracking-[0.4em] text-white/ uppercase">{selectedBook?.name}</span>
+                            <span className="text-[10px] font-black tracking-[0.4em] text-white/60 uppercase">{selectedBook?.name}</span>
                             <h1 className="text-8xl font-black opacity-10 tracking-tighter mt-1">{chapterNum}</h1>
                         </div>
 
@@ -423,11 +429,11 @@ const Bible: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center">
-                                                <Lightbulb className="w-4 h-4 text-white/" />
+                                                <Lightbulb className="w-4 h-4 text-white/60" />
                                             </div>
                                             <h4 className="text-sm font-bold">Resumo do Capítulo</h4>
                                         </div>
-                                        <ChevronRight className={cn("w-5 h-5 text-white/ transition-transform", showInsights && "rotate-90")} />
+                                        <ChevronRight className={cn("w-5 h-5 text-white/60 transition-transform", showInsights && "rotate-90")} />
                                     </div>
                                     <AnimatePresence>
                                         {showInsights && (
@@ -437,13 +443,13 @@ const Bible: React.FC = () => {
                                                 exit={{ height: 0, opacity: 0 }}
                                                 className="space-y-4 pt-5 mt-5 border-t border-white/5 overflow-hidden"
                                             >
-                                                <p className="text-white/ italic text-base leading-relaxed">{insight.summary}</p>
+                                                <p className="text-white/60 italic text-base leading-relaxed">{insight.summary}</p>
                                                 <div className="space-y-2">
-                                                    <h5 className="text-[10px] font-black text-white/ uppercase tracking-[0.2em]">Aplicação</h5>
+                                                    <h5 className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">Aplicação</h5>
                                                     {insight.practicalApplication.map((app, i) => (
                                                         <div key={i} className="flex gap-3">
                                                             <div className="w-1 h-1 rounded-full bg-white/30 mt-3 flex-shrink-0" />
-                                                            <p className="text-white/ text-sm">{app}</p>
+                                                            <p className="text-white/60 text-sm">{app}</p>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -459,7 +465,7 @@ const Bible: React.FC = () => {
                             {chapterData.verses.map(v => (
                                 <div key={v.number} className="group relative flex items-start gap-4">
                                     <div className="flex-1 relative">
-                                        <span className="absolute -left-10 top-1 text-xs font-black text-white/ tabular-nums select-none">{v.number}</span>
+                                        <span className="absolute -left-10 top-1 text-xs font-black text-white/60 tabular-nums select-none">{v.number}</span>
                                         <p className="inline leading-relaxed text-white/80">
                                             {v.number === 1 && (
                                                 <span className="text-5xl font-bold float-left mr-3 mt-1 leading-[0.9] text-white">{v.text.charAt(0)}</span>
@@ -479,7 +485,7 @@ const Bible: React.FC = () => {
                                 disabled={chapterNum === 1}
                                 className="flex-1 bg-white/[0.03] border border-white/5 p-6 rounded-3xl hover:bg-white/[0.07] transition-all text-left disabled:opacity-20"
                             >
-                                <p className="text-[10px] font-black text-white/ uppercase tracking-widest mb-1">Anterior</p>
+                                <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Anterior</p>
                                 <p className="text-base font-bold">← Cap. {chapterNum! - 1}</p>
                             </button>
                             <button
@@ -487,7 +493,7 @@ const Bible: React.FC = () => {
                                 disabled={chapterNum === selectedBook?.chapters}
                                 className="flex-1 bg-white/[0.03] border border-white/5 p-6 rounded-3xl hover:bg-white/[0.07] transition-all text-right disabled:opacity-20"
                             >
-                                <p className="text-[10px] font-black text-white/ uppercase tracking-widest mb-1">Próximo</p>
+                                <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Próximo</p>
                                 <p className="text-base font-bold">Cap. {chapterNum! + 1} →</p>
                             </button>
                         </div>

@@ -12,11 +12,11 @@ const VARIANTS: Record<Variant, string> = {
     primary: 'bg-white text-black border border-white hover:bg-white/90',
     // Secundário: fundo quase preto, borda fina
     secondary: 'bg-white/[0.02] text-white/70 border border-white/12 hover:border-white/30 hover:text-white hover:bg-white/[0.05]',
-    ghost: 'bg-transparent text-white/ border border-white/12 hover:border-white/30 hover:text-white',
+    ghost: 'bg-transparent text-white/60 border border-white/12 hover:border-white/30 hover:text-white',
 };
 
 const BASE =
-    'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 ' +
+    'profile-action inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 ' +
     'text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap ' +
     'transition-[background-color,border-color,color,transform,box-shadow] duration-150 ease-out ' +
     'hover:shadow-[0_6px_20px_-10px_rgba(255,255,255,0.35)] active:scale-[0.98] ' +

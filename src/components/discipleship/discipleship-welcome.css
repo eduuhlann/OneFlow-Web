@@ -45,7 +45,7 @@
 }
 
 .disc-welcome-paper button:focus-visible {
-  outline-color: #20211c;
+  outline-color: #f4f3ee;
 }
 
 .disc-welcome-back,
@@ -83,10 +83,10 @@
   position: relative;
   width: 100%;
   padding: 25px 34px 21px;
-  background: #e4e3dc;
-  color: #20211c;
-  border: 1px solid rgba(244, 243, 238, 0.16);
-  border-radius: 4px;
+  background: transparent;
+  color: #f4f3ee;
+  border: 0;
+  border-radius: 0;
 }
 
 .disc-welcome-paper-top {
@@ -95,7 +95,7 @@
   justify-content: space-between;
   gap: 18px;
   padding-bottom: 18px;
-  border-bottom: 1px solid rgba(49, 50, 41, 0.14);
+  border-bottom: 1px solid rgba(244, 243, 238, 0.14);
 }
 
 .disc-welcome-paper-top > span:first-child {
@@ -109,7 +109,7 @@
   font-size: 8px;
   font-weight: 400;
   letter-spacing: 0.14em;
-  color: #5c5d53;
+  color: #aaa9a3;
   text-align: right;
 }
 
@@ -124,7 +124,7 @@
 .disc-welcome-kicker {
   display: block;
   margin-bottom: 18px;
-  color: #5c5d53;
+  color: #aaa9a3;
   font-size: 8px;
   font-weight: 400;
   letter-spacing: 0.15em;
@@ -153,7 +153,7 @@
 .disc-welcome-description {
   max-width: 280px;
   margin: 20px 0 0;
-  color: #57584e;
+  color: #aaa9a3;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.65;
@@ -184,25 +184,25 @@
 }
 
 .disc-welcome-primary {
-  border: 1px solid #23241e;
-  background: #23241e;
-  color: #f4f3ee;
+  border: 1px solid #f4f3ee;
+  background: #f4f3ee;
+  color: #080808;
 }
 
 .disc-welcome-primary:hover {
-  background: #3d3e35;
-  border-color: #3d3e35;
+  background: #d9d8d1;
+  border-color: #d9d8d1;
 }
 
 .disc-welcome-secondary {
-  border: 1px solid rgba(49, 50, 41, 0.21);
+  border: 1px solid rgba(244, 243, 238, 0.25);
   background: transparent;
-  color: #292b23;
+  color: #f4f3ee;
 }
 
 .disc-welcome-secondary:hover {
-  background: rgba(255, 255, 255, 0.23);
-  border-color: rgba(49, 50, 41, 0.36);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(244, 243, 238, 0.45);
 }
 
 .disc-welcome-primary > svg:last-child,
@@ -227,7 +227,7 @@
   padding: 4px 0;
   border: 0;
   background: transparent;
-  color: #4c4e42;
+  color: #aaa9a3;
   font-size: 10px;
   text-align: left;
   text-decoration: underline;
@@ -237,7 +237,7 @@
 }
 
 .disc-welcome-more-actions button:hover {
-  color: #1d1e18;
+  color: #f4f3ee;
   text-decoration-color: currentColor;
 }
 
@@ -277,7 +277,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  color: #5c5d53;
+  color: #aaa9a3;
   font-size: 7px;
   letter-spacing: 0.18em;
   text-align: center;
@@ -290,8 +290,8 @@
   min-height: 57px;
   margin-top: 24px;
   padding: 15px 17px;
-  background: #f4f3ee;
-  border-radius: 12px 12px 12px 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 .disc-welcome-mantra > svg {
@@ -310,7 +310,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 18px;
-  color: #4c4e43;
+  color: #aaa9a3;
   font-size: 9px;
 }
 
@@ -320,14 +320,14 @@
   justify-content: space-between;
   gap: 15px;
   padding-top: 17px;
-  border-top: 1px solid rgba(49, 50, 41, 0.14);
-  color: #55574a;
+  border-top: 1px solid rgba(244, 243, 238, 0.14);
+  color: #aaa9a3;
   font-size: 9px;
   letter-spacing: 0.015em;
 }
 
 .disc-welcome-bottom-symbol {
-  color: #424437;
+  color: #c0bfb9;
   font-size: 22px;
   line-height: 1;
 }
@@ -418,4 +418,39 @@
 @media (prefers-reduced-motion: reduce) {
   .disc-welcome-star { animation: none; }
   .disc-welcome button { transition: none; }
+}
+
+/* Give the welcome section more room in the main panel. */
+.disc-welcome-shell {
+  width: min(1400px, 100%);
+  padding-inline: clamp(20px, 3vw, 48px);
+}
+.disc-welcome-paper { padding: 30px 20px; }
+.disc-welcome-paper-top > span:first-child { font-size: 14px; }
+.disc-welcome-meta { font-size: 10px; }
+.disc-welcome-main { padding: 48px 0; gap: 48px; }
+.disc-welcome-kicker { font-size: 10px; }
+.disc-welcome-intro h1 { font-size: clamp(48px, 4.5vw, 72px); }
+.disc-welcome-description { max-width: 360px; font-size: 16px; }
+.disc-welcome-actions { max-width: 390px; margin-top: 36px; gap: 12px; }
+.disc-welcome-primary,
+.disc-welcome-secondary { min-height: 56px; padding: 16px 20px; font-size: 15px; }
+.disc-welcome-more-actions button { font-size: 13px; min-height: 42px; }
+.disc-welcome-art { max-width: 600px; }
+.disc-welcome-orbit-caption { font-size: 9px; }
+.disc-welcome-mantra p { font-size: 14px; }
+.disc-welcome-visual-note,
+.disc-welcome-paper-bottom { font-size: 11px; }
+
+@container discipleship-welcome (max-width: 760px) {
+  .disc-welcome-shell { padding: 24px 18px; }
+  .disc-welcome-paper { padding: 16px 0; }
+  .disc-welcome-main { gap: 30px; padding: 32px 0; }
+  .disc-welcome-intro h1 { font-size: clamp(38px, 8cqw, 58px); }
+  .disc-welcome-description { font-size: 14px; }
+  .disc-welcome-actions { max-width: none; margin-top: 26px; }
+  .disc-welcome-art { width: min(100%, 460px); }
+  .disc-welcome-paper-top > span:first-child { font-size: 12px; }
+  .disc-welcome-meta { font-size: 8px; }
+  .disc-welcome-mantra p { font-size: 12px; }
 }

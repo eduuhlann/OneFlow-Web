@@ -1,105 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
     AlertCircle,
     ArrowLeft,
-    ArrowRight
+    ArrowRight,
+    LoaderCircle,
+    BookOpen,
+    Users
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
 import { translateAuthError } from '../services/authErrors';
-
-function AuthParticles() {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        let animId = 0;
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-        let particles: { x: number; y: number; size: number; vx: number; vy: number; opacity: number }[] = [];
-
-        const resize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        };
-
-        const init = () => {
-            particles = [];
-            const count = Math.floor((canvas.width * canvas.height) / 8000);
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 2 + 0.5,
-                    vx: (Math.random() - 0.5) * 0.4,
-                    vy: (Math.random() - 0.5) * 0.4,
-                    opacity: Math.random() * 0.6 + 0.2,
-                });
-            }
-        };
-
-        const draw = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const p of particles) {
-                ctx.globalAlpha = p.opacity;
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-                p.x += p.vx;
-                p.y += p.vy;
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
-            }
-            if (!reducedMotion.matches) {
-                animId = requestAnimationFrame(draw);
-            }
-        };
-
-        const handleResize = () => {
-            cancelAnimationFrame(animId);
-            resize();
-            init();
-            draw();
-        };
-        const handleMotionPreference = () => {
-            cancelAnimationFrame(animId);
-            draw();
-        };
-
-        window.addEventListener('resize', handleResize);
-        reducedMotion.addEventListener('change', handleMotionPreference);
-        handleResize();
-
-        return () => {
-            cancelAnimationFrame(animId);
-            window.removeEventListener('resize', handleResize);
-            reducedMotion.removeEventListener('change', handleMotionPreference);
-        };
-    }, []);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            aria-hidden="true"
-            className="fixed inset-0 w-full h-full pointer-events-none z-0"
-            style={{ background: '#000' }}
-        />
-    );
-}
+import './auth.css';
 
 export default function Auth() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [activeProvider, setActiveProvider] = useState<'discord' | 'google' | null>(null);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -111,164 +31,66 @@ export default function Auth() {
     }, []);
 
     useEffect(() => {
-        if (user) {
-            navigate('/dashboard');
-        }
+        if (user) navigate('/dashboard');
     }, [user, navigate]);
 
     const handleOAuthLogin = async (provider: 'discord' | 'google') => {
+        setActiveProvider(provider);
         setLoading(true);
         setError('');
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
-                options: {
-                    redirectTo: new URL('/auth/callback', window.location.origin).toString(),
-                },
+                options: { redirectTo: new URL('/auth/callback', window.location.origin).toString() },
             });
             if (error) throw error;
-        } catch (err: any) {
-            setError(translateAuthError(err.message));
+        } catch (err: unknown) {
+            setError(translateAuthError(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.'));
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen text-white relative overflow-hidden selection:bg-white selection:text-black">
-            <AuthParticles />
-
-            <Link
-                to="/"
-                className="absolute top-5 left-5 md:top-7 md:left-7 z-20 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm text-white/70 backdrop-blur-sm transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-            >
-                <ArrowLeft size={16} aria-hidden="true" />
-                Voltar ao início
-            </Link>
-
-            <div className="relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-center lg:gap-20 p-4 md:p-6 pt-24 md:pt-24 pb-10 overflow-y-auto">
-                {/* Left Side: Logo - Hidden on mobile */}
-                <div className="hidden lg:flex flex-1 items-center justify-center lg:justify-center order-2 lg:order-1" style={{ perspective: 1200 }}>
-                    <motion.div
-                        initial={{ opacity: 0, y: 80, scale: 0.85, rotateX: 40, rotateY: -15 }}
-                        animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0, rotateY: 0 }}
-                        transition={{ 
-                            duration: 1.4, 
-                            type: "spring", 
-                            stiffness: 80,
-                            damping: 14,
-                            delay: 0.2
-                        }}
-                        className="w-full max-w-lg lg:ml-[-10%] relative"
-                    >
-                        <motion.div
-                            animate={{ opacity: [0.15, 0.45, 0.15], scale: [0.95, 1.15, 0.95] }}
-                            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                            className="absolute -inset-10 bg-white/5 blur-[80px] rounded-[50%] z-0"
-                            style={{ pointerEvents: 'none' }}
-                        />
-                        
-                        <motion.div
-                            animate={{ y: [0, -15, 0] }}
-                            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                            <motion.img
-                                src={logo}
-                                alt="OneFlow Logo"
-                                className="w-full h-auto object-contain brightness-[1.15] relative z-10 transition-all cursor-pointer drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
-                                whileHover={{ 
-                                    scale: 1.08, 
-                                    filter: "brightness(1.4) drop-shadow(0 0 50px rgba(255,255,255,0.3))" 
-                                }}
-                                transition={{ type: "spring", bounce: 0.6 }}
-                            />
-                        </motion.div>
-                    </motion.div>
-                </div>
-
-                {/* Right Side: Auth Options */}
-                <div className="flex-1 flex items-center justify-center lg:justify-start order-1 lg:order-2 w-full">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="w-full max-w-xl"
-                    >
-                        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 md:p-14 shadow-2xl shadow-black/50 text-center">
-                            <div className="mb-10">
-                                <h1 className="text-5xl md:text-6xl font-outfit font-extrabold tracking-[-0.05em] mb-4 leading-[0.9] uppercase group">
-                                    BEM-VINDO AO <br/>
-                                    <span className="text-white/ group-hover:text-white transition-colors duration-700">ONEFLOW</span>
-                                </h1>
-                                <p className="text-[9px] font-bold tracking-[0.5em] text-white/ uppercase">
-                                    Escolha como se conectar
-                                </p>
-                            </div>
-
-                            <div className="space-y-4">
-                                <button
-                                    onClick={() => handleOAuthLogin('discord')}
-                                    disabled={loading}
-                                    className="w-full bg-[#5865F2] text-white py-6 rounded-2xl font-outfit font-black text-[12px] tracking-widest flex items-center justify-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-[0_20px_50px_-20px_rgba(88,101,242,0.5)] uppercase group relative overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-discord" viewBox="0 0 16 16">
+        <main className="auth-page">
+            <Link to="/" className="auth-back"><ArrowLeft size={16} />Voltar ao início</Link>
+            <div className="auth-layout">
+                <section className="auth-story" aria-label="OneFlow">
+                    <div className="auth-logo"><img src={logo} alt="OneFlow" /></div>
+                    <p className="auth-eyebrow">UM ESPAÇO PARA A SUA FÉ</p>
+                    <h2>Sua jornada.<br /><em>Um novo começo.</em></h2>
+                    <p className="auth-story-description">Encontre inspiração na Palavra e pessoas para compartilhar a caminhada.</p>
+                    <div className="auth-story-details"><span><BookOpen size={17} /> Palavra que inspira</span><span><Users size={17} /> Conexões com propósito</span></div>
+                </section>
+                <motion.section className="auth-panel" aria-labelledby="auth-title" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <p className="auth-eyebrow">BEM-VINDO AO ONEFLOW</p>
+                    <h1 id="auth-title">Entre no seu <em>flow.</em></h1>
+                    <p className="auth-description">Escolha sua conta para começar ou continuar sua jornada.</p>
+                    <div className="auth-providers" aria-busy={loading}>
+                        <button type="button" className="auth-provider auth-provider-discord" disabled={loading} onClick={() => handleOAuthLogin('discord')}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-discord" viewBox="0 0 16 16">
                                         <path d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"/>
                                     </svg>
-                                    Continuar com Discord
-                                    <ArrowRight size={16} className="ml-2 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                                </button>
-
-                                <div className="flex items-center justify-center gap-3 my-2">
-                                    <div className="h-px flex-1 bg-white/10" />
-                                    <span className="text-[9px] font-black tracking-[0.3em] text-white/ uppercase">ou</span>
-                                    <div className="h-px flex-1 bg-white/10" />
-                                </div>
-
-                                <button
-                                    onClick={() => handleOAuthLogin('google')}
-                                    disabled={loading}
-                                    className="w-full bg-white text-gray-800 py-6 rounded-2xl font-outfit font-black text-[12px] tracking-widest flex items-center justify-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-[0_20px_50px_-20px_rgba(255,255,255,0.4)] uppercase group relative overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48" >
+                            <span>{loading && activeProvider === 'discord' ? 'Conectando…' : 'Continuar com Discord'}</span>
+                            {loading && activeProvider === 'discord' ? <LoaderCircle className="auth-spinner" size={18} /> : <ArrowRight size={18} />}
+                        </button>
+                        <div className="auth-divider"><span />ou<span /></div>
+                        <button type="button" className="auth-provider auth-provider-google" disabled={loading} onClick={() => handleOAuthLogin('google')}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48" >
                                         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                                         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
                                         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                                     </svg>
-                                    Continuar com Google
-                                    <ArrowRight size={16} className="ml-2 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                                </button>
-                            </div>
-
-                            {error && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="mt-8 flex items-center justify-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black tracking-widest uppercase"
-                                >
-                                    <AlertCircle size={16} />
-                                    {error}
-                                </motion.div>
-                            )}
-
-                            <div className="mt-12 pt-8 border-t border-white/5">
-                                <p className="text-[9px] font-black tracking-[0.3em] text-white/80 uppercase leading-relaxed">
-                                    Acesso seguro via Supabase Auth.<br/>
-                                    Seus dados estão protegidos.
-                                </p>
-                            </div>
-                        </div>
-
-                        <p className="mt-12 text-center text-[9px] font-black tracking-[0.4em] text-white/80 leading-relaxed uppercase">
-                            AO CONTINUAR VOCÊ CONCORDA COM OS<br />
-                            <span className="text-white/ underline decoration-white/10 underline-offset-8 text-[8px]">
-                                <Link to="/terms" className="hover:text-white transition-colors">TERMOS</Link> E <Link to="/privacy" className="hover:text-white transition-colors">PRIVACIDADE</Link>
-                            </span>
-                        </p>
-                    </motion.div>
-                </div>
+                            <span>{loading && activeProvider === 'google' ? 'Conectando…' : 'Continuar com Google'}</span>
+                            {loading && activeProvider === 'google' ? <LoaderCircle className="auth-spinner" size={18} /> : <ArrowRight size={18} />}
+                        </button>
+                    </div>
+                    {error && <div className="auth-error" role="alert"><AlertCircle size={18} /><span>{error}</span></div>}
+                    <p className="auth-account-note">Sua conta será criada automaticamente no primeiro acesso.</p>
+                    <p className="auth-terms">Ao continuar, você concorda com os <Link to="/terms">Termos de uso</Link> e a <Link to="/privacy">Política de privacidade</Link>.</p>
+                </motion.section>
             </div>
-        </div>
+            <footer className="auth-footer">Sua fé. Sua jornada. OneFlow.</footer>
+        </main>
     );
 }

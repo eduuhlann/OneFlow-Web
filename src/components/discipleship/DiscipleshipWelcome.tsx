@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BookOpen, MessageCircle, Pause, Play, Plus, UserRoundPlus, Users } from 'lucide-react';
+import { useEffect, useId, useRef } from 'react';
+import { ArrowUpRight, BookOpen, MessageCircle, Plus, UserRound, UserRoundPlus, Users } from 'lucide-react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import './discipleship-welcome.css';
 
@@ -29,21 +29,17 @@ const firstOrbit = ellipsePath(159, 75, 32);
 const secondOrbit = ellipsePath(141, 91, -39);
 
 export function DiscipleshipWelcome({
-  displayName,
   connectionCount,
   onExplorePeople,
   onConversations,
   onNewGroup,
   onExplorePlans,
-  onBack,
 }: DiscipleshipWelcomeProps) {
-  const [paused, setPaused] = useState(false);
   const reducedMotion = useReducedMotion();
-  const still = paused || Boolean(reducedMotion);
+  const still = Boolean(reducedMotion);
   const svgRef = useRef<SVGSVGElement>(null);
   const artRef = useRef<HTMLDivElement>(null);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  const initial = displayName?.trim().charAt(0).toLocaleUpperCase('pt-BR') || 'V';
   const count = typeof connectionCount === 'number' && Number.isFinite(connectionCount)
     ? Math.max(0, Math.floor(connectionCount))
     : 0;
@@ -86,26 +82,6 @@ export function DiscipleshipWelcome({
   return (
     <section className="disc-welcome" data-paused={still ? 'true' : 'false'} aria-labelledby={`${id}-title`}>
       <div className="disc-welcome-shell">
-        <header className="disc-welcome-topbar">
-          <button type="button" className="disc-welcome-back" onClick={onBack} aria-label="Voltar ao início">
-            <ArrowLeft size={16} aria-hidden="true" />
-            <span>Voltar ao início</span>
-          </button>
-          <span className="disc-welcome-eyebrow">DISCIPULADO</span>
-          <button
-            type="button"
-            className="disc-welcome-motion"
-            onClick={() => setPaused((value) => !value)}
-            aria-pressed={still}
-            aria-label={reducedMotion ? 'Animações reduzidas pela preferência do dispositivo' : paused ? 'Retomar animações' : 'Pausar animações'}
-            title={reducedMotion ? 'Sua preferência de movimento reduzido está ativa' : paused ? 'Retomar animações' : 'Pausar animações'}
-            disabled={Boolean(reducedMotion)}
-          >
-            {paused && !reducedMotion ? <Play size={13} aria-hidden="true" /> : <Pause size={13} aria-hidden="true" />}
-            <span>{reducedMotion ? 'Movimento reduzido' : paused ? 'Retomar' : 'Pausar animações'}</span>
-          </button>
-        </header>
-
         <article className="disc-welcome-paper">
           <div className="disc-welcome-paper-top">
             <span><Users size={15} strokeWidth={1.5} aria-hidden="true" /> Conexões com propósito</span>
@@ -153,18 +129,18 @@ export function DiscipleshipWelcome({
                     <g transform="translate(220 151)">
                       <ellipse className="disc-welcome-orbit-one" rx="159" ry="75" transform="rotate(32)" stroke="#a5a59b" strokeWidth="0.8" strokeOpacity="0.62" />
                       <ellipse className="disc-welcome-orbit-two" rx="141" ry="91" transform="rotate(-39)" stroke="#a5a59b" strokeWidth="0.8" strokeOpacity="0.62" />
-                      <circle r="44" fill="#d3d2ca" />
-                      <Users x={-20} y={-20} width={40} height={40} stroke="#262721" strokeWidth={1} />
+                      <circle r="44" fill="#1c1c1a" />
+                      <Users x={-20} y={-20} width={40} height={40} stroke="#f4f3ee" strokeWidth={1} />
 
                       <g transform={reducedMotion ? 'translate(-108 -61)' : undefined}>
                         {!reducedMotion && <animateMotion dur="32s" begin="-16s" repeatCount="indefinite"><mpath href={`#${id}-orbit-one`} /></animateMotion>}
                         <circle r="24" fill="#b7b7aa" />
-                        <text fill="#24251f" textAnchor="middle" dominantBaseline="central" fontFamily="Outfit, sans-serif" fontSize="18" fontWeight="400">{initial}</text>
+                        <UserRound x={-12} y={-12} width={24} height={24} stroke="#24251f" strokeWidth={1.5} />
                       </g>
                       <g transform={reducedMotion ? 'translate(123 66)' : undefined}>
                         {!reducedMotion && <animateMotion dur="38s" begin="-4s" repeatCount="indefinite"><mpath href={`#${id}-orbit-two`} /></animateMotion>}
                         <circle r="24" fill="#30322b" />
-                        <text fill="#f4f3ee" textAnchor="middle" dominantBaseline="central" fontFamily="Outfit, sans-serif" fontSize="18" fontWeight="400">C</text>
+                        <UserRound x={-12} y={-12} width={24} height={24} stroke="#f4f3ee" strokeWidth={1.5} />
                       </g>
                       <g transform={reducedMotion ? 'translate(32 -103)' : undefined}>
                         {!reducedMotion && <animateMotion dur="27s" begin="-20s" repeatCount="indefinite"><mpath href={`#${id}-orbit-two`} /></animateMotion>}
@@ -172,7 +148,7 @@ export function DiscipleshipWelcome({
                       </g>
                     </g>
                     <g transform="translate(342 65)">
-                      <g className="disc-welcome-star" stroke="#43453a" strokeWidth="1.25" strokeLinecap="round">
+                      <g className="disc-welcome-star" stroke="#c0bfb9" strokeWidth="1.25" strokeLinecap="round">
                         <path d="M-12 0H12M0-12V12M-8.5-8.5L8.5 8.5M-8.5 8.5L8.5-8.5" />
                       </g>
                     </g>
@@ -200,7 +176,6 @@ export function DiscipleshipWelcome({
             <span className="disc-welcome-bottom-symbol" aria-hidden="true">✳</span>
           </footer>
         </article>
-        <p className="disc-welcome-bottom-note">Cada jornada tem seu ritmo. Encontre alguém para caminhar com você.</p>
       </div>
     </section>
   );

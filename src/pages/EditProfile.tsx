@@ -370,13 +370,15 @@ const EditProfile: React.FC = () => {
         <aside className="ep-sidebar">
           <div className="ep-sidebar-top">
             <OneFlowLogo />
-            <p className="ep-sidebar-heading">Configurações Do Perfil</p>
+            <p className="ep-sidebar-heading">Seu perfil</p>
           </div>
 
-          <nav className="ep-nav">
+          <nav className="ep-nav" aria-label="Seções do perfil">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
+                aria-current={activeSection === item.id ? 'page' : undefined}
+                title={item.label}
                 onClick={() => setActiveSection(item.id)}
                 className={`ep-nav-item ${activeSection === item.id ? 'ep-nav-item--active' : ''}`}
               >
@@ -462,7 +464,7 @@ const EditProfile: React.FC = () => {
                   {/* Section header */}
                   <div className="ep-section-header">
                     <h2 className="ep-section-title">Perfil</h2>
-                    <p className="ep-section-desc">Aqui você pode editar as informações básicas do seu perfil.</p>
+                    <p className="ep-section-desc">Mostre quem você é. Personalize sua foto, seu nome e sua história.</p>
                   </div>
 
                   {/* ── Avatar ── */}
@@ -502,7 +504,7 @@ const EditProfile: React.FC = () => {
 
                   {/* ── Display Name ── */}
                   <div className="ep-block">
-                    <label className="ep-field-label" htmlFor="ep-display-name">Nome De Exibição</label>
+                    <label className="ep-field-label" htmlFor="ep-display-name">Nome de exibição</label>
                     <p className="ep-field-desc">Este é o nome que as pessoas verão no OneFlow.</p>
                     <div className="ep-input-wrap">
                       <input
@@ -520,7 +522,7 @@ const EditProfile: React.FC = () => {
 
                   {/* ── Username ── */}
                   <div className="ep-block">
-                    <label className="ep-field-label" htmlFor="ep-username">Nome De Usuário</label>
+                    <label className="ep-field-label" htmlFor="ep-username">Nome de usuário</label>
                     <p className="ep-field-desc">Seu identificador único no OneFlow.</p>
                     <div className="ep-input-wrap ep-input-wrap--prefix">
                       <span className="ep-input-prefix"><AtSign size={14} /></span>
@@ -540,7 +542,7 @@ const EditProfile: React.FC = () => {
 
                   {/* ── Bio ── */}
                   <div className="ep-block">
-                    <label className="ep-field-label" htmlFor="ep-bio">Sobre Mim</label>
+                    <label className="ep-field-label" htmlFor="ep-bio">Sobre mim</label>
                     <p className="ep-field-desc">Conte um pouco sobre você.</p>
                     <div className="ep-textarea-wrap">
                       <textarea
@@ -558,7 +560,7 @@ const EditProfile: React.FC = () => {
 
                   {/* ── Bio curta (#3) ── */}
                   <div className="ep-block">
-                    <label className="ep-field-label" htmlFor="ep-short-bio">Bio Curta</label>
+                    <label className="ep-field-label" htmlFor="ep-short-bio">Bio curta</label>
                     <p className="ep-field-desc">Aparece no card de compartilhamento e no topo do seu perfil público.</p>
                     <div className="ep-textarea-wrap">
                       <input
@@ -793,7 +795,7 @@ const EditProfile: React.FC = () => {
                     {[
                       { label: 'Perfil Público', desc: 'Seu perfil pode ser visto por qualquer pessoa.' },
                       { label: 'Exibir Conexões', desc: 'Outras pessoas podem ver suas redes conectadas.' },
-                      { label: 'Exibir Sobre Mim', desc: 'Sua bio aparece no perfil público.' },
+                      { label: 'Exibir Sobre mim', desc: 'Sua bio aparece no perfil público.' },
                     ].map((item, i) => (
                       <div key={i} className="ep-privacy-item">
                         <div>
@@ -1906,6 +1908,53 @@ const EP_STYLES = `
     .ep-save-btn { padding: 8px 14px; font-size: 12px; }
     .ep-lib-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
     .ep-lib-grid--wide { grid-template-columns: 1fr; }
+  }
+
+  /* Spacious editor and accessible navigation on smaller screens. */
+  .ep-root { font-family: 'Outfit', sans-serif; font-size: 16px; }
+  .ep-main { min-width: 0; }
+  .ep-header { gap: 20px; padding: 24px 40px; }
+  .ep-header-title { font-size: 26px; font-weight: 500; letter-spacing: -.6px; }
+  .ep-back-btn { width: 44px; height: 44px; border-radius: 50%; }
+  .ep-save-btn { min-height: 46px; padding: 12px 22px; font-size: 15px; }
+  .ep-content { padding: 44px 40px 80px; }
+  .ep-editor { width: 100%; max-width: 960px; margin-inline: auto; }
+  .ep-section-header { padding-bottom: 26px; border-bottom: 1px solid #ffffff15; margin-bottom: 12px; }
+  .ep-section-title { font-size: 40px; font-weight: 400; letter-spacing: -1.2px; }
+  .ep-section-desc { font-size: 17px; line-height: 1.8; max-width: 600px; }
+  .ep-field-label { font-size: 17px; font-weight: 500; }
+  .ep-field-desc { font-size: 14px; line-height: 1.8; }
+  .ep-input { min-height: 58px; padding-right: 72px; font-size: 17px; }
+  .ep-textarea { font-size: 17px; min-height: 150px; }
+  .ep-input::placeholder, .ep-textarea::placeholder { color: #777770; }
+  .ep-input:focus, .ep-textarea:focus { border-color: #c9c8c0; }
+  .ep-btn-primary, .ep-btn-secondary { min-height: 44px; font-size: 14px; }
+  .ep-nav-item { min-height: 50px; font-size: 15px; border-radius: 10px; }
+  .ep-nav-item--active { background: #ffffff0c; box-shadow: inset 3px 0 #f4f3ee; }
+  .ep-root button:focus-visible { outline: 2px solid #f4f3ee; outline-offset: 4px; }
+  @media (min-width: 901px) and (max-width: 1400px) {
+    .ep-sidebar { width: 230px; padding: 30px 18px; }
+    .ep-logo-text, .ep-sidebar-heading, .ep-nav-label { display: block; }
+    .ep-sidebar-top { align-items: flex-start; }
+    .ep-nav-item { justify-content: flex-start; padding: 14px; }
+  }
+  @media (max-width: 640px) {
+    .ep-root { flex-direction: column; }
+    .ep-sidebar { display: block; width: 100%; height: auto; position: static; padding: 16px; border-right: 0; border-bottom: 1px solid #ffffff15; overflow: visible; }
+    .ep-sidebar-top { display: none; }
+    .ep-nav { display: flex; gap: 8px; overflow-x: auto; padding: 4px; }
+    .ep-nav-item { flex-shrink: 0; justify-content: center; gap: 8px; padding: 12px 14px; min-height: 44px; }
+    .ep-nav-label { display: block; font-size: 13px; white-space: nowrap; }
+    .ep-nav-item--active { box-shadow: inset 0 -2px #f4f3ee; }
+    .ep-header { padding: 18px 16px; gap: 12px; flex-wrap: wrap; }
+    .ep-header-title { font-size: 22px; }
+    .ep-header-right { flex-wrap: wrap; }
+    .ep-save-btn { font-size: 13px; padding: 12px 16px; }
+    .ep-content { padding: 30px 20px 60px; }
+    .ep-section-title { font-size: 34px; }
+    .ep-section-desc { font-size: 15px; }
+    .ep-block { padding-block: 26px; }
+    .ep-avatar-row { flex-wrap: wrap; gap: 22px; }
   }
 `;
 

@@ -13,7 +13,7 @@ export function ProfileBanner({ bannerSrc, featuredVerse, avatarSrc, displayName
     const initial = (displayName || '?').charAt(0).toUpperCase();
 
     return (
-        <div className="relative h-48 w-full sm:h-60 md:h-72 lg:h-80">
+        <div className="profile-banner relative h-48 w-full sm:h-60 md:h-72 lg:h-80">
             <div className="absolute inset-0 overflow-hidden rounded-t-[2rem]">
                 {bannerSrc ? (
                     <img
@@ -41,7 +41,7 @@ export function ProfileBanner({ bannerSrc, featuredVerse, avatarSrc, displayName
             </div>
 
             {featuredVerse ? (
-                <blockquote className="absolute right-6 top-6 z-10 max-w-[46%] truncate text-right font-serif text-[13px] font-medium leading-snug text-white sm:top-8 sm:text-[15px]">
+                <blockquote className="profile-featured-verse absolute right-6 top-6 z-10 max-w-[46%] text-right font-serif text-[13px] font-medium leading-snug text-white sm:top-8 sm:text-[15px]">
                     &ldquo;{featuredVerse}&rdquo;
                 </blockquote>
             ) : null}
@@ -50,7 +50,7 @@ export function ProfileBanner({ bannerSrc, featuredVerse, avatarSrc, displayName
                 className="absolute bottom-0 left-6 z-20 sm:left-8"
                 style={{ transform: 'translateY(60%)' }}
             >
-                <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[#0b0b0b] shadow-[0_6px_28px_-4px_rgba(0,0,0,0.7)] ring-1 ring-white/20 sm:h-28 sm:w-28 lg:h-32 lg:w-32">
+                <div className="profile-avatar h-24 w-24 overflow-hidden rounded-full border-4 border-[#0b0b0b] shadow-[0_6px_28px_-4px_rgba(0,0,0,0.7)] ring-1 ring-white/20 sm:h-28 sm:w-28 lg:h-32 lg:w-32">
                     {avatarSrc ? (
                         <img
                             src={avatarSrc}

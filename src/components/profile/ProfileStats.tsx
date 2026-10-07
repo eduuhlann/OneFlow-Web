@@ -12,14 +12,14 @@ interface StatCardProps {
  */
 export function StatCard({ icon, value, label }: StatCardProps) {
     return (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/[0.06] bg-[#0e0e0e] px-5 py-6 text-center">
-            <span className="flex items-center justify-center rounded-full bg-white/[0.04] p-2 text-white/">
+        <div className="profile-stat flex flex-col items-center gap-3 rounded-2xl border border-white/[0.06] bg-[#0e0e0e] px-5 py-6 text-center">
+            <span className="flex items-center justify-center rounded-full bg-white/[0.04] p-2 text-white/60">
                 {icon}
             </span>
             <span className="text-[28px] font-sans font-semibold tracking-tight text-white tabular-nums">
                 {value}
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/">
+            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/60">
                 {label}
             </span>
         </div>

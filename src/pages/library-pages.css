@@ -1,0 +1,55 @@
+.bible-page, .plans-page { font-family: 'Outfit', sans-serif; background: #080808; color: #f4f3ee; }
+.bible-library, .plans-library { max-width: 1200px; }
+.bible-page header > div { max-width: 1152px; }
+.library-intro { padding-block: 28px 48px; }
+.library-eyebrow { font-size: 11px; letter-spacing: 2px; color: #aaa9a3; margin: 0 0 20px; }
+.library-intro h1, .library-intro h2 { font-size: clamp(38px, 4.5vw, 62px); font-weight: 400; letter-spacing: -2px; line-height: 1.15; margin: 0 0 20px; }
+.library-intro em { font-family: 'Playfair Display', Georgia, serif; font-weight: 400; }
+.library-intro > p:last-of-type { font-size: 17px; color: #aaa9a3; line-height: 1.8; max-width: 620px; }
+.library-search { display: flex; align-items: center; gap: 14px; max-width: 600px; margin-top: 32px; padding: 18px 22px; border: 1px solid #ffffff25; border-radius: 12px; background: #111110; color: #aaa9a3; }
+.library-search:focus-within { border-color: #f4f3ee88; }
+.library-search input { width: 100%; min-width: 0; background: transparent; outline: none; font-size: 16px; color: #f4f3ee; }
+.library-search input::placeholder { color: #777770; }
+.library-section-title { font-size: 14px; font-weight: 500; letter-spacing: .5px; color: #c9c8c0; }
+.bible-book { padding: 24px; border-color: #ffffff18; border-radius: 14px; min-height: 104px; }
+.bible-book p:first-child { font-size: 19px; font-weight: 500; }
+.bible-book p:not(:first-child) { font-size: 13px; color: #999991; margin-top: 8px; }
+.library-no-results { color: #aaa9a3; padding: 24px 0; }
+.bible-chapters { max-width: 1000px; }
+.bible-chapters .grid > a { font-size: 20px; border-radius: 12px; }
+.bible-reader { max-width: 800px; }
+.bible-page header button, .bible-page header a { min-height: 40px; }
+.bible-page a:focus-visible, .bible-page button:focus-visible, .plans-page button:focus-visible { outline: 2px solid #f4f3ee; outline-offset: 4px; }
+.plans-library > header { padding-bottom: 30px; align-items: center; }
+.plans-library > header h1 { font-family: 'Outfit', sans-serif; font-size: 38px; }
+.plans-intro { padding-top: 28px; }
+.plans-new-button { min-height: 48px; font-size: 13px; text-transform: none; letter-spacing: 0; }
+.plans-create { background: linear-gradient(130deg, #1c1c19, #111110); padding: 36px; border-radius: 18px; }
+.plans-create h2 { font-family: 'Outfit', sans-serif; font-size: 28px; }
+.plans-create p { font-size: 17px; }
+.plans-create button { background: #f4f3ee; color: #080808; font-size: 15px; border-radius: 12px; }
+.plans-create button:hover { background: #d9d8d1; }
+.plans-invite-description { margin-top: 14px; font-size: 16px; line-height: 1.7; color: #aaa9a3; }
+.plans-section input { font-size: 16px; letter-spacing: .12em; border-radius: 12px; }
+.plans-section input::placeholder { text-transform: none; letter-spacing: 0; }
+.plans-section button { font-size: 15px; }
+.plans-item { padding: 28px 20px; gap: 20px; }
+.plans-item h3 { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 500; }
+.plans-item p { font-size: 14px; }
+.plans-item .tabular-nums { font-size: 14px; }
+.plans-item button { opacity: 1; }
+@media (max-width: 600px) {
+ .library-intro { padding-block: 20px 32px; }
+ .library-intro h1, .library-intro h2 { font-size: 38px; letter-spacing: -1.5px; }
+ .library-intro > p:last-of-type { font-size: 15px; }
+ .bible-book { padding: 18px 16px; min-height: 94px; }
+ .bible-book p:first-child { font-size: 17px; }
+ .plans-library > header { flex-wrap: wrap; gap: 24px; }
+ .plans-new-button { margin-left: 64px; }
+ .plans-create { padding: 26px; }
+ .plans-create h2 { font-size: 24px; }
+ .plans-create p { font-size: 15px; }
+ .plans-item { padding-inline: 8px; gap: 8px; }
+ .plans-item h3 { font-size: 20px; }
+ .plans-item p { font-size: 13px; }
+}
