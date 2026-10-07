@@ -6,12 +6,17 @@ import {
   MessageSquarePlus,
   Send,
   Trash2,
+  BookOpen,
+  CalendarDays,
+  Compass,
+  ArrowUpRight,
 } from 'lucide-react';
 import { IconBible } from '@tabler/icons-react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import PageTransition from '../components/PageTransition';
 import { callGeminiChat } from '../services/ai/geminiService';
+import './oneflow-ai.css';
 
 type ChatMessage = {
   id: string;
@@ -63,9 +68,9 @@ function readConversations(): Conversation[] {
 }
 
 const suggestions = [
-  'Me ajude a organizar minha semana',
-  'Explique um conceito de forma simples',
-  'Sugira um plano de estudos para mim',
+  { title: 'Explore a Palavra', description: 'Entenda uma passagem com mais clareza.', prompt: 'Me ajude a entender o contexto e os ensinamentos de João 15.', Icon: BookOpen },
+  { title: 'Encontre seu ritmo', description: 'Organize um momento diário de leitura.', prompt: 'Me ajude a criar uma rotina de leitura bíblica de 15 minutos por dia.', Icon: CalendarDays },
+  { title: 'Comece uma reflexão', description: 'Leve a fé para as escolhas do seu dia.', prompt: 'Quero refletir sobre como viver minha fé nas pequenas escolhas do dia a dia.', Icon: Compass },
 ];
 
 export default function OneFlowAI() {
@@ -76,6 +81,7 @@ export default function OneFlowAI() {
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeConversation =
@@ -190,11 +196,11 @@ export default function OneFlowAI() {
 
   return (
     <PageTransition>
-      <main className="flex h-[100dvh] min-h-[520px] bg-[#080808] font-sans text-white">
+      <main className="ai-page flex h-[100dvh] min-h-[520px] bg-[#080808] font-sans text-white">
         <aside
           className={`${
             showHistory ? 'flex' : 'hidden'
-          } fixed inset-0 z-30 w-full flex-col border-r border-white/[0.08] bg-[#0c0c0c] p-4 md:static md:flex md:w-[270px] md:shrink-0`}
+          } ai-sidebar fixed inset-0 z-30 w-full flex-col border-r border-white/[0.08] bg-[#0c0c0c] p-4 md:static md:flex md:w-[270px] md:shrink-0`}
         >
           <div className="flex items-center justify-between gap-3">
             <button
@@ -252,7 +258,7 @@ export default function OneFlowAI() {
                   type="button"
                   onClick={() => removeConversation(conversation.id)}
                   aria-label={`Excluir conversa ${conversation.title}`}
-                  className="mr-1 rounded-md p-2 text-white/35 opacity-100 transition hover:bg-white/10 hover:text-white md:opacity-0 md:group-hover:opacity-100"
+                  className="focus-visible:opacity-100 mr-1 rounded-md p-2 text-white/35 opacity-100 transition hover:bg-white/10 hover:text-white md:opacity-0 md:group-hover:opacity-100"
                 >
                   <Trash2 size={14} aria-hidden="true" />
                 </button>
@@ -271,7 +277,7 @@ export default function OneFlowAI() {
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col">
+        <section className="ai-main flex min-w-0 flex-1 flex-col">
           <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-white/[0.08] px-4 sm:px-7">
             <div className="flex min-w-0 items-center gap-3">
               <button
@@ -300,34 +306,36 @@ export default function OneFlowAI() {
             </button>
           </header>
 
-          <div className="custom-scrollbar flex-1 overflow-y-auto px-4 sm:px-8">
-            <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col py-8 sm:py-12">
+          <div className="ai-scroll custom-scrollbar flex-1 overflow-y-auto px-4 sm:px-8">
+            <div className="ai-content mx-auto flex min-h-full w-full max-w-3xl flex-col py-8 sm:py-12">
               {activeConversation.messages.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center justify-center pb-8 text-center">
+                <div className="ai-welcome flex flex-1 flex-col items-center justify-center pb-8 text-center">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
                     <IconBible size={25} className="text-white/85" aria-hidden="true" />
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                    Como posso ajudar?
+                    Um espaço para <em>suas perguntas.</em>
                   </h2>
                   <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/45">
-                    Converse com a OneFlow V1. Pergunte, explore ideias ou comece por uma sugestão.
+                    Explore a Palavra, organize suas ideias e encontre um novo ponto de partida. Por onde vamos começar?
                   </p>
-                  <div className="mt-8 grid w-full max-w-xl gap-2 sm:grid-cols-3">
+                  <div className="ai-suggestions mt-8 grid w-full max-w-xl gap-2 sm:grid-cols-3">
                     {suggestions.map((suggestion) => (
                       <button
-                        key={suggestion}
+                        key={suggestion.title}
                         type="button"
-                        onClick={() => setPrompt(suggestion)}
+                        onClick={() => { setPrompt(suggestion.prompt); composerRef.current?.focus(); }}
                         className="rounded-xl border border-white/[0.09] bg-white/[0.025] p-3 text-left text-xs leading-relaxed text-white/65 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
                       >
-                        {suggestion}
+                        <span className="ai-suggestion-top"><suggestion.Icon size={22} strokeWidth={1.5} /><ArrowUpRight size={17} /></span>
+                        <strong>{suggestion.title}</strong>
+                        <span className="ai-suggestion-description">{suggestion.description}</span>
                       </button>
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="space-y-8 pb-8">
+                <div className="ai-messages space-y-8 pb-8">
                   {activeConversation.messages.map((message) => (
                     <article
                       key={message.id}
@@ -348,7 +356,7 @@ export default function OneFlowAI() {
                         }`}
                       >
                         {message.role === 'model' ? (
-                          <div className="prose prose-invert prose-sm max-w-none break-words prose-p:my-3 prose-headings:mb-2 prose-headings:mt-5 prose-li:my-1 prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-[#151515] prose-code:text-white/90">
+                          <div className="ai-response prose prose-invert prose-sm max-w-none break-words prose-p:my-3 prose-headings:mb-2 prose-headings:mt-5 prose-li:my-1 prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-[#151515] prose-code:text-white/90">
                             <ReactMarkdown>{message.content}</ReactMarkdown>
                           </div>
                         ) : (
@@ -372,8 +380,8 @@ export default function OneFlowAI() {
             </div>
           </div>
 
-          <div className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-6">
-            <div className="mx-auto max-w-3xl">
+          <div className="ai-composer shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-6">
+            <div className="ai-composer-inner mx-auto max-w-3xl">
               {error && (
                 <p className="mb-3 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-xs leading-relaxed text-red-200" role="alert">
                   Não foi possível gerar a resposta: {error}
@@ -387,12 +395,13 @@ export default function OneFlowAI() {
                   Envie uma mensagem para OneFlow V1
                 </label>
                 <textarea
+                  ref={composerRef}
                   id="oneflow-prompt"
                   rows={1}
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
                   onKeyDown={handleComposerKeyDown}
-                  placeholder="Pergunte alguma coisa"
+                  placeholder="O que você quer explorar hoje?"
                   disabled={Boolean(generatingId)}
                   className="max-h-40 min-h-11 w-full resize-y bg-transparent px-3 py-3 text-sm leading-relaxed text-white outline-none placeholder:text-white/35 disabled:opacity-50"
                 />
