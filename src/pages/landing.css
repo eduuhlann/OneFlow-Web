@@ -86,11 +86,11 @@ html.oneflow-landing-page { position: relative; }
 .landing-showcase-heading h2 { font-size: clamp(40px, 3.7vw, 54px); margin-top: 15px; }
 .landing-showcase-heading > p { color: #999993; font-size: 13px; line-height: 1.9; padding-bottom: 3px; }
 .landing-showcase-heading > p > span { display: flex; align-items: center; justify-content: space-between; gap: 28px; font-size: 8px; letter-spacing: .16em; color: #e0dfd9; margin-top: 21px; }
-.landing-showcase-viewport { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-inline: max(56px, calc((100vw - 1280px) / 2)); padding-left: max(56px, calc((100vw - 1280px) / 2)); padding-right: max(56px, calc((100vw - 1280px) / 2)); }
+.landing-showcase-viewport { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-inline: 24px; padding-inline: 24px; }
 .landing-showcase-viewport::-webkit-scrollbar { display: none; }
 .landing-showcase.is-pinned .landing-showcase-viewport { overflow: clip; scroll-snap-type: none; }
-.landing-showcase-track { display: flex; gap: 24px; position: relative; width: max-content; padding-right: max(56px, calc((100vw - 1280px) / 2)); }
-.landing-feature { width: min(1050px, calc(100vw - 170px)); min-height: 395px; border: 1px solid #ffffff19; border-radius: 14px; padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 34px; background: #111; scroll-snap-align: start; flex-shrink: 0; }
+.landing-showcase-track { display: flex; gap: 24px; position: relative; width: max-content; padding-right: 24px; }
+.landing-feature { width: min(950px, calc(100vw - 220px)); min-height: 395px; border: 1px solid #ffffff19; border-radius: 14px; padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 34px; background: #111; scroll-snap-align: start; flex-shrink: 0; }
 .landing-feature-copy { display: flex; flex-direction: column; align-items: flex-start; padding: 20px 10px 15px 22px; }
 .landing-feature-index { display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 12px; color: #999993; margin-bottom: 33px; }
 .landing-feature-copy .landing-eyebrow { color: #969690; font-size: 8px; }
@@ -98,6 +98,8 @@ html.oneflow-landing-page { position: relative; }
 .landing-feature-description { color: #a0a09a; font-size: 12px; line-height: 1.85; max-width: 355px; }
 .landing-feature .landing-text-link { margin-top: 21px; font-size: 12px; }
 .landing-feature-caption { font-size: 7px; letter-spacing: .12em; color: #81817b; margin-top: auto; padding-top: 25px; }
+.landing-screenshot-preview { display: flex; align-items: center; justify-content: center; padding: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.08); }
+.landing-screenshot-preview img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 24px 48px rgba(0,0,0,0.32); }
 .landing-preview { border-radius: 7px; min-height: 360px; position: relative; overflow: hidden; }
 .landing-preview-top { height: 54px; margin-inline: 25px; border-bottom: 1px solid currentColor; border-bottom-color: #00000013; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 9px; }
 .landing-preview-top > span:first-child { display: flex; align-items: center; gap: 9px; }
@@ -233,9 +235,9 @@ html.oneflow-landing-page { position: relative; }
   .landing-hero h1 { font-size: 8vw; }
   .landing-hero-actions { gap: 22px; }
   .landing-hero-description { font-size: 14px; }
-  .landing-showcase-viewport { padding-left: 40px; padding-right: 40px; scroll-padding-inline: 40px; }
-  .landing-showcase-track { padding-right: 40px; }
-  .landing-feature { gap: 22px; width: calc(100vw - 110px); }
+  .landing-showcase-viewport { padding-inline: 20px; scroll-padding-inline: 20px; }
+  .landing-showcase-track { padding-right: 20px; }
+  .landing-feature { gap: 22px; width: min(860px, calc(100vw - 120px)); }
   .landing-purpose-layout { gap: 65px; }
   .landing-faq { gap: 55px; }
 }
@@ -310,9 +312,9 @@ html.oneflow-landing-page { position: relative; }
   .landing-showcase-heading h2 { font-size: 39px; margin-top: 14px; }
   .landing-showcase-heading > p { margin-top: 18px; font-size: 12px; line-height: 1.7; }
   .landing-showcase-heading > p > span { font-size: 7px; justify-content: flex-start; gap: 15px; margin-top: 13px; }
-  .landing-showcase-viewport { padding-inline: 22px; scroll-padding-inline: 22px; }
-  .landing-showcase-track { gap: 16px; padding-right: 22px; }
-  .landing-feature { width: calc(100vw - 57px); max-width: 470px; grid-template-columns: 1fr; gap: 19px; min-height: auto; padding: 12px; }
+  .landing-showcase-viewport { padding-inline: 14px; scroll-padding-inline: 14px; }
+  .landing-showcase-track { gap: 16px; padding-right: 14px; }
+  .landing-feature { width: calc(100vw - 52px); max-width: 470px; grid-template-columns: 1fr; gap: 19px; min-height: auto; padding: 12px; }
   .landing-feature-copy { padding: 13px 12px 0; }
   .landing-feature-index { margin-bottom: 23px; font-size: 10px; }
   .landing-feature h3 { font-size: 29px; margin-block: 13px; }

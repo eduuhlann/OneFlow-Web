@@ -60,24 +60,24 @@ const Plans: React.FC = () => {
     return (
         <PageTransition>
             <div className="plans-page min-h-screen bg-[var(--of-bg)] text-white">
-                <div className="plans-library mx-auto flex w-full max-w-5xl flex-col px-6 pb-32 pt-6 md:px-10 md:pt-10">
+                <div className="plans-library mx-auto flex w-full max-w-[1600px] flex-col px-6 pb-32 pt-6 md:px-16 md:pt-10">
                     {/* Header */}
-                    <header className="flex items-start justify-between gap-6 pb-14 pt-4 md:pb-20 md:pt-6">
+                    <header className="flex items-start justify-between gap-6 pb-5 pt-4 md:pt-6">
                         <div className="flex items-center gap-5">
                             <button
                                 onClick={() => navigate('/dashboard')}
                                 title="Voltar"
                                 aria-label="Voltar"
-                                className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--of-border)] bg-[var(--of-surface)] text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white"
+                                className="flex size-12 shrink-0 items-center justify-center rounded-full border border-[var(--of-border)] bg-[var(--of-surface)] text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white sm:size-14"
                             >
-                                <ArrowLeft size={17} strokeWidth={1.75} />
+                                <ArrowLeft size={19} strokeWidth={1.75} />
                             </button>
 
                             <div>
-                                <span className="block text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--of-muted)]">
+                                <span className="block text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--of-muted)]">
                                     jornadas
                                 </span>
-                                <h1 className="mt-2 font-serif text-4xl font-normal leading-none tracking-tight sm:text-5xl">
+                                <h1 className="mt-2 font-serif text-4xl font-normal leading-none tracking-tight sm:text-6xl">
                                     Meus planos
                                 </h1>
                             </div>
@@ -85,9 +85,9 @@ const Plans: React.FC = () => {
 
                         <button
                             onClick={() => navigate('/plans/ai-generator')}
-                            className="plans-new-button group flex h-11 shrink-0 items-center gap-2 rounded-full border border-transparent bg-white px-6 text-[12px] font-semibold uppercase tracking-[0.16em] text-black transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-primary)] active:scale-95"
+                            className="plans-new-button group flex h-12 shrink-0 items-center gap-2 rounded-full border border-transparent bg-white px-7 text-[13px] font-semibold uppercase tracking-[0.16em] text-black transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-primary)] active:scale-95 sm:h-14 sm:px-8"
                         >
-                            <Plus size={15} strokeWidth={2} />
+                            <Plus size={17} strokeWidth={2} />
                             Novo plano
                         </button>
                     </header>
@@ -122,57 +122,48 @@ const Plans: React.FC = () => {
                         <h2>Crie raízes na <em>Palavra.</em></h2>
                         <p>Um plano para seu momento. Uma caminhada no seu ritmo.</p>
                     </div>
-                    {/* Criar com IA */}
-                    <section className="plans-create rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 md:p-10">
-                        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-                            <div>
-                                <h2 className="font-serif text-2xl font-normal tracking-tight md:text-[28px]">Sua próxima jornada começa aqui</h2>
-                                <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[var(--of-secondary)]">
-                                    Uma trilha de estudo criada a partir do seu momento de vida e das suas
-                                    necessidades espirituais.
-                                </p>
-                            </div>
-
+                    <div className="plans-actions-grid">
+                        <section className="plans-create rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 md:p-10">
+                            <h2 className="font-serif text-2xl font-normal tracking-tight md:text-[28px]">Sua próxima jornada começa aqui</h2>
+                            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[var(--of-secondary)]">
+                                Uma trilha de estudo criada a partir do seu momento de vida e das suas
+                                necessidades espirituais.
+                            </p>
                             <button
                                 onClick={() => navigate('/plans/ai-generator')}
-                                className="h-[56px] shrink-0 rounded-full border border-[var(--of-border-hover)] px-8 text-[13px] font-medium tracking-tight text-white transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-white/40 hover:bg-[var(--of-surface-hover)] active:scale-[0.98]"
+                                className="plans-create-button mt-6 h-[54px] shrink-0 rounded-full border border-transparent px-8 text-[13px] font-medium tracking-tight transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:bg-[var(--of-primary)] active:scale-[0.98]"
                             >
                                 Criar meu plano
                             </button>
-                        </div>
-                    </section>
+                        </section>
 
-                    {/* Entrar com código */}
-                    <section className="plans-section mt-16 md:mt-20">
-                        <h2 className="library-section-title flex items-center gap-5">
-                            Entrar com código
-                            <span className="h-px flex-1 bg-[var(--of-border)]" />
-                        </h2>
-
-                        <p className="plans-invite-description">Recebeu um convite? Entre no plano e compartilhe a jornada.</p>
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-4">
-                            <input
-                                value={inviteCode}
-                                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                                onKeyDown={e => { if (e.key === 'Enter') handleJoinCode(); }}
-                                placeholder="Digite o código de convite"
-                                maxLength={8}
-                                aria-label="Código de convite"
-                                className="min-w-0 flex-1 rounded-full border border-[var(--of-border)] bg-[var(--of-surface)] px-7 py-5 font-sans text-[13px] tracking-[0.3em] text-white uppercase placeholder:text-[var(--of-muted)] focus:border-[var(--of-border-hover)] focus:outline-none transition-colors duration-[var(--of-dur)]"
-                            />
-                            <button
-                                onClick={handleJoinCode}
-                                disabled={joiningCode || !inviteCode.trim()}
-                                className="inline-flex h-[58px] shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--of-border)] px-8 text-[13px] font-medium tracking-tight text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white active:scale-[0.98] disabled:pointer-events-none disabled:opacity-30"
-                            >
-                                <LogIn size={16} strokeWidth={1.75} />
-                                {joiningCode ? 'Entrando...' : 'Entrar'}
-                            </button>
-                        </div>
-                    </section>
+                        <section className="plans-invite-card rounded-2xl border border-[var(--of-border)] bg-[var(--of-surface)] p-8 md:p-9">
+                            <h2 className="font-serif text-2xl font-normal tracking-tight">Entrar com código</h2>
+                            <p className="plans-invite-description">Recebeu um convite? Entre no plano e compartilhe a jornada.</p>
+                            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-3">
+                                <input
+                                    value={inviteCode}
+                                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleJoinCode(); }}
+                                    placeholder="Digite o código de convite"
+                                    maxLength={8}
+                                    aria-label="Código de convite"
+                                    className="min-w-0 flex-1 rounded-xl border border-[var(--of-border)] bg-[var(--of-surface)] px-5 py-4 font-sans text-[13px] tracking-[0.12em] text-white uppercase placeholder:text-[var(--of-muted)] focus:border-[var(--of-border-hover)] focus:outline-none transition-colors duration-[var(--of-dur)]"
+                                />
+                                <button
+                                    onClick={handleJoinCode}
+                                    disabled={joiningCode || !inviteCode.trim()}
+                                    className="inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--of-border)] px-6 text-[13px] font-medium tracking-tight text-[var(--of-secondary)] transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-[var(--of-border-hover)] hover:bg-[var(--of-surface-hover)] hover:text-white active:scale-[0.98] disabled:pointer-events-none disabled:opacity-30"
+                                >
+                                    <LogIn size={16} strokeWidth={1.75} />
+                                    {joiningCode ? 'Entrando...' : 'Entrar'}
+                                </button>
+                            </div>
+                        </section>
+                    </div>
 
                     {/* Planos */}
-                    <section className="plans-section mt-16 md:mt-20">
+                    <section className="plans-section">
                         <h2 className="library-section-title flex items-center gap-5">
                             Seus planos
                             <span className="h-px flex-1 bg-[var(--of-border)]" />
@@ -183,14 +174,16 @@ const Plans: React.FC = () => {
                                 Carregando seus planos...
                             </div>
                         ) : aiPlans.length === 0 ? (
-                            <div className="flex flex-col items-center gap-6 py-28 text-center">
-                                <BookOpen size={56} strokeWidth={1} className="text-[var(--of-muted)]" />
-                                <p className="max-w-sm text-[15px] leading-relaxed text-[var(--of-secondary)]">
-                                    Você ainda não tem planos. Comece pela trilha criada para o seu momento.
-                                </p>
+                            <div className="flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between sm:py-16">
+                                <div className="flex items-center gap-5">
+                                    <BookOpen size={40} strokeWidth={1} className="shrink-0 text-[var(--of-muted)]" />
+                                    <p className="max-w-sm text-[15px] leading-relaxed text-[var(--of-secondary)]">
+                                        Você ainda não tem planos. Comece pela trilha criada para o seu momento.
+                                    </p>
+                                </div>
                                 <button
                                     onClick={() => navigate('/plans/ai-generator')}
-                                    className="h-[54px] rounded-full border border-[var(--of-border-hover)] px-8 text-[13px] font-medium tracking-tight transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-white/40 hover:bg-[var(--of-surface-hover)]"
+                                    className="h-[54px] shrink-0 self-start rounded-full border border-[var(--of-border-hover)] px-8 text-[13px] font-medium tracking-tight transition-all duration-[var(--of-dur)] ease-[var(--of-ease)] hover:border-white/40 hover:bg-[var(--of-surface-hover)] sm:self-auto"
                                 >
                                     Criar meu primeiro plano
                                 </button>

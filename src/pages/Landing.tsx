@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, MotionConfig, useReducedMotion, useScroll, useSpring } from 'motion/react';
-import { ArrowDown, ArrowUpRight, BookOpen, Check, Menu, Pause, Play, Plus, Sparkles, Users, X } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, BookOpen, Check, Menu, Pause, Play, Plus, Users, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
 import FeatureShowcase from '../components/landing/FeatureShowcase';
@@ -117,10 +117,10 @@ export default function Landing() {
             <div className="landing-purpose-layout">
               <Reveal><h2 id="purpose-title"><ScrollText mode="letters" disabled={motionDisabled} end={0.65}>Mais presença.</ScrollText><br /><em><ScrollText mode="letters" disabled={motionDisabled} end={0.65}>Mais propósito.</ScrollText></em></h2><p className="landing-purpose-description"><ScrollText disabled={motionDisabled} end={0.65}>A fé se vive nos pequenos passos. Na passagem que toca você. Na conversa que acolhe. No tempo que você escolhe dedicar ao que importa.</ScrollText></p><p className="landing-purpose-description"><ScrollText disabled={motionDisabled} end={0.65}>O OneFlow reúne esses momentos para você cultivar uma caminhada mais próxima da Palavra e de outras pessoas.</ScrollText></p><Link to={entryPath} className="landing-text-link">Encontre seu próximo passo<ArrowUpRight size={17} /></Link></Reveal>
               <Reveal className="landing-purpose-principles" delay={0.15}>
-                {[{ Icon: BookOpen, number: '01', title: 'A Palavra no centro', text: 'Leia, explore e volte ao que dá sentido à sua caminhada.' }, { Icon: Users, number: '02', title: 'A gente cresce junto', text: 'Crie conexões e compartilhe a jornada com outras pessoas.' }, { Icon: Sparkles, number: '03', title: 'No seu próprio ritmo', text: 'Um plano, uma reflexão, um novo começo. Um passo de cada vez.' }].map(({ Icon, number, title, text }) => <div className="landing-principle" key={number}><span className="landing-principle-number">{number}</span><div><Icon size={22} strokeWidth={1.25} /><h3><ScrollText disabled={motionDisabled} end={0.72}>{title}</ScrollText></h3><p><ScrollText disabled={motionDisabled} end={0.72}>{text}</ScrollText></p></div><ArrowUpRight size={19} className="landing-principle-arrow" /></div>)}
+                {[{ Icon: BookOpen, number: '01', title: 'A Palavra no centro', text: 'Leia, explore e volte ao que dá sentido à sua caminhada.' }, { Icon: Users, number: '02', title: 'A gente cresce junto', text: 'Crie conexões e compartilhe a jornada com outras pessoas.' }, { Icon: Check, number: '03', title: 'No seu próprio ritmo', text: 'Um plano, uma reflexão, um novo começo. Um passo de cada vez.' }].map(({ Icon, number, title, text }) => <div className="landing-principle" key={number}><span className="landing-principle-number">{number}</span><div><Icon size={22} strokeWidth={1.25} /><h3><ScrollText disabled={motionDisabled} end={0.72}>{title}</ScrollText></h3><p><ScrollText disabled={motionDisabled} end={0.72}>{text}</ScrollText></p></div><ArrowUpRight size={19} className="landing-principle-arrow" /></div>)}
               </Reveal>
             </div>
-            <Reveal><div className="landing-manifesto"><span aria-hidden="true">✳</span><p><ScrollText mode="letters" disabled={motionDisabled} end={0.68}>A jornada é sua.</ScrollText><br /><em><ScrollText disabled={motionDisabled} end={0.68}>Você não precisa caminhar só.</ScrollText></em></p><span className="landing-manifesto-sign">ONEFLOW</span></div></Reveal>
+            <Reveal><div className="landing-manifesto"><p><ScrollText mode="letters" disabled={motionDisabled} end={0.68}>A jornada é sua.</ScrollText><br /><em><ScrollText disabled={motionDisabled} end={0.68}>Você não precisa caminhar só.</ScrollText></em></p><span className="landing-manifesto-sign">ONEFLOW</span></div></Reveal>
           </section>
 
           <section id="duvidas" className="landing-faq landing-container" aria-labelledby="faq-title">

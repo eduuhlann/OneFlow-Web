@@ -1,4 +1,4 @@
-import { BookOpen, ArrowUpRight, Check, Sparkles } from 'lucide-react';
+import { BookOpen, ArrowUpRight, Check } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import './flow-artwork.css';
 
@@ -27,7 +27,7 @@ export default function FlowArtwork({ paused = false }: FlowArtworkProps) {
         </div>
       </div>
       <div className="flow-reading-progress">
-        <span className="flow-reading-progress-icon"><Sparkles size={18} /></span>
+        <span className="flow-reading-progress-icon"><Check size={18} /></span>
         <div><strong>Um dia de cada vez.</strong><span>Pequenos passos. Uma nova perspectiva.</span></div>
         <span className="flow-reading-check"><Check size={16} /></span>
       </div>

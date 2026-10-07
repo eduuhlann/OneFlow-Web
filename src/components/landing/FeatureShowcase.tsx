@@ -1,61 +1,34 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, CalendarDays, Check, MessageCircle, Sparkles, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, CalendarDays, Check, MessageCircle, Users } from 'lucide-react';
 import ScrollText from './ScrollText';
 import { scrollLandingTo } from './useSmoothScroll';
+import bibleImage from '../../assets/landing/bible.png';
+import discipleshipImage from '../../assets/landing/discipulado.png';
+import plansImage from '../../assets/landing/plans.png';
+import aiImage from '../../assets/landing/ai-chat.png';
 
 const STICKY_TOP = 90;
 const HORIZONTAL_TRAVEL_RATIO = 0.6;
 
 const features = [
-  { id: 'palavra', number: '01', tag: 'BÍBLIA', title: 'Uma pausa.\nUma nova perspectiva.', description: 'Encontre tempo para a Palavra. Explore livros, capítulos e passagens em uma leitura feita para você se aprofundar.', Icon: BookOpen },
-  { id: 'constancia', number: '02', tag: 'PLANOS DE LEITURA', title: 'Pequenos passos.\nRaízes profundas.', description: 'Transforme intenção em constância. Encontre planos de leitura e construa sua caminhada um dia de cada vez.', Icon: CalendarDays },
-  { id: 'conexao', number: '03', tag: 'DISCIPULADO', title: 'Caminhar junto\nfaz toda a diferença.', description: 'Conecte-se com outras pessoas, compartilhe reflexões e fortaleça a fé em conversas com propósito.', Icon: Users },
-  { id: 'reflexao', number: '04', tag: 'ONEFLOW V1', title: 'Boas perguntas.\nNovas descobertas.', description: 'Conte com um assistente de IA para explorar suas perguntas, aprofundar reflexões e encontrar um ponto de partida para estudar.', Icon: Sparkles },
+  { id: 'palavra', number: '01', tag: 'BÍBLIA', title: 'Uma pausa.\nUma nova perspectiva.', description: 'Encontre tempo para a Palavra. Explore livros, capítulos e passagens em uma leitura feita para você se aprofundar.', Icon: BookOpen, image: bibleImage, imageAlt: 'Tela de leitura bíblica em estilo dark mode' },
+  { id: 'constancia', number: '02', tag: 'PLANOS DE LEITURA', title: 'Pequenos passos.\nRaízes profundas.', description: 'Transforme intenção em constância. Encontre planos de leitura e construa sua caminhada um dia de cada vez.', Icon: CalendarDays, image: plansImage, imageAlt: 'Tela de criação e acompanhamento de planos de leitura' },
+  { id: 'conexao', number: '03', tag: 'DISCIPULADO', title: 'Caminhar junto\nfaz toda a diferença.', description: 'Conecte-se com outras pessoas, compartilhe reflexões e fortaleça a fé em conversas com propósito.', Icon: Users, image: discipleshipImage, imageAlt: 'Tela de conexão e discipulado' },
+  { id: 'reflexao', number: '04', tag: 'ONEFLOW V1', title: 'Boas perguntas.\nNovas descobertas.', description: 'Conte com um assistente de IA para explorar suas perguntas, aprofundar reflexões e encontrar um ponto de partida para estudar.', Icon: Check, image: aiImage, imageAlt: 'Tela de conversa com o assistente OneFlow V1' },
 ];
 
-function BiblePreview() {
-  const [selected, setSelected] = useState(0);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const passages = [
-    { label: 'Salmos 23', reference: 'SALMOS 23:1–3', text: 'O Senhor é o meu pastor; de nada terei falta.', caption: 'Ele renova as minhas forças e me guia por caminhos de justiça.' },
-    { label: 'João 15', reference: 'JOÃO 15:5', text: 'Eu sou a videira; vocês são os ramos.', caption: 'Uma leitura sobre permanecer, crescer e dar frutos.' },
-    { label: 'Filipenses 4', reference: 'FILIPENSES 4:13', text: 'Tudo posso naquele que me fortalece.', caption: 'Uma leitura sobre encontrar força e contentamento em Cristo.' },
-  ];
-  const selectWithKeyboard = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    let next = index;
-    if (event.key === 'ArrowRight') next = (index + 1) % passages.length;
-    else if (event.key === 'ArrowLeft') next = (index + passages.length - 1) % passages.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = passages.length - 1;
-    else return;
-    event.preventDefault();
-    setSelected(next);
-    tabRefs.current[next]?.focus();
-  };
-  return <div className="landing-preview landing-bible-preview"><div className="landing-preview-top"><span><BookOpen size={15} />Sua pausa com a Palavra</span><span>NVI</span></div><div className="landing-bible-tabs" role="tablist" aria-label="Passagens da prévia">{passages.map((passage, index) => <button ref={(element) => { tabRefs.current[index] = element; }} role="tab" tabIndex={selected === index ? 0 : -1} aria-selected={selected === index} aria-controls="landing-passage" id={`landing-passage-tab-${index}`} key={passage.label} onClick={() => setSelected(index)} onKeyDown={(event) => selectWithKeyboard(event, index)}>{passage.label}</button>)}</div><div className="landing-passage" id="landing-passage" role="tabpanel" aria-labelledby={`landing-passage-tab-${selected}`} tabIndex={0}><span className="landing-preview-label">{passages[selected].reference}</span><p key={selected}>{passages[selected].text}</p><span>{passages[selected].caption}</span></div><div className="landing-bible-preview-footer"><span className="landing-preview-label">LEIA. RESPIRE. REFLITA.</span><BookOpen size={18} strokeWidth={1.2} /></div></div>;
+function ScreenshotPreview({ src, alt }: { src: string; alt: string }) {
+  return <div className="landing-preview landing-screenshot-preview"><img src={src} alt={alt} /></div>;
 }
 
-function PlanPreview() {
-  const [days, setDays] = useState([true, true, false, false, false]);
-  const completed = days.filter(Boolean).length;
-  return <div className="landing-preview landing-plan-preview"><div className="landing-preview-top"><span><CalendarDays size={15} />Um dia de cada vez</span><span>PRÉVIA</span></div><div className="landing-plan-heading"><div className="landing-plan-mark" aria-hidden="true"><span /><span /><span /></div><span className="landing-preview-label">SUA CAMINHADA</span><h4>Crie raízes<br /><em>na Palavra.</em></h4><p>5 momentos para desacelerar e refletir.</p></div><div className="landing-plan-days" aria-label="Experimente marcar os dias de leitura">{days.map((done, index) => <button aria-label={`${done ? 'Desmarcar' : 'Concluir'} dia ${index + 1}`} aria-pressed={done} key={index} onClick={() => setDays((current) => current.map((day, dayIndex) => dayIndex === index ? !day : day))}><span>{done ? <Check size={17} /> : String(index + 1).padStart(2, '0')}</span><small>DIA {index + 1}</small></button>)}</div><div className="landing-plan-progress"><span style={{ width: `${completed * 20}%` }} /></div><p className="landing-plan-caption" aria-live="polite">{completed} de 5 dias · Experimente marcar seu progresso</p></div>;
-}
-
-function ConnectionPreview() {
-  const [selected, setSelected] = useState(0);
-  const messages = ['Uma passagem me acompanhou hoje. Posso compartilhar com você?', 'O que você tem aprendido na sua caminhada esta semana?'];
-  return <div className="landing-preview landing-connection-preview"><div className="landing-preview-top"><span><Users size={15} />Conexões com propósito</span><span>PRÉVIA</span></div><div className="landing-connection-orbit" aria-hidden="true"><i /><i /><span className="landing-avatar landing-avatar--one">V</span><span className="landing-connection-center"><Users size={30} strokeWidth={1} /></span><span className="landing-avatar landing-avatar--two">C</span><span className="landing-connection-star">✳</span></div><div className="landing-chat-bubble"><MessageCircle size={15} /><p>{messages[selected]}</p></div><button className="landing-preview-action" onClick={() => setSelected((selected + 1) % messages.length)}>Uma conversa pode ser o começo<ArrowRight size={16} /></button></div>;
-}
-
-function AiPreview() {
-  const [selected, setSelected] = useState(0);
-  const examples = [{ question: 'Por onde começar a ler a Bíblia?', answer: 'O Evangelho de João pode ser um bom começo para conhecer a vida e os ensinamentos de Jesus. Que tal separar um momento do seu dia para ler o primeiro capítulo?', reference: 'Um ponto de partida: João 1' }, { question: 'Como criar uma rotina de leitura?', answer: 'Comece com um tempo que cabe no seu dia. Escolha um livro, leia uma pequena passagem e anote o que chamou sua atenção. Constância se constrói com pequenos passos.', reference: 'Uma reflexão: Salmos 1:2–3' }];
-  return <div className="landing-preview landing-ai-preview"><div className="landing-preview-top"><span><Sparkles size={15} />OneFlow V1</span><span>PRÉVIA</span></div><div className="landing-ai-symbol" aria-hidden="true">✳</div><div className="landing-ai-question"><span>VOCÊ</span><p>{examples[selected].question}</p></div><div className="landing-ai-answer"><span><Sparkles size={13} />ONEFLOW V1</span><p>{examples[selected].answer}</p><small><BookOpen size={12} />{examples[selected].reference}</small></div><button className="landing-ai-prompt" onClick={() => setSelected((selected + 1) % examples.length)}><span>Explorar outra pergunta</span><ArrowRight size={17} /></button></div>;
-}
-
-const previews = [BiblePreview, PlanPreview, ConnectionPreview, AiPreview];
+const previews = [
+  () => <ScreenshotPreview src={bibleImage} alt="Tela da leitura bíblica em estilo dark mode" />,
+  () => <ScreenshotPreview src={plansImage} alt="Tela de planos de leitura do OneFlow" />,
+  () => <ScreenshotPreview src={discipleshipImage} alt="Tela de discipulado e conexões do OneFlow" />,
+  () => <ScreenshotPreview src={aiImage} alt="Tela do assistente OneFlow V1" />,
+];
 
 export default function FeatureShowcase({ motionDisabled, entryPath }: { motionDisabled: boolean; entryPath: string }) {
   const prefersReducedMotion = useReducedMotion();
